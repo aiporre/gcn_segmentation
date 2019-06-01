@@ -78,3 +78,24 @@ data
   |-../
   |- raw@ -> /path/to/your//files_mdh
 ```
+
+# Cite this work
+
+Ariel Iporre-Rivas, Dorothee Saur, Karl Rohr, Gerik Scheuermann, Christina Gillmann, "Stroke-GFCN: ischemic stroke lesion prediction with a fully convolutional graph network," J. Med. Imag. 10(4) 044502 (17 July 2023) https://doi.org/10.1117/1.JMI.10.4.044502
+
+## bibtex
+```
+@article{10.1117/1.JMI.10.4.044502,
+author = {Ariel Iporre-Rivas and Dorothee Saur and Karl Rohr and Gerik Scheuermann and Christina Gillmann},
+title = {{Stroke-GFCN: ischemic stroke lesion prediction with a fully convolutional graph network}},
+volume = {10},
+journal = {Journal of Medical Imaging},
+number = {4},
+publisher = {SPIE},
+pages = {044502},
+keywords = {medical imaging, stroke prediction, machine learning, graph neural networks, multi-modal imaging},
+year = {2023},
+doi = {10.1117/1.JMI.10.4.044502},
+URL = {https://doi.org/10.1117/1.JMI.10.4.044502}
+}
+```
