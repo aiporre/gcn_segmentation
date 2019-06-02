@@ -21,7 +21,7 @@ class M2NISTSuperpixels(InMemoryDataset):
 
     @property
     def raw_file_names(self):
-        return ['dataTrain.pt','dataTest.pt']
+        return ['data1.pt','data2.pt']
 
     @property
     def processed_file_names(self):
