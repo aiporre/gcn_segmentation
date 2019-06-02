@@ -1,0 +1,7 @@
+numpy
+scipy
+tensorflow
+scikit-image
+scikit-learn
+numpy_groupies
+cached-property
