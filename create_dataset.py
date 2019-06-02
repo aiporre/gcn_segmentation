@@ -142,7 +142,7 @@ def create_dataset(filename,indices):
     edge_index = []
     edge_slice = [0]
     print('creating first part from ' , indices[0] , ' to ', indices[-1],'indices')
-    for i in tqmd(indices):
+    for i in tqdm(indices):
         print('image',i,'/',1+indices[-1])
         print('Generating patches')
         w = padgen.transform(combined[i])
