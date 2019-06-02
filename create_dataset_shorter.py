@@ -104,15 +104,16 @@ def graph_maker(image, labels):
         data['centroid'] = region['centroid']
     if g.number_of_nodes()<75:
         print('warning: number of nodes is less than 75, ', g.number_of_nodes() )
-    while g.number_of_nodes()>75: 
+    if g.number_of_nodes()>75: 
         indices = list(range(g.number_of_edges()))
         shuffle(indices)
         edges_data = list(g.edges(data=True))
         edges = [edges_data[index] for index in indices]
         edges=sorted(edges, key=lambda t: t[2].get('weight', 1))
-        src, dst = edges[0][0], edges[0][1]
-        merge_mean_color(g, src, dst)
-        g.merge_nodes(src, dst, weight_func=_weight_mean_color)
+        for i in range(75,g.number_of_nodes())
+            src, dst = edges[0][0], edges[0][1]
+            merge_mean_color(g, src, dst)
+            g.merge_nodes(src, dst, weight_func=_weight_mean_color)
     
     nodes_data = g.nodes(data=True)
     edges_data = list(g.edges(data=True))
@@ -176,6 +177,6 @@ def create_dataset(filename,indices):
     torch.save(data, './data/M2NIST/raw/'+ filename +'.pt')
     print('created part: ', filename)
 
-create_dataset('data1',range(0,10))
-create_dataset('data2',range(10,15))
+create_dataset('data1',range(0,500))
+create_dataset('data2',range(500,700))
 

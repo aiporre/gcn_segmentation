@@ -176,6 +176,6 @@ def create_dataset(filename,indices):
     torch.save(data, './data/M2NIST/raw/'+ filename +'.pt')
     print('created part: ', filename)
 
-create_dataset('data1',range(0,10))
-create_dataset('data2',range(10,15))
+create_dataset('data1',range(0,500))
+create_dataset('data2',range(500,700))
 
