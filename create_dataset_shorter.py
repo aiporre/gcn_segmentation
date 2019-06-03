@@ -42,7 +42,7 @@ class PatchGen(object):
     def __init__(self,patch_size=21):
 #         assert(patch_size%2==1)
         self.patch_size = patch_size
-                 
+
     def transform(self,im,padding=2):
         p = self.patch_size
         padding = p//2
@@ -68,10 +68,18 @@ def graph_maker(image, labels):
 
 
     def merge_mean_color(graph, src, dst):
+        total_mass = graph.node[dst]['pixel count'] + graph.node[src]['pixel count']
+        m_dst = graph.node[dst]['pixel count']/total_mass
+        m_src = graph.node[src]['pixel count']/total_mass
+        graph.node[dst]['centroid'] = (m_dst*graph.node[dst]['centroid'][0]+m_src*graph.node[src]['centroid'][0],
+                                       m_dst * graph.node[dst]['centroid'][1] + m_src * graph.node[src]['centroid'][1])
         graph.node[dst]['total color'] += graph.node[src]['total color']
         graph.node[dst]['pixel count'] += graph.node[src]['pixel count']
         graph.node[dst]['mean color'] = (graph.node[dst]['total color'] /
                                          graph.node[dst]['pixel count'])
+    def remove_from_list(src,edges_list):
+        return [e for e in edges_list if not e[0]==src and not e[1]==src]
+
     def translate_graph(nodes_data, edges_data):
         N = len(nodes_data) # number of nodes
         a = {n[0]: i for i, n in enumerate(nodes_data)}
@@ -79,7 +87,7 @@ def graph_maker(image, labels):
         # generating the edges with the new numeration
         for e in edges_data:
             g2.add_edge(a[e[0]],a[e[1]],weight=e[2]['weight'])
-        
+
         # reassinging the values to each node
         for n, values in nodes_data:
             n2 = a[n]
@@ -87,8 +95,11 @@ def graph_maker(image, labels):
                 g2.node[n2][k]=v
         return g2
 
+    # start_time = time.time()
     g = graph.rag_mean_color(image,labels)
-    
+    # c_time = time.time()
+    # print('rag mean calculation',c_time-start_time)
+    # start_time = c_time
     offset = 1
     # create a map array
     map_array = np.arange(labels.max() + 1)
@@ -96,28 +107,42 @@ def graph_maker(image, labels):
         for label in d['labels']:
             map_array[label] = offset
         offset += 1
-        
+
     # compute centroids to the nodes
     g_labels = map_array[labels]
     regions = regionprops(g_labels)
     for (n, data), region in zip(g.nodes(data=True), regions):
         data['centroid'] = region['centroid']
+    # c_time = time.time()
+    # print('compute centroids',c_time - start_time)
+    # start_time = c_time
     if g.number_of_nodes()<75:
         print('warning: number of nodes is less than 75, ', g.number_of_nodes() )
-    if g.number_of_nodes()>75: 
+    if g.number_of_nodes()>75:
         indices = list(range(g.number_of_edges()))
         shuffle(indices)
         edges_data = list(g.edges(data=True))
         edges = [edges_data[index] for index in indices]
-        edges=sorted(edges, key=lambda t: t[2].get('weight', 1))
-        for i in range(75,g.number_of_nodes())
+        edges = sorted(edges, key=lambda t: t[2].get('weight', 1))
+        # history_sources = []
+        # c_time = time.time()
+        # # print('initialization sorting and getting edges data',c_time - start_time)
+        # start_time = c_time
+        for i in range(75, g.number_of_nodes()):
             src, dst = edges[0][0], edges[0][1]
             merge_mean_color(g, src, dst)
             g.merge_nodes(src, dst, weight_func=_weight_mean_color)
-    
+            edges = remove_from_list(src, edges)
+            # history_sources.append(src)
+        # c_time = time.time()
+        # print('removed excess of nodes',c_time - start_time)
+        # start_time = c_time
     nodes_data = g.nodes(data=True)
     edges_data = list(g.edges(data=True))
-    return translate_graph(nodes_data,edges_data)
+    g_out = translate_graph(nodes_data,edges_data)
+    # c_time = time.time()
+    # print('reassing node numbers', c_time - start_time)
+    return g_out
 
 
 ####################
@@ -143,7 +168,7 @@ def create_dataset(filename,indices):
     edge_index = []
     edge_slice = [0]
     print('creating first part from ' , indices[0] , ' to ', indices[-1],'indices')
-    for i in tqmd(indices):
+    for i in tqdm(indices):
         print('image',i,'/',1+indices[-1])
         print('Generating patches')
         w = padgen.transform(combined[i])
@@ -152,13 +177,13 @@ def create_dataset(filename,indices):
         m = padgen.get_central_pixels(mask[i])
         print('Done')
         print('Segmentating of each patch')
-        s = [segmentation_algorithm(ww.squeeze()) for ww in w]
+        s = [segmentation_algorithm(ww.squeeze()) for ww in tqdm(w)]
         print('Done')
         print('generating graphs')
-        g = [graph_maker(ww.squeeze(), ss) for ww, ss in zip(w,s)]
+        g = [graph_maker(ww.squeeze(), ss) for ww, ss in tqdm(zip(w,s))]
         print('Done')
         print('Collecting data')
-        for mm, gg in tqdm(zip(m,g)):
+        for mm, gg in zip(m,g):
             node_pos = list(map(lambda n: n[1]['centroid'], gg.nodes(data=True)))
 #             node_pos = list(map(lambda x: cart2pol(x[0],x[1]), node_pos))
             node_values = list(map(lambda n: n[1]['mean color'][0], gg.nodes(data=True)))
@@ -177,6 +202,7 @@ def create_dataset(filename,indices):
     torch.save(data, './data/M2NIST/raw/'+ filename +'.pt')
     print('created part: ', filename)
 
-create_dataset('data1',range(0,500))
-create_dataset('data2',range(500,700))
+if __name__=='__main__':
+    create_dataset('data1', range(0, 500))
+    create_dataset('data2', range(500, 700))
 
