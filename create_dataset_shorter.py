@@ -203,6 +203,6 @@ def create_dataset(filename,indices):
     print('created part: ', filename)
 
 if __name__=='__main__':
-    create_dataset('data1', range(0, 500))
-    create_dataset('data2', range(500, 700))
+    create_dataset('data1', range(0, 3))
+    create_dataset('data2', range(3, 5))
 
