@@ -180,7 +180,7 @@ def create_dataset(filename,indices):
         s = [segmentation_algorithm(ww.squeeze()) for ww in tqdm(w)]
         print('Done')
         print('generating graphs')
-        g = [graph_maker(ww.squeeze(), ss) for ww, ss in tqdm(zip(w,s))]
+        g = [graph_maker(ww.squeeze(), ss) for ww, ss in tqdm(list(zip(w,s)))]
         print('Done')
         print('Collecting data')
         for mm, gg in zip(m,g):
