@@ -153,7 +153,7 @@ mask = 1-segmented[:,:,:,-1]
 combined = np.load("./data/M2NIST/combined.npy").reshape((-1, HEIGHT, WIDTH, 1))/255
 #####################
 padgen = PatchGen()
-segmentation_algorithm = lambda x: slic(x, n_segments=75, compactness=5, max_iter=25, sigma=0)
+segmentation_algorithm = lambda x: slic(x, n_segments=75, max_iter=50)
 #####################
 def cart2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
