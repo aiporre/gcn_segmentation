@@ -13,3 +13,4 @@ pip install --no-cache-dir torch-spline-conv
 pip install torch-geometric
 python3 example/gcn.py
 cd ../gcn_air
+pip install -r requirements.txt
