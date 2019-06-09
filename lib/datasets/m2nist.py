@@ -45,7 +45,7 @@ class M2NIST(Datasets):
     def _load_train(self):
         #TODO: shuffle data before split
         train_index= np.ceil(self._N_samples*(1-self.test_rate)).astype(int)
-        images = self._combined[0:train_index]
+        images = self._combined[0:train_index].transpose(0,3,1,2)
         labels = self._mask[0:train_index]
         return images, labels
 

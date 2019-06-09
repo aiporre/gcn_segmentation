@@ -12,21 +12,21 @@ class M2NISTTest(TestCase):
         self.assertEqual(data.val.num_examples, 1000)
         self.assertEqual(data.test.num_examples, 1000)
 
-    # def test_shapes(self):
-    #     images, labels = data.train.next_batch(32, shuffle=False)
-    #     self.assertEqual(images.shape, (32, 28, 28, 1))
-    #     self.assertEqual(labels.shape, (32, 10))
-    #     data.train.next_batch(data.train.num_examples - 32, shuffle=False)
-    #
-    #     images, labels = data.val.next_batch(32, shuffle=False)
-    #     self.assertEqual(images.shape, (32, 28, 28, 1))
-    #     self.assertEqual(labels.shape, (32, 10))
-    #     data.val.next_batch(data.val.num_examples - 32, shuffle=False)
-    #
-    #     images, labels = data.test.next_batch(32, shuffle=False)
-    #     self.assertEqual(images.shape, (32, 28, 28, 1))
-    #     self.assertEqual(labels.shape, (32, 10))
-    #     data.test.next_batch(data.test.num_examples - 32, shuffle=False)
+    def test_shapes(self):
+        images, labels = data.train.next_batch(32, shuffle=False)
+        self.assertEqual(images.shape, (32, 64, 84, 1))
+        self.assertEqual(labels.shape, (32, 64, 84))
+        data.train.next_batch(data.train.num_examples - 32, shuffle=False)
+
+        images, labels = data.val.next_batch(32, shuffle=False)
+        self.assertEqual(images.shape, (32, 64, 84, 1))
+        self.assertEqual(labels.shape, (32, 64, 84))
+        data.val.next_batch(data.val.num_examples - 32, shuffle=False)
+
+        images, labels = data.test.next_batch(32, shuffle=False)
+        self.assertEqual(images.shape, (32, 64, 84, 1))
+        self.assertEqual(labels.shape, (32, 64, 84))
+        data.test.next_batch(data.test.num_examples - 32, shuffle=False)
     #
     # def test_images(self):
     #     images, _ = data.train.next_batch(
