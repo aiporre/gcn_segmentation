@@ -24,10 +24,11 @@ def train():
     trainer.save_model(MODEL_PATH)
 
 def eval():
-    # print('DCM factor: ' , evaluator.DCM(model))
+    model.eval()
+    print('DCM factor: ' , evaluator.DCM(model))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
     plt.show()
 
-train()
+# train()
 eval()
