@@ -9,7 +9,7 @@ class Evaluator(object):
         N = len(self.dataset)
         # TODO: Do it in batches!!
         for image, label in self.dataset:
-            features = torch.tensor(image).permute(2, 0, 1).unsqueeze(0).float()
+            features = torch.tensor(image).unsqueeze(0).float()
             label = torch.tensor(label).unsqueeze(0).float()
             prediction = model(features)
             pred_mask = (prediction > 0.5).float()
@@ -30,7 +30,7 @@ class Evaluator(object):
         # plot mask
         ax2.imshow(mask)
         # plot prediction
-        input = torch.tensor(image).permute(2, 0, 1).unsqueeze(0).float()
+        input = torch.tensor(image).unsqueeze(0).float()
         prediction = model(input)
         pred_mask = (prediction > 0.5).float()
         ax3.imshow(pred_mask.detach().numpy().squeeze())
