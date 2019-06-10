@@ -14,18 +14,18 @@ class M2NISTTest(TestCase):
 
     def test_shapes(self):
         images, labels = data.train.next_batch(32, shuffle=False)
-        self.assertEqual(images.shape, (32, 64, 84, 1))
-        self.assertEqual(labels.shape, (32, 64, 84))
+        self.assertEqual((32, 1, 64, 84), images.shape)
+        self.assertEqual((32, 64, 84), labels.shape)
         data.train.next_batch(data.train.num_examples - 32, shuffle=False)
 
         images, labels = data.val.next_batch(32, shuffle=False)
-        self.assertEqual(images.shape, (32, 64, 84, 1))
-        self.assertEqual(labels.shape, (32, 64, 84))
+        self.assertEqual((32, 1, 64, 84), images.shape)
+        self.assertEqual((32, 64, 84), labels.shape)
         data.val.next_batch(data.val.num_examples - 32, shuffle=False)
-
+        
         images, labels = data.test.next_batch(32, shuffle=False)
-        self.assertEqual(images.shape, (32, 64, 84, 1))
-        self.assertEqual(labels.shape, (32, 64, 84))
+        self.assertEqual((32, 1, 64, 84), images.shape)
+        self.assertEqual((32, 64, 84), labels.shape)
         data.test.next_batch(data.test.num_examples - 32, shuffle=False)
     #
     # def test_images(self):

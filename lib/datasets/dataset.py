@@ -50,6 +50,12 @@ class Dataset(object):
         self._images = self._images[perm]
         self._labels = self._labels[perm]
 
+    def __len__(self):
+        return self.num_examples
+
+    def __getitem__(self, idx):
+        return self._images[idx], self._labels[idx]
+
     def next_batch(self, batch_size, shuffle=True):
         start = self._index_in_epoch
 

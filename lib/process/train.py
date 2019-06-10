@@ -1,6 +1,7 @@
 import torch
 from torch import optim
 import torch.nn as nn
+import os
 
 class Trainer(object):
 
@@ -45,8 +46,19 @@ class Trainer(object):
     def train_epoch(self, lr=0.01):
         loss = []
         self.update_lr(lr=lr)
-        while not self.dataset.epochs_completed:
+        currect_epochs_completed = self.dataset.epochs_completed
+        while self.dataset.epochs_completed == currect_epochs_completed:
             loss_batch = self.train_batch()
             print('loss batch ', loss_batch)
             loss.append(loss_batch)
         return loss
+
+    def save_model(self, path):
+        torch.save(self.model.state_dict(), path)
+
+    def load_model(self, model, path):
+        self.model = model
+        if os.path.exists(path):
+            self.model.load_state_dict(torch.load(path))
+        else:
+            print('Warning: there is no file :', path)

@@ -51,6 +51,6 @@ class M2NIST(Datasets):
 
     def _load_test(self):
         train_index= np.ceil(self._N_samples*(1-self.test_rate)).astype(int)
-        images = self._combined[train_index:self._N_samples]
+        images = self._combined[train_index:self._N_samples].transpose(0,3,1,2)
         labels = self._mask[train_index:self._N_samples]
         return images, labels
