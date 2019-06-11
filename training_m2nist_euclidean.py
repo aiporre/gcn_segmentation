@@ -29,5 +29,5 @@ def eval():
     fig = evaluator.plot_prediction(model=model)
     plt.show()
 
-# train()
+train()
 eval()

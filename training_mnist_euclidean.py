@@ -18,7 +18,7 @@ def train():
         loss = trainer.train_epoch()
         print('loss',loss)
         with torch.no_grad():
-            score = evaluator.DCM()
+            score = evaluator.DCM(model=model)
             print('DCM score:', score)
     print('end of training')
     trainer.save_model(MODEL_PATH)
@@ -30,5 +30,5 @@ def eval():
     fig = evaluator.plot_prediction(model=model)
     plt.show()
 
-# train()
+train()
 eval()

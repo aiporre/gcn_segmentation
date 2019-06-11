@@ -7,10 +7,9 @@ class Evaluator(object):
     def DCM(self, model):
         DCM_accum = 0
         N = len(self.dataset)
-        # TODO: Do it in batches!!
         for image, label in self.dataset:
-            features = torch.tensor(image).unsqueeze(0).float()
-            label = torch.tensor(label).unsqueeze(0).float()
+            features = torch.tensor(image).float()
+            label = torch.tensor(label).float()
             prediction = model(features)
             pred_mask = (prediction > 0.5).float()
             DCM_accum += dice_coeff(pred_mask, label).item()
@@ -28,9 +27,9 @@ class Evaluator(object):
         #TODO: image will change its shape I need a transformer class
         ax1.imshow(image.copy().squeeze())
         # plot mask
-        ax2.imshow(mask)
+        ax2.imshow(mask.squeeze())
         # plot prediction
-        input = torch.tensor(image).unsqueeze(0).float()
+        input = torch.tensor(image).float()
         prediction = model(input)
         pred_mask = (prediction > 0.5).float()
         ax3.imshow(pred_mask.detach().numpy().squeeze())

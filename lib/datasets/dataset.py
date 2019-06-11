@@ -39,6 +39,9 @@ class Dataset(object):
         self._images = images
         self._labels = labels
         self._index_in_epoch = 0
+        self.batch_size = 1
+    def enforce_batch(self, batch_size):
+        self.batch_size = batch_size
 
     @property
     def num_examples(self):
@@ -51,10 +54,11 @@ class Dataset(object):
         self._labels = self._labels[perm]
 
     def __len__(self):
-        return self.num_examples
+        return int(self.num_examples/self.batch_size)
 
     def __getitem__(self, idx):
-        return self._images[idx], self._labels[idx]
+        self._index_in_epoch = idx*self.batch_size
+        return self.next_batch(batch_size=self.batch_size, shuffle=False)
 
     def next_batch(self, batch_size, shuffle=True):
         start = self._index_in_epoch
