@@ -7,12 +7,16 @@ class Evaluator(object):
     def DCM(self, model):
         DCM_accum = 0
         N = len(self.dataset)
+        self.dataset.enforce_batch(32)
+
         for image, label in self.dataset:
             features = torch.tensor(image).float()
             label = torch.tensor(label).float()
             prediction = model(features)
             pred_mask = (prediction > 0.5).float()
             DCM_accum += dice_coeff(pred_mask, label).item()
+        self.dataset.enforce_batch_size(1)
+
         return DCM_accum/N
 
     def plot_prediction(self,model, index=0, fig=None, figsize=(10,10)):
