@@ -47,8 +47,8 @@ class Trainer(object):
         loss = []
         self.update_lr(lr=lr)
         currect_epochs_completed = self.dataset.epochs_completed
-        # while self.dataset.epochs_completed == currect_epochs_completed:
-        for _ in range(1):
+        while self.dataset.epochs_completed == currect_epochs_completed:
+        # for _ in range(1):
             loss_batch = self.train_batch()
             print('loss batch ', loss_batch)
             loss.append(loss_batch)
