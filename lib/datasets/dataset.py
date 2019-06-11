@@ -40,6 +40,7 @@ class Dataset(object):
         self._labels = labels
         self._index_in_epoch = 0
         self.batch_size = 1
+
     def enforce_batch(self, batch_size):
         self.batch_size = batch_size
 
@@ -54,11 +55,25 @@ class Dataset(object):
         self._labels = self._labels[perm]
 
     def __len__(self):
-        return int(self.num_examples/self.batch_size)
+        return int(self.num_examples/self.batch_size)+1
 
     def __getitem__(self, idx):
+        if not isinstance(idx, int):
+            raise TypeError('dataset indices must be integers, not ', type(idx))
+        if idx > self.__len__() or idx < -self.__len__():
+            raise IndexError('dataset index out of range')
+        if idx < 0:
+            idx = self.__len__()+idx
         self._index_in_epoch = idx*self.batch_size
         return self.next_batch(batch_size=self.batch_size, shuffle=False)
+
+    def __iter__(self):
+        i = 0
+        while i< self.__len__():
+            i += 1
+            yield self.next_batch(batch_size=self.batch_size, shuffle=False)
+    # def __next__(self):
+    #     yield self.next_batch()
 
     def next_batch(self, batch_size, shuffle=True):
         start = self._index_in_epoch
