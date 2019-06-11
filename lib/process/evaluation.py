@@ -1,20 +1,29 @@
 import torch
 from torch.autograd import Function, Variable
 import matplotlib.pyplot as plt
+from .progress_bar import printProgressBar
+
 class Evaluator(object):
     def __init__(self, dataset):
         self.dataset = dataset.test
-    def DCM(self, model):
+    def DCM(self, model, progress_bar=True):
         DCM_accum = 0
         N = len(self.dataset)
         self.dataset.enforce_batch(32)
+        L = len(self.dataset)
+        if progress_bar:
+            printProgressBar(0, L, prefix='DCM:', suffix='Complete', length=50)
 
+        i = 0
         for image, label in self.dataset:
+
             features = torch.tensor(image).float()
             label = torch.tensor(label).float()
             prediction = model(features)
             pred_mask = (prediction > 0.5).float()
             DCM_accum += dice_coeff(pred_mask, label).item()
+            i += 1
+            printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
         self.dataset.enforce_batch_size(1)
 
         return DCM_accum/N
