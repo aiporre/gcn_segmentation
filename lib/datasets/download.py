@@ -5,6 +5,7 @@ import os
 import sys
 import tarfile
 from six.moves import urllib
+from zipfile import ZipFile
 
 
 def _print_status(name, percentage):
@@ -34,6 +35,8 @@ def maybe_download_and_extract(url, data_dir):
 
     if ".tar" in filename:
         return extract_tar(data_dir, filename)
+    elif ".zip" in filename:
+        return extract_zip(data_dir,filename)
     else:  # pragma: no cover
         return filepath
 
@@ -58,3 +61,18 @@ def extract_tar(data_dir, filename):
         print(' Done!')
 
     return extracted_dir
+
+def extract_zip(data_dir, filename):
+    filepath = os.path.join(data_dir, filename)
+    with ZipFile(filepath,mode='r') as zip_file:
+        extracted_dirs = [os.path.join(data_dir, file) for file in zip_file.namelist()]
+        if not all([os.path.exists(extracted_dir) for extracted_dir in extracted_dirs]):
+            sys.stdout.write(
+                '>> Extracting {} to {}...'.format(filename, extracted_dirs))
+            sys.stdout.flush()
+
+            zip_file.extractall(data_dir)
+
+            print(' Done!')
+
+

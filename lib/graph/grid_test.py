@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from numpy.testing import assert_equal
 
-from .grid import grid_adj, grid_points, grid_mass
+from .grid import grid_adj, grid_points, grid_mass, grid_tensor
 
 
 class GridTest(TestCase):
@@ -29,3 +29,6 @@ class GridTest(TestCase):
                     [1, 1, 1, 0, 1, 1], [0, 0, 1, 1, 0, 1], [0, 0, 1, 1, 1, 0]]
 
         assert_equal(adj.toarray(), expected)
+
+    def test_grid_tensor(self):
+        tensor = grid_tensor((3, 2), connectity=4)

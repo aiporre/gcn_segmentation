@@ -5,27 +5,27 @@ from .dataset import Datasets, Dataset
 
 
 class MNIST(Datasets):
-    def __init__(self, data_dir, val_size=5000):
+    def __init__(self,  data_dir='data/M2NIST', val_size=5000):
         mnist = input_data.read_data_sets(
             data_dir, one_hot=True, validation_size=val_size)
 
         images = self._preprocess_images(mnist.train.images)
-        labels = self._preprocess_labels(mnist.train.labels)
+        labels = self._preprocess_labels(mnist.train.images)
         train = Dataset(images, labels)
 
         images = self._preprocess_images(mnist.validation.images)
-        labels = self._preprocess_labels(mnist.validation.labels)
+        labels = self._preprocess_labels(mnist.validation.images)
         val = Dataset(images, labels)
 
         images = self._preprocess_images(mnist.test.images)
-        labels = self._preprocess_labels(mnist.test.labels)
+        labels = self._preprocess_labels(mnist.test.images)
         test = Dataset(images, labels)
 
         super(MNIST, self).__init__(train, val, test)
 
     @property
     def classes(self):
-        return ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        return ['foreground', 'background']
 
     @property
     def width(self):
@@ -41,7 +41,11 @@ class MNIST(Datasets):
 
     def _preprocess_images(self, images):
         return np.reshape(images, (-1, self.height, self.width,
-                                   self.num_channels))
+                                   self.num_channels)).transpose(0,3,1,2)
 
-    def _preprocess_labels(self, labels):
-        return labels.astype(np.uint8)
+    def _preprocess_labels(self, images):
+        threshold = 0.1
+        images = np.reshape(images, (-1, self.height, self.width,
+                            self.num_channels))
+        masks = (images > threshold).astype(np.float)
+        return masks.squeeze()
