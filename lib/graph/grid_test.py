@@ -31,4 +31,5 @@ class GridTest(TestCase):
         assert_equal(adj.toarray(), expected)
 
     def test_grid_tensor(self):
-        tensor = grid_tensor((3, 2), connectity=4)
+        tensor = grid_tensor((3, 2), connectivity=4)
+        print(tensor)

@@ -3,6 +3,8 @@ import scipy.sparse as sp
 
 from .distortion import filter_adj
 from torch_geometric.data import Data
+import torch
+from itertools import product
 
 
 
@@ -56,6 +58,16 @@ def grid_mass(shape, dtype=np.float32):
     """Return the mass of grid points of a given shape with distance `1`."""
     return np.ones(shape[0] * shape[1], dtype)
 
-def grid_tensor(shape, connectity=4, dtype=np.float32):
-    adj_matrix = grid_adj(shape=shape, connectity=connectity, dtype=dtype)
-    return 0
+def grid_tensor(shape, connectivity=4, dtype=np.float32):
+    adj_matrix = grid_adj(shape=shape, connectivity=connectivity, dtype=dtype)
+    cols = adj_matrix.col
+    rows = adj_matrix.row
+    edge_index = torch.tensor([cols,
+                               rows], dtype=torch.long)
+    x = torch.ones((shape[0]*shape[1],1), dtype=torch.float)
+
+    pos = torch.tensor([(i,j) for i,j in  product(range(shape[0]),range(shape[1]))], dtype=torch.float)
+
+    data = Data(x=x, edge_index=edge_index, pos=pos, y=1)
+
+    return data
