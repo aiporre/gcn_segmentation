@@ -1,5 +1,5 @@
 import numpy as np
-
+from torch_geometric.data import DataLoader
 
 class Datasets(object):
     def __init__(self, train, val, test):
@@ -31,6 +31,47 @@ class Datasets(object):
         idx = np.where(label == 1)[0]
         return [self.classes[i] for i in idx]
 
+
+class GraphDataset(object):
+    def __int__(self,dataset, batch_size=1, shuffle=False ):
+        self.epochs_completed = 0
+        self._dataset = dataset
+        self.batch_size = batch_size
+        self._dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+
+
+    def enforce_batch(self, batch_size):
+        self.batch_size = batch_size
+        self._dataloader = DataLoader(self._dataset, batch_size=self.batch_size, shuffle=True)
+
+    @property
+    def num_examples(self):
+        return len(self._dataset)
+
+    def __len__(self):
+        return int(self.num_examples/self.batch_size)+1
+
+    def __getitem__(self, idx):
+        if not isinstance(idx, int):
+            raise TypeError('dataset indices must be integers, not ', type(idx))
+        if idx > self.__len__() or idx < -self.__len__():
+            raise IndexError('dataset index out of range')
+        if idx < 0:
+            idx = self.__len__()+idx
+        self._index_in_epoch = idx*self.batch_size
+        return self.next_batch(batch_size=self.batch_size, shuffle=False)
+
+    def __iter__(self):
+        i = 0
+        while i < self.__len__():
+            i += 1
+            yield self.next_batch(batch_size=self.batch_size, shuffle=False)
+
+    def next_batch(self, batch_size, shuffle=True):
+        for data in self._dataloader:
+            images = data
+            labels = data.y
+            yield labels, images
 
 class Dataset(object):
     def __init__(self, images, labels):
@@ -72,8 +113,6 @@ class Dataset(object):
         while i< self.__len__():
             i += 1
             yield self.next_batch(batch_size=self.batch_size, shuffle=False)
-    # def __next__(self):
-    #     yield self.next_batch()
 
     def next_batch(self, batch_size, shuffle=True):
         start = self._index_in_epoch
