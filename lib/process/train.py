@@ -3,6 +3,9 @@ from torch import optim
 import torch.nn as nn
 import os
 
+from .progress_bar import printProgressBar
+
+
 class Trainer(object):
 
     '''Class to train a model '''
@@ -10,9 +13,7 @@ class Trainer(object):
         self.model = model
         self.dataset = dataset.train
         self._batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else 1
-
-    def __len__(self):
-        return self.dataset.num_examples
+        self.dataset.enforce_batch(self._batch_size)
 
     def update_lr(self, lr):
         self.optimizer = optim.SGD(self.model.parameters(),
@@ -43,14 +44,17 @@ class Trainer(object):
         self.optimizer.step()
 
         return loss.item()
-    def train_epoch(self, lr=0.01):
+    def train_epoch(self, lr=0.01, progress_bar=True):
         loss = []
         self.update_lr(lr=lr)
-        currect_epochs_completed = self.dataset.epochs_completed
-        while self.dataset.epochs_completed == currect_epochs_completed:
-        # for _ in range(1):
+        L = self.dataset.num_batches
+        print('--> L', L)
+        if progress_bar:
+            printProgressBar(0, L, prefix='Train Epoch:', suffix='Complete', length=50)
+        for i in range(self.dataset.num_batches):
             loss_batch = self.train_batch()
-            print('loss batch ', loss_batch)
+            suffix = 'loss batch '+ str(loss_batch)
+            printProgressBar(i+1, L, prefix='Train Epoch:', suffix='Complete, '+suffix, length=50)
             loss.append(loss_batch)
         return loss
 
