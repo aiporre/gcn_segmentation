@@ -33,61 +33,85 @@ class Datasets(object):
 
 
 class GraphDataset(object):
-    def __int__(self,dataset, batch_size=1, shuffle=False ):
-        self.epochs_completed = 0
+    def __init__(self,dataset, batch_size=1, shuffle=False ):
+        self.shuffle = shuffle
         self._dataset = dataset
-        self.batch_size = batch_size
-        self._dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        self._batch_size = batch_size
+        self._dataloader = DataLoader(dataset, batch_size=self._batch_size, shuffle=self.shuffle)
+        self._dataloader_iter = self._dataloader.__iter__()
+        self._index_in_epoch = 0
 
 
     def enforce_batch(self, batch_size):
-        self.batch_size = batch_size
-        self._dataloader = DataLoader(self._dataset, batch_size=self.batch_size, shuffle=True)
+        self._batch_size = batch_size
+        self._dataloader = DataLoader(self._dataset, batch_size=self._batch_size, shuffle=self.shuffle)
+
+    @property
+    def num_batches(self):
+        return int(len(self._dataset) / self._batch_size)
 
     @property
     def num_examples(self):
         return len(self._dataset)
 
     def __len__(self):
-        return int(self.num_examples/self.batch_size)+1
+        return self.num_examples
 
     def __getitem__(self, idx):
         if not isinstance(idx, int):
-            raise TypeError('dataset indices must be integers, not ', type(idx))
+            raise TypeError('dataset indices must be integers, not '+ str(type(idx)))
         if idx > self.__len__() or idx < -self.__len__():
             raise IndexError('dataset index out of range')
         if idx < 0:
             idx = self.__len__()+idx
-        self._index_in_epoch = idx*self.batch_size
-        return self.next_batch(batch_size=self.batch_size, shuffle=False)
+        return self._dataset[idx]
 
     def __iter__(self):
         i = 0
         while i < self.__len__():
-            i += 1
-            yield self.next_batch(batch_size=self.batch_size, shuffle=False)
+            yield self._dataset[i]
+            i +=1
 
-    def next_batch(self, batch_size, shuffle=True):
-        for data in self._dataloader:
-            images = data
-            labels = data.y
-            yield labels, images
+    def batches(self):
+        for _ in range(self.num_batches):
+            yield self.next_batch(self._batch_size, shuffle=self.shuffle)
+
+    def next_batch(self, batch_size):
+        if not batch_size == self._batch_size:
+            self.enforce_batch(batch_size)
+            self._dataloader_iter = self._dataloader.__iter__()
+
+        # restarting dataloader iterable when
+        start = self._index_in_epoch
+        if start + self._batch_size > self.num_examples:
+            self._dataloader_iter = self._dataloader.__iter__()
+            self._index_in_epoch = 0
+        # new sample
+        data = self._dataloader_iter.__next__()
+        images, labels = data, data.y
+        self._index_in_epoch += self._batch_size
+
+        return labels, images
 
 class Dataset(object):
-    def __init__(self, images, labels):
-        self.epochs_completed = 0
-
+    def __init__(self, images, labels, batch_size=1, shuffle=True):
+        self.epochs_completed=0
         self._images = images
         self._labels = labels
         self._index_in_epoch = 0
-        self.batch_size = 1
+        self._shuffle = shuffle
+        self._batch_size = 1
 
     def enforce_batch(self, batch_size):
-        self.batch_size = batch_size
+        self._batch_size = batch_size
 
     @property
     def num_examples(self):
         return self._labels.shape[0]
+
+    @property
+    def num_batches(self):
+        return int(self.num_examples/self._batch_size)+1
 
     def _random_shuffle_examples(self):
         perm = np.arange(self.num_examples)
@@ -95,8 +119,9 @@ class Dataset(object):
         self._images = self._images[perm]
         self._labels = self._labels[perm]
 
+
     def __len__(self):
-        return int(self.num_examples/self.batch_size)+1
+        return self.num_examples
 
     def __getitem__(self, idx):
         if not isinstance(idx, int):
@@ -105,16 +130,21 @@ class Dataset(object):
             raise IndexError('dataset index out of range')
         if idx < 0:
             idx = self.__len__()+idx
-        self._index_in_epoch = idx*self.batch_size
-        return self.next_batch(batch_size=self.batch_size, shuffle=False)
+        return self._images[idx], self._labels[idx]
 
     def __iter__(self):
         i = 0
         while i< self.__len__():
+            yield self._images[i], self._labels[i]
             i += 1
-            yield self.next_batch(batch_size=self.batch_size, shuffle=False)
+    def batches(self):
+        for _ in range(self.num_batches):
+            yield self.next_batch(batch_size=self._batch_size,shuffle=self._shuffle)
 
     def next_batch(self, batch_size, shuffle=True):
+        if not batch_size == self._batch_size:
+            self.enforce_batch(batch_size)
+
         start = self._index_in_epoch
 
         # Shuffle for the first epoch.

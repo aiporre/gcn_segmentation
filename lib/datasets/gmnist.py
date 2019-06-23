@@ -1,9 +1,13 @@
 import os
 from .dataset import Datasets, Dataset, GraphDataset
 import torch
-from torch_geometric.data import (InMemoryDataset, Data, download_url,
-                                  extract_tar, DataLoader)
+from torch_geometric.data import (Dataset, Data)
 import torch_geometric.transforms as T
+from tensorflow.examples.tutorials.mnist import input_data
+import numpy as np
+from lib.graph import grid_tensor
+
+
 class GMNIST(Datasets):
     def __init__(self, data_dir='data/GMNIST', batch_size=32, test_rate=0.2, validation=False):
         self.data_dir = data_dir
@@ -21,10 +25,7 @@ class GMNIST(Datasets):
 
 
 
-class _GMNIST(InMemoryDataset):
-
-    url = 'http://ls7-www.cs.uni-dortmund.de/cvpr_geometric_dl/' \
-          'mnist_superpixels.tar.gz'
+class _GMNIST(Dataset):
 
     def __init__(self,
                  root,
@@ -32,51 +33,53 @@ class _GMNIST(InMemoryDataset):
                  transform=None,
                  pre_transform=None,
                  pre_filter=None):
-        super(GMNIST, self).__init__(root, transform, pre_transform,
+        self.offset = 0 if train else 8000
+        self.train = train
+        super(_GMNIST, self).__init__(root, transform, pre_transform,
                                                pre_filter)
-        path = self.processed_paths[0] if train else self.processed_paths[1]
-        self.data, self.slices = torch.load(path)
 
     @property
     def raw_file_names(self):
-        return ['training.pt', 'test.pt']
+        return []
 
     @property
     def processed_file_names(self):
-        return ['training.pt', 'test.pt']
+        if self.train:
+            return ['data_{}.pt'.format(i) for i in range(8000)]
+        else:
+            return ['data_{}.pt'.format(i) for i in range(8000,10000)]
 
     def download(self):
-        path = download_url(self.url, self.raw_dir)
-        extract_tar(path, self.raw_dir, mode='r')
-        os.unlink(path)
+        pass
+
+    def __len__(self):
+        return len(self.processed_file_names)
 
     def process(self):
-        for raw_path, path in zip(self.raw_paths, self.processed_paths):
-            x, edge_index, edge_slice, pos, y = torch.load(raw_path)
-            edge_index, y = edge_index.to(torch.long), y.to(torch.long)
-            m, n = y.size(0), 75
-            x, pos = x.view(m * n, 1), pos.view(m * n, 2)
-            node_slice = torch.arange(0, (m + 1) * n, step=n, dtype=torch.long)
-            graph_slice = torch.arange(m + 1, dtype=torch.long)
-            self.data = Data(x=x, edge_index=edge_index, y=y, pos=pos)
-            self.slices = {
-                'x': node_slice,
-                'edge_index': edge_slice,
-                'y': graph_slice,
-                'pos': node_slice
-            }
+        i = self.offset
+        mnist = input_data.read_data_sets(
+            self.raw_dir, one_hot=True, validation_size=0)
+        images = mnist.train.images[0:8000] if self.train else mnist.test.images[8000:10000]
+        masks = (images > 0.1).astype(np.float)
 
-            if self.pre_filter is not None:
-                data_list = [self.get(idx) for idx in range(len(self))]
-                data_list = [d for d in data_list if self.pre_filter(d)]
-                self.data, self.slices = self.collate(data_list)
+        for image, mask in zip(images, masks):
+            # Read data from `raw_path`.
+            grid = grid_tensor((28, 28), connectivity=4)
+            grid.x = torch.tensor(image.reshape(28 * 28)).float()
+            grid.batch = torch.zeros(grid.num_nodes).long()
+            grid.y = torch.tensor([mask.reshape(28 * 28)]).float().transpose(0, 1)
+            data = grid
+
+            if self.pre_filter is not None and not self.pre_filter(data):
+                continue
 
             if self.pre_transform is not None:
-                data_list = [self.get(idx) for idx in range(len(self))]
-                data_list = [self.pre_transform(data) for data in data_list]
-                self.data, self.slices = self.collate(data_list)
+                data = self.pre_transform(data)
 
-            torch.save((self.data, self.slices), path)
+            torch.save(data, os.path.join(self.processed_dir, 'data_{}.pt'.format(i)))
+            i += 1
 
-# if __name__=='__main__':
-# dataset = GMNIST('./')
+    def get(self, idx):
+        idx += self.offset
+        data = torch.load(os.path.join(self.processed_dir, 'data_{}.pt'.format(idx)))
+        return data
