@@ -2,7 +2,7 @@ import torch
 import torch_geometric.transforms as T
 import torch.nn.functional as F
 from torch_geometric.utils import normalized_cut
-from torch_geometric.data import Data
+from torch_geometric.data import Data, Batch
 from torch_geometric.nn import graclus, max_pool
 from torch_geometric.nn import SplineConv
 
@@ -30,19 +30,22 @@ def consecutive_cluster(src):
     return inv, perm
 
 
-def recover_grid(source, pos, edge_index, cluster, transform=None):
+def recover_grid(source, pos, edge_index, cluster, batch=None, transform=None):
+    device = cluster.device
     cluster, perm = consecutive_cluster(cluster)
-    weights = torch.ones((1, len(cluster)))
-    Q = torch.zeros((source.num_nodes, cluster.shape[0])).scatter_(0, cluster.unsqueeze(0), weights)
-    #     print('x.shape, Q.shape',source.x.shape, Q.shape)
+    weights = torch.ones((1, len(cluster)), device=device)
+    Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0), weights)
 
     if source.x.dim() == 1:
         x = source.x.unsqueeze(0).mm(Q).squeeze()
     else:
         # the max dimension is 2
         x = Q.transpose(0, 1).mm(source.x)
-    #     print('x.shape: ',x.shape)
-    data = Data(x=x, edge_index=edge_index, pos=pos)
+    if batch is not None:
+        data = Batch(x=x, edge_index=edge_index, pos=pos, batch=batch)
+    else:
+        data = Data(x=x, edge_index=edge_index, pos=pos)
+
     if transform is not None:
         data = transform(data)
     return data
