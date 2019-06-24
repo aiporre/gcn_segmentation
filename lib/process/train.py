@@ -14,6 +14,7 @@ class Trainer(object):
         self.dataset = dataset.train
         self._batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else 1
         self.dataset.enforce_batch(self._batch_size)
+        self.to_tensor = kwargs['to_tensor'] if 'to_tensor' in kwargs.keys() else True
 
     def update_lr(self, lr):
         self.optimizer = optim.SGD(self.model.parameters(),
@@ -29,8 +30,8 @@ class Trainer(object):
         :return:
         '''
         images, labels = self.dataset.next_batch(batch_size=self._batch_size, shuffle=True)
-        features = torch.tensor(images).float()
-        target = torch.tensor(labels).float()
+        features = torch.tensor(images).float() if self.to_tensor else images
+        target = torch.tensor(labels).float() if self.to_tensor else labels
 
         prediction = self.model(features)
 

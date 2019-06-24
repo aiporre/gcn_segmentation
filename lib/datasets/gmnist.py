@@ -66,8 +66,7 @@ class _GMNIST(Dataset):
             # Read data from `raw_path`.
             grid = grid_tensor((28, 28), connectivity=4)
             grid.x = torch.tensor(image.reshape(28 * 28)).float()
-            grid.batch = torch.zeros(grid.num_nodes).long()
-            grid.y = torch.tensor([mask.reshape(28 * 28)]).float().transpose(0, 1)
+            grid.y = torch.tensor([mask.reshape(28 * 28)]).float()
             data = grid
 
             if self.pre_filter is not None and not self.pre_filter(data):

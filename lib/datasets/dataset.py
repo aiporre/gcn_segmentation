@@ -76,7 +76,7 @@ class GraphDataset(object):
         for _ in range(self.num_batches):
             yield self.next_batch(self._batch_size, shuffle=self.shuffle)
 
-    def next_batch(self, batch_size):
+    def next_batch(self, batch_size, shuffle=True):
         if not batch_size == self._batch_size:
             self.enforce_batch(batch_size)
             self._dataloader_iter = self._dataloader.__iter__()
@@ -91,7 +91,7 @@ class GraphDataset(object):
         images, labels = data, data.y
         self._index_in_epoch += self._batch_size
 
-        return labels, images
+        return images, labels
 
 class Dataset(object):
     def __init__(self, images, labels, batch_size=1, shuffle=True):
