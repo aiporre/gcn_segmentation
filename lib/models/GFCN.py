@@ -65,20 +65,23 @@ class GFCN(torch.nn.Module):
         cluster1 = graclus(data.edge_index, weight, data.x.size(0))
         pos1 = data.pos
         edge_index1 = data.edge_index
+        batch1 = data.batch if hasattr(data,'batch') else None
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         data.x = F.elu(self.conv2(data.x, data.edge_index, data.edge_attr))
         weight = normalized_cut_2d(data.edge_index, data.pos)
         pos2 = data.pos
         edge_index2 = data.edge_index
+        batch2 = data.batch if hasattr(data,'batch') else None
+
         cluster2 = graclus(data.edge_index, weight, data.x.size(0))
         data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
 
         # upsample
-        data = recover_grid(data, pos2, edge_index2, cluster2, transform=T.Cartesian(cat=False))
+        data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
         data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr))
 
-        data = recover_grid(data, pos1, edge_index1, cluster1, transform=T.Cartesian(cat=False))
+        data = recover_grid(data, pos1, edge_index1, cluster1, batch2=batch2, transform=T.Cartesian(cat=False))
         data.x = F.elu(self.conv4(data.x, data.edge_index, data.edge_attr))
 
         x, batch = data.x, torch.zeros(data.num_nodes)
