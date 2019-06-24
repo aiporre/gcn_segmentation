@@ -81,7 +81,7 @@ class GFCN(torch.nn.Module):
         data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
         data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr))
 
-        data = recover_grid(data, pos1, edge_index1, cluster1, batch2=batch2, transform=T.Cartesian(cat=False))
+        data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch2, transform=T.Cartesian(cat=False))
         data.x = F.elu(self.conv4(data.x, data.edge_index, data.edge_attr))
 
         x, batch = data.x, torch.zeros(data.num_nodes)
