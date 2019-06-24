@@ -33,7 +33,7 @@ def consecutive_cluster(src):
 def recover_grid(source, pos, edge_index, cluster, batch=None, transform=None):
     device = cluster.device
     cluster, perm = consecutive_cluster(cluster)
-    weights = torch.ones((1, len(cluster)), device=device)
+    weights = torch.ones((1, len(cluster))).to(device)
     Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0), weights)
 
     if source.x.dim() == 1:
