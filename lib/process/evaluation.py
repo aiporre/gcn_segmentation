@@ -26,7 +26,11 @@ class Evaluator(object):
             features = features.to(self.device)
             label = label.to(self.device)
             prediction = model(features)
-            pred_mask = (prediction > 0.5).float().squeeze()
+            pred_mask = (prediction > 0.5).float()
+            # reorganize prediction according to the batch.
+            if not pred_mask.size(0) == label.size(0):
+                b = label.size(0)
+                pred_mask = pred_mask.view(b, -1)
             DCM_accum += dice_coeff(pred_mask, label).item()
             i += 1
             printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
