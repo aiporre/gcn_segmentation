@@ -2,6 +2,7 @@ import torch
 from torch.autograd import Function, Variable
 import matplotlib.pyplot as plt
 from .progress_bar import printProgressBar
+from lib.utils import print_debug
 
 class Evaluator(object):
     def __init__(self, dataset, batch_size=64, to_tensor=True, device=None):
@@ -64,7 +65,14 @@ class DiceCoeff(Function):
     def forward(self, inputs, targets):
         self.save_for_backward(inputs, targets)
         eps = 0.0001
-        self.inter = torch.dot(inputs.view(-1), targets.view(-1))
+        try:
+            self.inter = torch.dot(inputs.view(-1), targets.view(-1))
+        except RuntimeError as e:
+            message = 'inputs'+str(inputs.size())+'targets'+str(targets.size())
+            print_debug(message)
+            print_debug('Error calculation in intersection', exception=e)
+            raise e
+
         self.union = torch.sum(inputs)+torch.sum(targets)+eps
 
         t = (2*self.inter.float()+eps)/self.union.float()
