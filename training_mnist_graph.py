@@ -4,7 +4,7 @@ from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
 import torch
 # CONSTANST
-MODEL_PATH = './u-net-mnist.pth'
+MODEL_PATH = './u-net-mnist-g.pth'
 EPOCHS = 1
 
 dataset = GMNIST()
@@ -12,9 +12,9 @@ dataset = GMNIST()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = GFCN()
 model = model.to(device)
-trainer = Trainer(model=model,dataset=dataset, batch_size=64, to_tensor=False, device=device)
+trainer = Trainer(model=model,dataset=dataset, batch_size=16, to_tensor=False, device=device)
 trainer.load_model(model, MODEL_PATH)
-evaluator = Evaluator(dataset=dataset, batch_size=64, to_tensor=False, device=device)
+evaluator = Evaluator(dataset=dataset, batch_size=16, to_tensor=False, device=device)
 
 def train():
     for _ in range(EPOCHS):

@@ -23,7 +23,7 @@ class Evaluator(object):
             features = torch.tensor(image).float() if self.to_tensor else image
             label = torch.tensor(label).float() if self.to_tensor else label
             features = features.to(self.device)
-            features = features.to(self.device)
+            label = label.to(self.device)
             prediction = model(features)
             pred_mask = (prediction > 0.5).float()
             DCM_accum += dice_coeff(pred_mask, label).item()
