@@ -33,7 +33,10 @@ class Evaluator(object):
                 pred_mask = pred_mask.view(b, -1)
             DCM_accum += dice_coeff(pred_mask, label).item()
             i += 1
-            printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
+            if progress_bar:
+                printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
+            else:
+                print('Training Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
         self.dataset.enforce_batch(1)
 
         return DCM_accum/N
@@ -47,6 +50,7 @@ class Evaluator(object):
         image, mask = self.dataset.next_batch(1)
         # plot input image
         #TODO: image will change its shape I need a transformer class
+
         ax1.imshow(image.copy().squeeze())
         # plot mask
         ax2.imshow(mask.squeeze())

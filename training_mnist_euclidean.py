@@ -27,10 +27,10 @@ def train():
 
 def eval():
     model.eval()
-    # print('DCM factor: ' , evaluator.DCM(model))
+    print('DCM factor: ' , evaluator.DCM(model))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
     plt.show()
 
-train()
+# train()
 eval()
