@@ -52,7 +52,7 @@ class Evaluator(object):
         if not image is np.ndarray:
             dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that
             assert(dimension%2,'the dimension is not even define a transformer. Not supported.')
-            image = image.x.cpu().detach().numpy().reshape(dimension/2, dimension/2)
+            image = image.x.cpu().detach().numpy().reshape(dimension//2, dimension//2)
 
 
 
