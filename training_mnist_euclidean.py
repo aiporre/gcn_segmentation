@@ -9,7 +9,7 @@ EPOCHS = 1
 
 dataset = MNIST()
 model = UNet(n_channels=1, n_classes=1)
-trainer = Trainer(model=model,dataset=dataset, batch_size=64)
+trainer = Trainer(model=model,dataset=dataset, batch_size=16)
 trainer.load_model(model, MODEL_PATH)
 evaluator = Evaluator(dataset=dataset)
 

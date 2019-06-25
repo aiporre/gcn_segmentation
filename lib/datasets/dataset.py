@@ -45,6 +45,8 @@ class GraphDataset(object):
     def enforce_batch(self, batch_size):
         self._batch_size = batch_size
         self._dataloader = DataLoader(self._dataset, batch_size=self._batch_size, shuffle=self.shuffle)
+        self._dataloader_iter = self._dataloader.__iter__()
+
 
     @property
     def num_batches(self):
@@ -79,7 +81,7 @@ class GraphDataset(object):
     def next_batch(self, batch_size, shuffle=True):
         if not batch_size == self._batch_size:
             self.enforce_batch(batch_size)
-            self._dataloader_iter = self._dataloader.__iter__()
+            self._index_in_epoch = 0
 
         # restarting dataloader iterable when
         start = self._index_in_epoch
@@ -87,7 +89,11 @@ class GraphDataset(object):
             self._dataloader_iter = self._dataloader.__iter__()
             self._index_in_epoch = 0
         # new sample
-        data = self._dataloader_iter.__next__()
+        try:
+            data = self._dataloader_iter.__next__()
+        except StopIteration:
+            self._dataloader_iter = self._dataloader.__iter__()
+            data = self._dataloader_iter.__next__()
         images, labels = data, data.y
         self._index_in_epoch += self._batch_size
 
