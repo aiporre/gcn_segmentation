@@ -9,14 +9,16 @@ EPOCHS = 1
 
 dataset = GMNIST()
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = GFCN()
-trainer = Trainer(model=model,dataset=dataset, batch_size=64, to_tensor=False)
+model = model.to(device)
+trainer = Trainer(model=model,dataset=dataset, batch_size=64, to_tensor=False, device=device)
 trainer.load_model(model, MODEL_PATH)
-evaluator = Evaluator(dataset=dataset)
+evaluator = Evaluator(dataset=dataset, batch_size=64, to_tensor=False, device=device)
 
 def train():
     for _ in range(EPOCHS):
-        loss = trainer.train_epoch()
+        loss = trainer.train_epoch(progress_bar=False)
         print('loss',loss)
         with torch.no_grad():
             score = evaluator.DCM(model=model)

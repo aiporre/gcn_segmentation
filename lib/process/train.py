@@ -15,6 +15,7 @@ class Trainer(object):
         self._batch_size = kwargs['batch_size'] if 'batch_size' in kwargs.keys() else 1
         self.dataset.enforce_batch(self._batch_size)
         self.to_tensor = kwargs['to_tensor'] if 'to_tensor' in kwargs.keys() else True
+        self.device = kwargs['device'] if 'device' in kwargs.keys() else torch.device('cpu')
 
     def update_lr(self, lr):
         self.optimizer = optim.SGD(self.model.parameters(),
@@ -32,6 +33,9 @@ class Trainer(object):
         images, labels = self.dataset.next_batch(batch_size=self._batch_size, shuffle=True)
         features = torch.tensor(images).float() if self.to_tensor else images
         target = torch.tensor(labels).float() if self.to_tensor else labels
+
+        features = features.to(self.device)
+        target = target.to(self.device)
 
         prediction = self.model(features)
 
@@ -55,7 +59,10 @@ class Trainer(object):
         for i in range(self.dataset.num_batches):
             loss_batch = self.train_batch()
             suffix = 'loss batch '+ str(loss_batch)
-            printProgressBar(i+1, L, prefix='Train Epoch:', suffix='Complete, '+suffix, length=50)
+            if progress_bar:
+                printProgressBar(i+1, L, prefix='Train Epoch:', suffix='Complete, '+suffix, length=50)
+            else:
+                print('Train Epoch:',i+1,' out of ', L,'Training...'+suffix)
             loss.append(loss_batch)
         return loss
 

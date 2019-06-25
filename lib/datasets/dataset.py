@@ -1,5 +1,8 @@
 import numpy as np
-from torch_geometric.data import DataLoader
+try:
+    from torch_geometric.data import DataLoader
+except ImportError:
+    print('Warning: Error while trying to import torch_geometric.data.Dataloader')
 
 class Datasets(object):
     def __init__(self, train, val, test):

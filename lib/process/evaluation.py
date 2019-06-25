@@ -4,10 +4,13 @@ import matplotlib.pyplot as plt
 from .progress_bar import printProgressBar
 
 class Evaluator(object):
-    def __init__(self, dataset, batch_size=32):
+    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None):
         self.dataset = dataset.test
         self._batch_size = batch_size
         self.dataset.enforce_batch(self._batch_size)
+        self.to_tensor = to_tensor
+        self.device = device if device is not None else torch.device('cpu')
+
 
     def DCM(self, model, progress_bar=True):
         DCM_accum = 0
@@ -17,8 +20,10 @@ class Evaluator(object):
             printProgressBar(0, L, prefix='DCM:', suffix='Complete', length=50)
         i = 0
         for image, label in self.dataset.batches():
-            features = torch.tensor(image).float()
-            label = torch.tensor(label).float()
+            features = torch.tensor(image).float() if self.to_tensor else image
+            label = torch.tensor(label).float() if self.to_tensor else label
+            features = features.to(self.device)
+            features = features.to(self.device)
             prediction = model(features)
             pred_mask = (prediction > 0.5).float()
             DCM_accum += dice_coeff(pred_mask, label).item()
@@ -34,18 +39,18 @@ class Evaluator(object):
         ax1 = fig.add_subplot(3, 1, 1)
         ax2 = fig.add_subplot(3, 1, 2)
         ax3 = fig.add_subplot(3, 1, 3)
-
-        image, mask = self.dataset[index]
+        image, mask = self.dataset.next_batch(1)
         # plot input image
         #TODO: image will change its shape I need a transformer class
         ax1.imshow(image.copy().squeeze())
         # plot mask
         ax2.imshow(mask.squeeze())
         # plot prediction
-        input = torch.tensor(image).float()
+        input = torch.tensor(image).float() if self.to_tensor else image
+        input = input.to(self.device)
         prediction = model(input)
         pred_mask = (prediction > 0.5).float()
-        ax3.imshow(pred_mask.detach().numpy().squeeze())
+        ax3.imshow(pred_mask.cpu().detach().numpy().squeeze())
         return fig
 
 
