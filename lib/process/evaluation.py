@@ -58,8 +58,8 @@ class Evaluator(object):
         if not image is np.ndarray:
             dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that
             dimension = np.sqrt(dimension).astype(int)
-            image = image.x.cpu().detach().numpy().reshape((dimension, dimension)).t()
-            mask = mask.cpu().detach().numpy().reshape((dimension,dimension)).t()
+            image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
+            mask = mask.cpu().detach().numpy().reshape((dimension,dimension))
             pred_mask = pred_mask.reshape((dimension,dimension))
 
 
