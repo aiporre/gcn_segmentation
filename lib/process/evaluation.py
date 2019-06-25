@@ -49,11 +49,18 @@ class Evaluator(object):
         ax3 = fig.add_subplot(3, 1, 3)
         # loading the image: it can be a numpy.ndarray or a Data/Batch object
         image, mask = self.dataset.next_batch(1) # selects an aleatory value from the dataset
+
+        input = torch.tensor(image).float() if self.to_tensor else image.clone()
+        input = input.to(self.device)
+        prediction = model(input)
+        pred_mask = (prediction > 0.5).float()
+
         if not image is np.ndarray:
             dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that
             dimension = np.sqrt(dimension).astype(int)
-            image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
-
+            image = image.x.cpu().detach().numpy().reshape((dimension, dimension)).t()
+            mask = mask.cpu().detach().numpy().reshape((dimension,dimension)).t()
+            pred_mask = pred_mask.reshape((dimension,dimension))
 
 
         # plot input image
@@ -63,10 +70,6 @@ class Evaluator(object):
         # plot mask
         ax2.imshow(mask.squeeze())
         # plot prediction
-        input = torch.tensor(image).float() if self.to_tensor else image
-        input = input.to(self.device)
-        prediction = model(input)
-        pred_mask = (prediction > 0.5).float()
         ax3.imshow(pred_mask.cpu().detach().numpy().squeeze())
         return fig
 
