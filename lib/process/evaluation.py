@@ -3,7 +3,7 @@ from torch.autograd import Function, Variable
 import matplotlib.pyplot as plt
 from .progress_bar import printProgressBar
 from lib.utils import print_debug
-
+import numpy as np
 class Evaluator(object):
     def __init__(self, dataset, batch_size=64, to_tensor=True, device=None):
         self.dataset = dataset.test
@@ -47,7 +47,15 @@ class Evaluator(object):
         ax1 = fig.add_subplot(3, 1, 1)
         ax2 = fig.add_subplot(3, 1, 2)
         ax3 = fig.add_subplot(3, 1, 3)
-        image, mask = self.dataset.next_batch(1)
+        # loading the image: it can be a numpy.ndarray or a Data/Batch object
+        image, mask = self.dataset.next_batch(1) # selects an aleatory value from the dataset
+        if not image is np.ndarray:
+            dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that
+            assert(dimension%2,'the dimension is not even define a transformer. Not supported.')
+            image = image.x.cpu().detach().numpy().reshape(dimension/2, dimension/2)
+
+
+
         # plot input image
         #TODO: image will change its shape I need a transformer class
 
