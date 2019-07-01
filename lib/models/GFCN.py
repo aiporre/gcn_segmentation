@@ -5,6 +5,7 @@ from torch_geometric.utils import normalized_cut
 from torch_geometric.data import Data, Batch
 from torch_geometric.nn import graclus, max_pool
 from torch_geometric.nn import SplineConv
+from lib.utils import print_debug
 
 
 
@@ -88,6 +89,8 @@ def bweights(source, cluster):
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
     device = cluster.device
     cluster, perm = consecutive_cluster(cluster)
+    print_debug('======> weights:', weights.size())
+    print_debug('======> cluster:', cluster.size())
     Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0),
                                                                               weights.unsqueeze(0))
     if source.x.dim() == 1:
