@@ -91,8 +91,9 @@ def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=No
     cluster, perm = consecutive_cluster(cluster)
     print_debug('======> weights:', weights.size())
     print_debug('======> cluster:', cluster.size())
-    Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0),
-                                                                              weights.unsqueeze(0))
+    weights = weights.unsqueeze(0) if weights.dim() == 1 else weights
+    Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0), weights)
+
     if source.x.dim() == 1:
         x = source.x.unsqueeze(0).mm(Q).squeeze()
     else:
