@@ -32,7 +32,6 @@ def load_itk(filename):
 
     return ct_scan, origin, spacing
 
-
 def load_vessel_mask_pre(shape, path):
     vessel_mask = np.load(os.path.join(path))
     return vessel_mask, range(200,205)
