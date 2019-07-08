@@ -4,10 +4,16 @@ from .dataset import Datasets, Dataset
 from config import VESSEL_DIR
 import SimpleITK as sitk
 import os
-import matplotlib.pyplot as plt
-import pyqtgraph as pg
 import pandas as pd
-from matplotlib.colors import Normalize
+import os
+from .dataset import Datasets, Dataset, GraphDataset
+import torch
+from torch_geometric.data import (Dataset, Data)
+import torch_geometric.transforms as T
+from tensorflow.examples.tutorials.mnist import input_data
+import numpy as np
+from lib.graph import grid_tensor
+
 
 
 def load_itk(filename):
@@ -43,7 +49,7 @@ def load_vessel_mask_csv(shape, path):
     return vessel_mask, z_slices
 
 
-def read_dataset(data_dir):
+def read_dataset(data_dir, test_rate):
     '''
         Reads the directory and conforms the structure of generic datasets:
         {'train': {'images': list of images, 'labels': list of labels}
@@ -63,81 +69,88 @@ def read_dataset(data_dir):
         vessel_mask, _ = load_vessel_mask_pre(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_OutputVolume.npy'.format(i)))
         # alternatively, we may curate the 9 slices there fore we need to know which slices were annotated
         # vessel_mask_annotations, z_slices = load_vessel_mask_csv(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_Annotations.csv'.format(i)))
-
-        # plotting stuff...
-        # print('vessel_mask: ', vessel_mask.shape)
-        # print('origin: ', origin)
-        # print('spacing', spacing)
-        # print('z_slices', z_slices)
-        # im1 = ct_scan_masked/ct_scan_masked.max()
-        # im2 = vessel_mask/vessel_mask.max()
-        # # im1[im2==1]=2
-        # # pg.image(im1)
-        # # input('click to end')
-        # im2[vessel_mask_annotations==1]=-0.5
-        # vmax = np.abs(im2).max()
-        # vmin = -vmax
-        # cmap = plt.cm.RdYlBu
-        #
-        # for z_slice in z_slices:
-        #     plt.figure()
-        #     plt.imshow(im1[z_slice,:,:],cmap='gray')
-        #     alphas = np.ones_like(im2[z_slice,:,:])
-        #     alphas[im2[z_slice,:,:]==0]=0
-        #     colors = Normalize(vmin, vmax, clip=True)(im2[z_slice,:,:])
-        #     colors = cmap(colors)
-        #     colors[..., -1] = alphas
-        #     plt.imshow(colors)
-        #     plt.show()
         images += [ct_scan_masked[i,:,:] for i in range(len(ct_scan_masked))]
         labels += [vessel_mask[i, :, :] for i in range(len(vessel_mask))]
     # TODO: split is hardcoded
-    split = 0.2
+    split = test_rate
     L = int(split*len(images))
     output['train']['images'], output['test']['images'] = np.stack(images[:-L], axis=0), np.stack(images[-L:], axis=0)
     output['train']['labels'], output['test']['labels'] = np.stack(labels[:-L], axis=0), np.stack(labels[-L:], axis=0)
     return output
-class VESSEL12(Datasets):
-    def __init__(self,  data_dir=VESSEL_DIR):
-        mnist = read_dataset(data_dir)
 
-        images = self._preprocess_images(mnist['train']['images'])
-        labels = self._preprocess_labels(mnist['train']['labels'])
-        train = Dataset(images, labels)
 
-        images = self._preprocess_images(mnist['test']['images'])
-        labels = self._preprocess_labels(mnist['test']['labels'])
-        val = Dataset(images, labels)
 
-        images = self._preprocess_images(mnist['test']['images'])
-        labels = self._preprocess_labels(mnist['test']['labels'])
-        test = Dataset(images, labels)
+class GVESSEL12(Datasets):
+    def __init__(self, data_dir=VESSEL_DIR, batch_size=32, test_rate=0.2):
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        self.test_rate = test_rate
 
-        super(VESSEL12, self).__init__(train, val, test)
+        train_dataset = _GVESSEL12(self.data_dir, train=True, transform=T.Cartesian())
+        test_dataset = _GVESSEL12(self.data_dir, False, transform=T.Cartesian())
+
+        train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
+        test = GraphDataset(test_dataset, batch_size=self.batch_size, shuffle=False)
+
+        super(GVESSEL12, self).__init__(train=train, test=test, val=test)
+
+
+
+class _GVESSEL12(Dataset):
+
+    def __init__(self,
+                 root,
+                 train=True,
+                 test_rate = 0.2,
+                 transform=None,
+                 pre_transform=None,
+                 pre_filter=None):
+        self.test_rate = test_rate
+        self.train = train
+        super(_GVESSEL12, self).__init__(root, transform, pre_transform,
+                                         pre_filter)
 
     @property
-    def classes(self):
-        return ['foreground', 'background']
+    def raw_file_names(self):
+        return []
 
     @property
-    def width(self):
-        return 512
+    def processed_file_names(self):
+        if self.train:
+            return ['data_{}.pt'.format(i) for i in range(8000)]
+        else:
+            return ['data_{}.pt'.format(i) for i in range(8000,10000)]
 
-    @property
-    def height(self):
-        return 512
+    def download(self):
+        pass
 
-    @property
-    def num_channels(self):
-        return 1
+    def __len__(self):
+        return len(self.processed_file_names)
 
-    def _preprocess_images(self, images):
-        return np.expand_dims(images,axis=1)
+    def process(self):
+        i = self.offset
+        vessel12 = read_dataset(self.raw_dir)
+        images = vessel12['train']['images'] if self.train else vessel12['test']['images']
+        masks = vessel12['train']['labels'] if self.train else vessel12['test']['images']
 
-    def _preprocess_labels(self, images):
-        return images #np.expand_dims(images, axis=1)
-        # threshold = 0.1
-        # images = np.reshape(images, (-1, self.height, self.width,
-        #                     self.num_channels))
-        # masks = (images > threshold).astype(np.float)
-        # return masks.squeeze()
+        for image, mask in zip(images, masks):
+            # Read data from `raw_path`.
+            grid = grid_tensor((28, 28), connectivity=4)
+            grid.x = torch.tensor(image.reshape(28 * 28)).float()
+            grid.y = torch.tensor([mask.reshape(28 * 28)]).float()
+            data = grid
+
+            if self.pre_filter is not None and not self.pre_filter(data):
+                continue
+
+            if self.pre_transform is not None:
+                data = self.pre_transform(data)
+
+            torch.save(data, os.path.join(self.processed_dir, 'data_{}.pt'.format(i)))
+            i += 1
+
+    def get(self, idx):
+        idx += self.offset
+        data = torch.load(os.path.join(self.processed_dir, 'data_{}.pt'.format(idx)))
+        return data
+
