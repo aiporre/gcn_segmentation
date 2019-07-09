@@ -4,8 +4,8 @@ from .dataset import Datasets, Dataset
 from config import VESSEL_DIR
 import SimpleITK as sitk
 import os
-import matplotlib.pyplot as plt
-import pyqtgraph as pg
+# import matplotlib.pyplot as plt
+# import pyqtgraph as pg
 import pandas as pd
 from .download import maybe_download_and_extract
 from imageio import imread
