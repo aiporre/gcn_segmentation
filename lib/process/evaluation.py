@@ -44,9 +44,10 @@ class Evaluator(object):
     def plot_prediction(self,model, index=0, fig=None, figsize=(10,10)):
         if not fig:
             fig = plt.figure(figsize=figsize)
-        ax1 = fig.add_subplot(3, 1, 1)
-        ax2 = fig.add_subplot(3, 1, 2)
-        ax3 = fig.add_subplot(3, 1, 3)
+        ax1 = fig.add_subplot(2, 2, 1)
+        ax2 = fig.add_subplot(2, 2, 2)
+        ax3 = fig.add_subplot(2, 2, 3)
+        ax4 = fig.add_subplot(2, 2, 4)
         # loading the image: it can be a numpy.ndarray or a Data/Batch object
         image, mask = self.dataset.next_batch(1) # selects an aleatory value from the dataset
 
@@ -55,7 +56,7 @@ class Evaluator(object):
         prediction = model(input)
         pred_mask = (prediction > 0.5).float()
 
-        if not image is np.ndarray:
+        if not isinstance(image,np.ndarray):
             dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that
             dimension = np.sqrt(dimension).astype(int)
             image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
@@ -66,11 +67,17 @@ class Evaluator(object):
         # plot input image
         #TODO: image will change its shape I need a transformer class
 
-        ax1.imshow(image.copy().squeeze())
+        ax1.imshow(image.copy().squeeze(),cmap='gray')
+        ax1.set_title('original image')
+        # plot p(y=1|X=x)
+        ax2.imshow(prediction.cpu().detach().numpy().squeeze(), cmap='gray')
+        ax2.set_title('probability map')
         # plot mask
-        ax2.imshow(mask.squeeze())
+        ax3.imshow(mask.squeeze(),cmap='gray')
+        ax3.set_title('ground truth mask')
         # plot prediction
-        ax3.imshow(pred_mask.cpu().detach().numpy().squeeze())
+        ax4.imshow(pred_mask.cpu().detach().numpy().squeeze(),cmap='gray')
+        ax4.set_title('predicted mask >0.5 prob')
         return fig
 
 
