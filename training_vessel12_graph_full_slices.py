@@ -20,7 +20,7 @@ def process_command_line():
                         help="learning rate")
     parser.add_argument("-g", "--epochs", type=int, default=10,
                         help="parameter gamam of the gaussians")
-    parser.add_argument("-g", "--vesseldir", type=str, default=VESSEL_DIR,
+    parser.add_argument("-d", "--vesseldir", type=str, default=VESSEL_DIR,
                         help="parameter gamam of the gaussians")
 
     return parser.parse_args()
