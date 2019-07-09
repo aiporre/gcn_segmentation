@@ -77,3 +77,10 @@ class VESSELTest(TestCase):
         data1 = VESSEL12('./data/vessel12/',annotated_slices=True)
         self.assertEqual(data1.train.num_examples,8)
         self.assertEqual(data1.test.num_examples, 1)
+        images, _ = data1.train.next_batch(
+            data1.train.num_examples, shuffle=False)
+
+        self.assertEqual(np.float, images.dtype)
+        self.assertLessEqual(np.abs(images.mean()), 0.01)
+        self.assertLessEqual(images.std(), 1.01)
+

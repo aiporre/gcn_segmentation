@@ -113,8 +113,12 @@ def read_dataset_cured(data_dir):
     raw_dir = os.path.join(data_dir,'Cured')
     maybe_download_and_extract('https://transfer.sh/3xwmz/cured_vessel12.zip',raw_dir)
     for i in range(9): # TODO: hardcode
-        im = np.squeeze(imread(os.path.join(raw_dir,"lung{}.png".format(i))))
-        lb = np.squeeze(imread(os.path.join(raw_dir, "mask{}.png".format(i))))
+        im = np.squeeze(imread(os.path.join(raw_dir,"lung{}.png".format(i)))).astype(np.float)
+        lb = np.squeeze(imread(os.path.join(raw_dir, "mask{}.png".format(i)))).astype(np.float)
+        mean = im.mean()
+        std = im.std()
+        im = (im-mean)/std
+        lb = lb/lb.max()
         images.append(im)
         labels.append(lb)
     # TODO: again split is hardcoded
