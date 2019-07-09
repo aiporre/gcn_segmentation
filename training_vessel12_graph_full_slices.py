@@ -1,15 +1,18 @@
 import argparse
 
 from lib.models import UNet
-from lib.datasets import VESSEL12
+from lib.datasets import GVESSEL12
 from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
 import torch
+from config import VESSEL_DIR
 # CONSTANST
 MODEL_PATH = './u-net-vessel12-g.pth'
 EPOCHS = 1
+DATA_DIR = VESSEL_DIR
 
-dataset = VESSEL12()
+
+dataset = None # GVESSEL12(data_dir=DATA_DIR)
 model = UNet(n_channels=1, n_classes=1)
 trainer = Trainer(model=model,dataset=dataset, batch_size=4)
 trainer.load_model(model, MODEL_PATH)
@@ -42,6 +45,8 @@ def process_command_line():
                         help="learning rate")
     parser.add_argument("-g", "--epochs", type=int, default=10,
                         help="parameter gamam of the gaussians")
+    parser.add_argument("-g", "--vesseldir", type=str, default=VESSEL_DIR,
+                        help="parameter gamam of the gaussians")
 
     return parser.parse_args()
 
@@ -50,5 +55,6 @@ def process_command_line():
 if __name__ == '__main__':
     args = process_command_line()
     EPOCHS = args.epochs
+    dataset = GVESSEL12(data_dir=args.vesseldir)
     train(lr=args.lr, progress_bar=args.progressbar)
     eval(progress_bar=args.progressbar)
