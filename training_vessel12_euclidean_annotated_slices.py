@@ -60,7 +60,6 @@ def process_command_line():
 
 if __name__ == '__main__':
     args = process_command_line()
-    global EPOCHS
     EPOCHS = args.epochs
     train(lr=args.lr, progress_bar=args.progressbar)
 
