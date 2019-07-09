@@ -6,13 +6,32 @@ from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
 import torch
 from config import VESSEL_DIR
+
+
+
+def process_command_line():
+    """Parse the command line arguments.
+    """
+    parser = argparse.ArgumentParser(description="Machine Learning exercise 5.",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-t", "--progressbar", type=bool, default=False,
+                        help="progress bar continuous")
+    parser.add_argument("-lr", "--lr", type=float, default=0.001,
+                        help="learning rate")
+    parser.add_argument("-g", "--epochs", type=int, default=10,
+                        help="parameter gamam of the gaussians")
+    parser.add_argument("-g", "--vesseldir", type=str, default=VESSEL_DIR,
+                        help="parameter gamam of the gaussians")
+
+    return parser.parse_args()
+
 # CONSTANST
+
+args = process_command_line()
+EPOCHS = args.epochs
 MODEL_PATH = './u-net-vessel12-g.pth'
 EPOCHS = 1
-DATA_DIR = VESSEL_DIR
-
-
-dataset = None # GVESSEL12(data_dir=DATA_DIR)
+dataset = GVESSEL12(data_dir=args.vesseldir)
 model = UNet(n_channels=1, n_classes=1)
 trainer = Trainer(model=model,dataset=dataset, batch_size=4)
 trainer.load_model(model, MODEL_PATH)
@@ -34,27 +53,5 @@ def eval():
     fig = evaluator.plot_prediction(model=model)
     plt.show()
 
-def process_command_line():
-    """Parse the command line arguments.
-    """
-    parser = argparse.ArgumentParser(description="Machine Learning exercise 5.",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-t", "--progressbar", type=bool, default=False,
-                        help="progress bar continuous")
-    parser.add_argument("-lr", "--lr", type=float, default=0.001,
-                        help="learning rate")
-    parser.add_argument("-g", "--epochs", type=int, default=10,
-                        help="parameter gamam of the gaussians")
-    parser.add_argument("-g", "--vesseldir", type=str, default=VESSEL_DIR,
-                        help="parameter gamam of the gaussians")
-
-    return parser.parse_args()
-
-
-
-if __name__ == '__main__':
-    args = process_command_line()
-    EPOCHS = args.epochs
-    dataset = GVESSEL12(data_dir=args.vesseldir)
-    train(lr=args.lr, progress_bar=args.progressbar)
-    eval(progress_bar=args.progressbar)
+train(lr=args.lr, progress_bar=args.progressbar)
+eval(progress_bar=args.progressbar)
