@@ -6,4 +6,4 @@ scikit-learn
 numpy_groupies
 cached-property
 SimpleITK
-
+pyqtgraph
