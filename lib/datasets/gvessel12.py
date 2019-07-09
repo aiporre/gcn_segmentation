@@ -48,7 +48,7 @@ def load_vessel_mask_csv(shape, path):
     return vessel_mask, z_slices
 
 
-def read_dataset(data_dir, test_rate):
+def read_dataset(data_dir, test_rate=0.2):
     '''
         Reads the directory and conforms the structure of generic datasets:
         {'train': {'images': list of images, 'labels': list of labels}
