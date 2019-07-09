@@ -6,7 +6,7 @@ import torch
 import numpy as np
 # CONSTANST
 MODEL_PATH = './u-net-vessel12_annotated_slices.pth'
-EPOCHS = 100
+EPOCHS = 200
 
 dataset = VESSEL12('./data/vessel12/', annotated_slices=True)
 model = UNet(n_channels=1, n_classes=1)
@@ -37,5 +37,5 @@ def eval():
     fig = evaluator.plot_prediction(model=model)
     plt.show()
 
-# train()
+train()
 eval()
