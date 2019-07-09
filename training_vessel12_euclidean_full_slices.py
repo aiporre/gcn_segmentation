@@ -4,7 +4,7 @@ from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
 import torch
 # CONSTANST
-MODEL_PATH = './u-net-vessel12.pth'
+MODEL_PATH = './u-net-vessel12_full_slices.pth'
 EPOCHS = 1
 
 dataset = VESSEL12()
@@ -18,7 +18,7 @@ def train():
         loss = trainer.train_epoch()
         print('loss',loss)
         with torch.no_grad():
-            score = evaluator.DCM()
+            score = evaluator.DCM(model)
             print('DCM score:', score)
     print('end of training')
     trainer.save_model(MODEL_PATH)
@@ -29,5 +29,5 @@ def eval():
     fig = evaluator.plot_prediction(model=model)
     plt.show()
 
-train()
+# train()
 eval()

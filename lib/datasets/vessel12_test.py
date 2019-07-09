@@ -73,3 +73,7 @@ class VESSELTest(TestCase):
         _, labels = data.test.next_batch(5, shuffle=False)
 
         data.test.next_batch(data.test.num_examples - 5, shuffle=False)
+    def test_vessel12_annotated(self):
+        data1 = VESSEL12('./data/vessel12/',annotated_slices=True)
+        self.assertEqual(data1.train.num_examples,8)
+        self.assertEqual(data1.test.num_examples, 1)

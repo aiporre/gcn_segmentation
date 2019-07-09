@@ -7,7 +7,8 @@ import os
 import matplotlib.pyplot as plt
 import pyqtgraph as pg
 import pandas as pd
-from matplotlib.colors import Normalize
+from .download import maybe_download_and_extract
+from imageio import imread
 
 
 def load_itk(filename):
@@ -43,7 +44,7 @@ def load_vessel_mask_csv(shape, path):
     return vessel_mask, z_slices
 
 
-def read_dataset(data_dir):
+def read_dataset_mhd(data_dir, annotated_slices=True):
     '''
         Reads the directory and conforms the structure of generic datasets:
         {'train': {'images': list of images, 'labels': list of labels}
@@ -61,8 +62,14 @@ def read_dataset(data_dir):
         ct_scan_masked = (ct_scan_masked-ct_scan_masked.min())/(ct_scan_masked.max()-ct_scan_masked.min())
 
         vessel_mask, _ = load_vessel_mask_pre(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_OutputVolume.npy'.format(i)))
-        # alternatively, we may curate the 9 slices there fore we need to know which slices were annotated
-        # vessel_mask_annotations, z_slices = load_vessel_mask_csv(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_Annotations.csv'.format(i)))
+
+        # this is legacy code commented because this is not industrial code XD
+        # # alternatively, we may curate the 9 slices there fore we need to know which slices were annotated
+        # if annotated_slices:
+        #     vessel_mask_annotations, z_slices = load_vessel_mask_csv(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_Annotations.csv'.format(i)))
+        #     ct_scan_masked = ct_scan_masked[z_slices]
+        #     vessel_mask = vessel_mask[z_slices]
+
 
         # plotting stuff...
         # print('vessel_mask: ', vessel_mask.shape)
@@ -97,20 +104,45 @@ def read_dataset(data_dir):
     output['train']['images'], output['test']['images'] = np.stack(images[:-L], axis=0), np.stack(images[-L:], axis=0)
     output['train']['labels'], output['test']['labels'] = np.stack(labels[:-L], axis=0), np.stack(labels[-L:], axis=0)
     return output
-class VESSEL12(Datasets):
-    def __init__(self,  data_dir=VESSEL_DIR):
-        mnist = read_dataset(data_dir)
 
-        images = self._preprocess_images(mnist['train']['images'])
-        labels = self._preprocess_labels(mnist['train']['labels'])
+
+def read_dataset_cured(data_dir):
+    output = {'train': {'images': [], 'labels': []}, 'test': {'images': [], 'labels': []}}
+    images = []
+    labels = []
+    raw_dir = os.path.join(data_dir,'Cured')
+    maybe_download_and_extract('https://transfer.sh/3xwmz/cured_vessel12.zip',raw_dir)
+    for i in range(9): # TODO: hardcode
+        im = np.squeeze(imread(os.path.join(raw_dir,"lung{}.png".format(i))))
+        lb = np.squeeze(imread(os.path.join(raw_dir, "mask{}.png".format(i))))
+        images.append(im)
+        labels.append(lb)
+    # TODO: again split is hardcoded
+    split = 0.2
+    L = int(split*len(images))
+    output['train']['images'], output['test']['images'] = np.stack(images[:-L], axis=0), np.stack(images[-L:], axis=0)
+    output['train']['labels'], output['test']['labels'] = np.stack(labels[:-L], axis=0), np.stack(labels[-L:], axis=0)
+
+    return output
+
+
+class VESSEL12(Datasets):
+    def __init__(self,  data_dir=VESSEL_DIR, annotated_slices=False):
+        if annotated_slices:
+            vessel_data = read_dataset_cured(data_dir)
+        else:
+            vessel_data = read_dataset_mhd(data_dir)
+
+        images = self._preprocess_images(vessel_data['train']['images'])
+        labels = self._preprocess_labels(vessel_data['train']['labels'])
         train = Dataset(images, labels)
 
-        images = self._preprocess_images(mnist['test']['images'])
-        labels = self._preprocess_labels(mnist['test']['labels'])
+        images = self._preprocess_images(vessel_data['test']['images'])
+        labels = self._preprocess_labels(vessel_data['test']['labels'])
         val = Dataset(images, labels)
 
-        images = self._preprocess_images(mnist['test']['images'])
-        labels = self._preprocess_labels(mnist['test']['labels'])
+        images = self._preprocess_images(vessel_data['test']['images'])
+        labels = self._preprocess_labels(vessel_data['test']['labels'])
         test = Dataset(images, labels)
 
         super(VESSEL12, self).__init__(train, val, test)

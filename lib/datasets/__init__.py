@@ -4,7 +4,11 @@ from .pascal_voc import PascalVOC
 from .queue import PreprocessQueue
 from .m2nist import M2NIST
 from .vessel12 import VESSEL12
-from .gvessel12 import GVESSEL12
+try:
+    from .gvessel12 import GVESSEL12
+except ImportError:
+    print('Warning: Error while importing lib.GVESSEL module. Pytorch Geometric not installed')
+
 try:
     from .gmnist import GMNIST
 except ImportError:
