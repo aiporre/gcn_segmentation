@@ -1,3 +1,5 @@
+import argparse
+
 from lib.models import UNet
 from lib.datasets import VESSEL12
 from lib.process import Trainer, Evaluator
@@ -29,5 +31,24 @@ def eval():
     fig = evaluator.plot_prediction(model=model)
     plt.show()
 
-train()
-eval()
+def process_command_line():
+    """Parse the command line arguments.
+    """
+    parser = argparse.ArgumentParser(description="Machine Learning exercise 5.",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-t", "--progressbar", type=bool, default=False,
+                        help="progress bar continuous")
+    parser.add_argument("-lr", "--lr", type=float, default=0.001,
+                        help="learning rate")
+    parser.add_argument("-g", "--epochs", type=int, default=10,
+                        help="parameter gamam of the gaussians")
+
+    return parser.parse_args()
+
+
+
+if __name__ == '__main__':
+    args = process_command_line()
+    EPOCHS = args.epochs
+    train(lr=args.lr, progress_bar=args.progressbar)
+    eval(progress_bar=args.progressbar)
