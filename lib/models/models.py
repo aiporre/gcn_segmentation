@@ -320,6 +320,13 @@ class UNet(nn.Module):
         x = self.outc(x)
         return torch.sigmoid(x)
 
+class FCN(nn.Module):
+    def __init__(self, n_channels, n_classes):
+        super(FCN, self).__init__()
+        self.inc = inconv(n_channels, 64)
+        self.down1 = down(64, 128)
+
+
 if __name__ == "__main__":
     # A full forward pass
     im = torch.randn(1, 1, 64, 84)
