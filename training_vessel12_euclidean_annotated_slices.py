@@ -47,7 +47,7 @@ def process_command_line():
     """
     parser = argparse.ArgumentParser(description="Machine Learning exercise 5.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-t", "--progressbar", type=int, default=0,
+    parser.add_argument("-t", "--progressbar", type=bool, default=False,
                         help="progress bar continuous")
     parser.add_argument("-lr", "--lr", type=float, default=0.001,
                         help="learning rate")
@@ -62,5 +62,6 @@ if __name__ == '__main__':
     args = process_command_line()
     EPOCHS = args.epochs
     train(lr=args.lr, progress_bar=args.progressbar)
+    eval(progress_bar=args.progressbar)
 
 
