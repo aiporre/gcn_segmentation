@@ -116,9 +116,9 @@ class _GVESSEL12(Dataset):
     @property
     def processed_file_names(self):
         if self.train:
-            return ['data_{}.pt'.format(i) for i in range(8000)]
+            return ['data_{}.pt'.format(i) for i in range(1060)]
         else:
-            return ['data_{}.pt'.format(i) for i in range(8000,10000)]
+            return ['data_{}.pt'.format(i) for i in range(1060,1325)]
 
     def download(self):
         pass
@@ -127,7 +127,7 @@ class _GVESSEL12(Dataset):
         return len(self.processed_file_names)
 
     def process(self):
-        i = self.offset
+        i = 0 if self.train else 1060
         vessel12 = read_dataset(self.raw_dir)
         images = vessel12['train']['images'] if self.train else vessel12['test']['images']
         masks = vessel12['train']['labels'] if self.train else vessel12['test']['images']
