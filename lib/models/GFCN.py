@@ -35,7 +35,7 @@ def recover_grid(source, pos, edge_index, cluster, batch=None, transform=None):
     device = cluster.device
     cluster, perm = consecutive_cluster(cluster)
     weights = torch.ones((1, len(cluster))).to(device)
-    Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0), weights)
+    Q = torch.zeros((source.num_nodes, cluster.shape[0]),dtype=weights.dtype).to(device).scatter_(0, cluster.unsqueeze(0), weights)
 
     if source.x.dim() == 1:
         x = source.x.unsqueeze(0).mm(Q).squeeze()
@@ -60,15 +60,16 @@ def consecutive_cluster(src):
 
 
 def bweights(source, cluster):
-    cluster, perm = consecutive_cluster(cluster)
-    cluster_codes, inversion = cluster.unique(return_inverse=True)
+    with torch.no_grad():
+        cluster, perm = consecutive_cluster(cluster)
+        cluster_codes, inversion = cluster.unique(return_inverse=True)
 
-    if source.x.dim() == 1:
-        centroids = torch.stack([source.x[cluster == i].mean() for i in cluster_codes])
-    #         cluster_count = torch.stack([source.x[cluster==i].count() for i in cluster_codes])
-    else:
-        # the max dim is 2
-        centroids = torch.stack([source.x[cluster == i].mean(dim=0) for i in cluster_codes])
+        if source.x.dim() == 1:
+            centroids = torch.stack([source.x[cluster == i].mean() for i in cluster_codes])
+    #             cluster_count = torch.stack([source.x[cluster==i].count() for i in cluster_codes])
+        else:
+            #   the max dim is 2
+            centroids = torch.stack([source.x[cluster == i].mean(dim=0) for i in cluster_codes])
     #         cluster_count = torch.stack([source.x[cluster==i].count() for i in cluster_codes])
 
     # alternative 1
@@ -79,36 +80,72 @@ def bweights(source, cluster):
     #     for i in range(len(weights)):
     #         weights[i] = weights[i]/centroids[cluster[i]]
     # alternative 3
-    aux = centroids[inversion]
-    weights = source.x/aux
+        weights = source.x/centroids[inversion]
 
-    weights[weights != weights] = 0
-    return weights.t(), centroids
-
+        weights[weights != weights] = 0
+    return weights
 
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
     device = cluster.device
     cluster, perm = consecutive_cluster(cluster)
-    print_debug('======> weights:', weights.size())
-    print_debug('======> cluster:', cluster.size())
-    weights = weights.unsqueeze(0) if weights.dim() == 1 else weights
-    Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0), weights)
-
-    if source.x.dim() == 1:
-        x = source.x.unsqueeze(0).mm(Q).squeeze()
-    else:
-        # the max dimension is 2
-        x = Q.transpose(0, 1).mm(source.x)
-        print('x.shape: ', x.shape)
+#     weights = weights.to(device)
+    print('======> weights:', weights.size())
+    print('======> cluster:', cluster.size())
+    
     if batch is not None:
-        data = Batch(x=x, edge_index=edge_index, pos=pos, batch=batch)
+        data = Batch( x=source.x[cluster]*weights, edge_index=edge_index, pos=pos, batch=batch)
     else:
-        data = Data(x=x, edge_index=edge_index, pos=pos)
+        data = Data( x=source.x[cluster]*weights, edge_index=edge_index, pos=pos)
+#     print('reconstructed data.x.shape' , data.x.shape)
+
 
     if transform is not None:
         data = transform(data)
     return data
 
+class GFCNA(torch.nn.Module):
+    def __init__(self):
+        super(GFCNA, self).__init__()
+        self.conv1 = SplineConv(1, 32, dim=2, kernel_size=5)
+        self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
+        self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)
+        self.conv4 = SplineConv(32, 1, dim=2, kernel_size=5)
+
+    def forward(self, data):
+        data.x = F.elu(self.conv1(data.x, data.edge_index, data.edge_attr))
+        weight = normalized_cut_2d(data.edge_index, data.pos)
+        cluster1 = graclus(data.edge_index, weight, data.x.size(0))
+        pos1 = data.pos
+        edge_index1 = data.edge_index
+        batch1 = data.batch if hasattr(data,'batch') else None
+        # weights1, centroids1 = bweights(data, cluster1)
+        data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
+
+        data.x = F.elu(self.conv2(data.x, data.edge_index, data.edge_attr))
+        weight = normalized_cut_2d(data.edge_index, data.pos)
+        cluster2 = graclus(data.edge_index, weight, data.x.size(0))
+        pos2 = data.pos
+        edge_index2 = data.edge_index
+        batch2 = data.batch if hasattr(data,'batch') else None
+        # weights2, centroids2 = bweights(data, cluster2)
+        data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
+
+        # upsample
+        # data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
+        #                                  batch=batch2, transform=None)
+        data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
+        data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr))
+
+        # data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
+        #                                  batch=batch1, transform=None)
+        data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
+        data.x = F.elu(self.conv4(data.x, data.edge_index, data.edge_attr))
+
+        # TODO handle contract on trainer and  evaluator
+
+        x, batch = data.x, torch.zeros(data.num_nodes)
+
+        return F.sigmoid(x)
 
 class GFCN(torch.nn.Module):
     def __init__(self):
@@ -125,7 +162,7 @@ class GFCN(torch.nn.Module):
         pos1 = data.pos
         edge_index1 = data.edge_index
         batch1 = data.batch if hasattr(data,'batch') else None
-        weights1, centroids1 = bweights(data, cluster1)
+        weights1 = bweights(data, cluster1)
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         data.x = F.elu(self.conv2(data.x, data.edge_index, data.edge_attr))
@@ -134,17 +171,17 @@ class GFCN(torch.nn.Module):
         pos2 = data.pos
         edge_index2 = data.edge_index
         batch2 = data.batch if hasattr(data,'batch') else None
-        weights2, centroids2 = bweights(data, cluster2)
+        weights2 = bweights(data, cluster2)
         data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
 
         # upsample
         data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
-                                         batch=batch2, transform=None)
+                                         batch=batch2, transform=T.Cartesian(cat=False))
         # data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
         data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr))
 
         data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
-                                         batch=batch1, transform=None)
+                                         batch=batch1, transform=T.Cartesian(cat=False))
         # data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
         data.x = F.elu(self.conv4(data.x, data.edge_index, data.edge_attr))
 
