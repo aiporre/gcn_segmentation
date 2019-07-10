@@ -1,6 +1,7 @@
 from lib.models import UNet
 from lib.datasets import VESSEL12
 from lib.process import Trainer, Evaluator
+from lib.utils import savefigs
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
@@ -34,10 +35,11 @@ def train(lr = 0.001, progress_bar=False):
     print('end of training')
     trainer.save_model(MODEL_PATH)
 
-def eval(progress_bar = False):
+def eval(progress_bar = False, figs_dir='./figs'):
     # print('DCM factor: ' , evaluator.DCM(model,progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
+    savefigs(fig_name='unet_e{}_lr{}_annotatedslices.png', fig=fig, fig_dir=figs_dir)
     plt.show()
 
 
@@ -54,6 +56,9 @@ def process_command_line():
     parser.add_argument("-g", "--epochs", type=int, default=10,
                         help="parameter gamam of the gaussians")
 
+    parser.add_argument("-f", "--figsdir", type=str, default='./fig',
+                        help="path to save figs")
+
     return parser.parse_args()
 
 
@@ -62,6 +67,6 @@ if __name__ == '__main__':
     args = process_command_line()
     EPOCHS = args.epochs
     train(lr=args.lr, progress_bar=args.progressbar)
-    eval(progress_bar=args.progressbar)
+    eval(progress_bar=args.progressbar, figs_dir=args.figsdir)
 
 
