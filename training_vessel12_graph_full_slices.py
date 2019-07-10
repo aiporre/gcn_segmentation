@@ -1,6 +1,6 @@
 import argparse
 
-from lib.models import UNet
+from lib.models import GFCN
 from lib.datasets import GVESSEL12
 from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
@@ -34,10 +34,10 @@ EPOCHS = args.epochs
 MODEL_PATH = './u-net-vessel12-g.pth'
 EPOCHS = 1
 dataset = GVESSEL12(data_dir=args.vesseldir)
-model = UNet(n_channels=1, n_classes=1)
+model = GFCN()
 trainer = Trainer(model=model,dataset=dataset, batch_size=4,to_tensor=False)
 trainer.load_model(model, MODEL_PATH)
-evaluator = Evaluator(dataset=dataset)
+evaluator = Evaluator(dataset=dataset,to_tensor=False)
 
 def train(lr=0.001, progress_bar=False):
     for _ in range(EPOCHS):
