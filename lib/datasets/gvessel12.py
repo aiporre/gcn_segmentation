@@ -97,7 +97,7 @@ class _GVESSEL12(Dataset):
         if self.train:
             return ['data_{:04d}.pt'.format(i) for i in range(1325-L)]
         else:
-            return ['data_{:04d}.pt'.format(i) for i in range(L,1325)]
+            return ['data_{:04d}.pt'.format(i) for i in range(1325-L,1325)]
 
     def download(self):
         pass
@@ -109,7 +109,7 @@ class _GVESSEL12(Dataset):
         split = self.test_rate
         L = int(split*1325)
         max_slices = 1325-L if self.train else L
-        offset = 0 if self.train else L
+        offset = 0 if self.train else 1325-L
         cnt_slices = 0
         scan_i=20
         while cnt_slices<max_slices:
@@ -129,7 +129,7 @@ class _GVESSEL12(Dataset):
             # process images and store them
             processed_num = len(ct_scan) if cnt_slices+len(ct_scan)<max_slices else max_slices-cnt_slices
             for i in range(processed_num):
-                print('---> file:',i+offset+cnt_slices)
+                print('---> file:', i+offset+cnt_slices)
                 # Read data from `raw_path`.
                 grid = grid_tensor((512, 512), connectivity=4)
                 grid.x = torch.tensor(ct_scan_masked[i, :, :].reshape(512 * 512)).float()
