@@ -13,6 +13,9 @@ import torch_geometric.transforms as T
 from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 from lib.graph import grid_tensor
+from .download import maybe_download_and_extract
+from imageio import imread
+
 
 
 
@@ -51,13 +54,16 @@ def load_vessel_mask_csv(shape, path):
 
 
 class GVESSEL12(Datasets):
-    def __init__(self, data_dir=VESSEL_DIR, batch_size=32, test_rate=0.2):
+    def __init__(self, data_dir=VESSEL_DIR, batch_size=32, test_rate=0.2, annotated_slices=False):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.test_rate = test_rate
-
-        train_dataset = _GVESSEL12(self.data_dir, train=True, transform=T.Cartesian())
-        test_dataset = _GVESSEL12(self.data_dir, False, transform=T.Cartesian())
+        if annotated_slices:
+            train_dataset = _GVESSEL12A(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate)
+            test_dataset = _GVESSEL12A(self.data_dir, False, transform=T.Cartesian(), test_rate=test_rate)
+        else:
+            train_dataset = _GVESSEL12(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate)
+            test_dataset = _GVESSEL12(self.data_dir, False, transform=T.Cartesian(), test_rate=test_rate)
 
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
         test = GraphDataset(test_dataset, batch_size=self.batch_size, shuffle=False)
@@ -151,4 +157,87 @@ class _GVESSEL12(Dataset):
         idx += offset
         data = torch.load(os.path.join(self.processed_dir, 'data_{:04d}.pt'.format(idx)))
         return data
+
+
+
+
+class _GVESSEL12A(Dataset):
+    ''' Dataset GVESSEL12A
+        Vessel12 selected and cleaned annotated slices
+    '''
+
+    def __init__(self,
+                 root,
+                 train=True,
+                 test_rate = 0.2,
+                 transform=None,
+                 pre_transform=None,
+                 pre_filter=None):
+        self.test_rate = test_rate
+        self.train = train
+        super(_GVESSEL12A, self).__init__(root, transform, pre_transform,
+                                         pre_filter)
+
+    @property
+    def raw_file_names(self):
+        return []
+
+    @property
+    def processed_file_names(self):
+        split = self.test_rate
+        L = int(split*9)
+        if self.train:
+            return ['vessel_a_{}.pt'.format(i) for i in range(9-L)]
+        else:
+            return ['vessel_a_{}.pt'.format(i) for i in range(L,9)]
+
+    def download(self):
+        maybe_download_and_extract('https://transfer.sh/3xwmz/cured_vessel12.zip', self.raw_dir)
+
+    def __len__(self):
+        return len(self.processed_file_names)
+
+    def process(self):
+        # compute split
+        split = self.test_rate
+        L = int(split*9)
+        # define range of scans to process
+        scans_range = range(9-L) if self.train else range(L,9)
+        # process scans
+        for scan_i in scans_range:
+            print('processed ', scan_i, ' out of ', len(scans_range))
+            im = np.squeeze(imread(os.path.join(self.raw_dir, "lung{}.png".format(scan_i)))).astype(np.float)
+            lb = np.squeeze(imread(os.path.join(self.raw_dir, "mask{}.png".format(scan_i)))).astype(np.float)
+            mean = im.mean()
+            std = im.std()
+            im = (im-mean)/std
+            lb = lb/lb.max()
+
+            # Read data from `raw_path`.
+            grid = grid_tensor((512, 512), connectivity=4)
+            grid.x = torch.tensor(im.reshape(512 * 512)).float()
+            grid.y = torch.tensor([lb.reshape(512 * 512)]).float()
+            data = grid
+
+            if self.pre_filter is not None and not self.pre_filter(data):
+                continue
+
+            if self.pre_transform is not None:
+                data = self.pre_transform(data)
+
+            torch.save(data, os.path.join(self.processed_dir, 'vessel_a_{}.pt'.format(scan_i)))
+
+
+
+    def get(self, idx):
+        # compute offset
+        split = self.test_rate
+        L = int(split*1325)
+        offset = 0 if self.train else L
+        # get the file
+        idx += offset
+        data = torch.load(os.path.join(self.processed_dir, 'vessel_a_{}.pt'.format(idx)))
+        return data
+
+
 
