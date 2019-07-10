@@ -120,10 +120,8 @@ class _GVESSEL12(Dataset):
                                                                               'VESSEL12_{:02d}_OutputVolume.npy'.format(
                                                                                   scan_i)))
 
+            # process images and store them
             processed_num = len(ct_scan) if cnt_slices+len(ct_scan)<max_slices else max_slices-cnt_slices
-            cnt_slices+=processed_num
-
-
             for i in range(processed_num):
                 # Read data from `raw_path`.
                 grid = grid_tensor((512, 512), connectivity=4)
@@ -138,6 +136,10 @@ class _GVESSEL12(Dataset):
                     data = self.pre_transform(data)
 
                 torch.save(data, os.path.join(self.processed_dir, 'data_{:03d}.pt'.format(i+offset+cnt_slices)))
+
+            # update counter
+            cnt_slices+=processed_num
+
 
 
     def get(self, idx):
