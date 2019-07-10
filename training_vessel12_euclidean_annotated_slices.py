@@ -39,7 +39,7 @@ def eval(progress_bar = False, figs_dir='./figs'):
     # print('DCM factor: ' , evaluator.DCM(model,progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
-    savefigs(fig_name='unet_e{}_lr{}_annotatedslices.png'.format(EPOCHS,0.001), fig=fig, fig_dir=figs_dir)
+    savefigs(fig_name='unet_e{}_lr{}_annotatedslices'.format(EPOCHS,0.001), fig=fig, fig_dir=figs_dir)
     plt.show()
 
 

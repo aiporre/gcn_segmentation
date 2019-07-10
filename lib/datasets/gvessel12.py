@@ -108,7 +108,7 @@ class _GVESSEL12(Dataset):
         while cnt_slices<max_slices:
             scan_i+=1
             print('processed ', cnt_slices, ' out of ', max_slices)
-            lung_mask, _, _ = load_itk(os.path.join(self.raw_dir, 'train', 'Lungmasks', 'VESSEL12_{:02d}.mhd'.format(i)))
+            lung_mask, _, _ = load_itk(os.path.join(self.raw_dir, 'train', 'Lungmasks', 'VESSEL12_{:02d}.mhd'.format(scan_i)))
             ct_scan, origin, spacing = load_itk(
                 os.path.join(self.raw_dir, 'train', 'Scans', 'VESSEL12_{:02d}.mhd'.format(scan_i)))
             ct_scan_masked = lung_mask*ct_scan
