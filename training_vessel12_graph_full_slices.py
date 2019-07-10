@@ -35,7 +35,7 @@ MODEL_PATH = './u-net-vessel12-g.pth'
 EPOCHS = 1
 dataset = GVESSEL12(data_dir=args.vesseldir)
 model = UNet(n_channels=1, n_classes=1)
-trainer = Trainer(model=model,dataset=dataset, batch_size=4)
+trainer = Trainer(model=model,dataset=dataset, batch_size=4,to_tensor=False)
 trainer.load_model(model, MODEL_PATH)
 evaluator = Evaluator(dataset=dataset)
 
