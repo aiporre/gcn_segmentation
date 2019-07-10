@@ -48,35 +48,6 @@ def load_vessel_mask_csv(shape, path):
     return vessel_mask, z_slices
 
 
-def read_dataset(data_dir, test_rate=0.2):
-    '''
-        Reads the directory and conforms the structure of generic datasets:
-        {'train': {'images': list of images, 'labels': list of labels}
-         'test': {'images': list of images, 'labels': list of labels}}
-    '''
-    output = {'train': {'images':[], 'labels':[]} , 'test': {'images':[], 'labels':[]}}
-    images = []
-    labels = []
-    for i in [21,22,23]:
-        # reading the ct-scan masked with the lungs
-        lung_mask, _, _ = load_itk(os.path.join(data_dir, 'train', 'Lungmasks', 'VESSEL12_{:02d}.mhd'.format(i)))
-        ct_scan, origin, spacing = load_itk(os.path.join(data_dir, 'train', 'Scans', 'VESSEL12_{:02d}.mhd'.format(i)))
-        ct_scan_masked = lung_mask*ct_scan
-        ct_scan_masked.astype(np.float,copy=False)
-        ct_scan_masked = (ct_scan_masked-ct_scan_masked.min())/(ct_scan_masked.max()-ct_scan_masked.min())
-
-        vessel_mask, _ = load_vessel_mask_pre(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_OutputVolume.npy'.format(i)))
-        # alternatively, we may curate the 9 slices there fore we need to know which slices were annotated
-        # vessel_mask_annotations, z_slices = load_vessel_mask_csv(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_Annotations.csv'.format(i)))
-        images += [ct_scan_masked[i,:,:] for i in range(len(ct_scan_masked))]
-        labels += [vessel_mask[i, :, :] for i in range(len(vessel_mask))]
-    # TODO: split is hardcoded
-    split = test_rate
-    L = int(split*len(images))
-    output['train']['images'], output['test']['images'] = np.stack(images[:-L], axis=0), np.stack(images[-L:], axis=0)
-    output['train']['labels'], output['test']['labels'] = np.stack(labels[:-L], axis=0), np.stack(labels[-L:], axis=0)
-    return output
-
 
 
 class GVESSEL12(Datasets):
@@ -115,10 +86,12 @@ class _GVESSEL12(Dataset):
 
     @property
     def processed_file_names(self):
+        split = self.test_rate
+        L = int(split*1325)
         if self.train:
-            return ['data_{}.pt'.format(i) for i in range(1060)]
+            return ['data_{}.pt'.format(i) for i in range(1325-L)]
         else:
-            return ['data_{}.pt'.format(i) for i in range(1060,1325)]
+            return ['data_{}.pt'.format(i) for i in range(L,1325)]
 
     def download(self):
         pass
@@ -127,26 +100,43 @@ class _GVESSEL12(Dataset):
         return len(self.processed_file_names)
 
     def process(self):
-        i = 0 if self.train else 1060
-        vessel12 = read_dataset(self.raw_dir)
-        images = vessel12['train']['images'] if self.train else vessel12['test']['images']
-        masks = vessel12['train']['labels'] if self.train else vessel12['test']['images']
+        split = self.test_rate
+        L = int(split*1325)
+        max_slices = 1325-L if self.train else L
+        cnt_slices = 0
 
-        for image, mask in zip(images, masks):
-            # Read data from `raw_path`.
-            grid = grid_tensor((512, 512), connectivity=4)
-            grid.x = torch.tensor(image.reshape(512 * 512)).float()
-            grid.y = torch.tensor([mask.reshape(512 * 512)]).float()
-            data = grid
+        while cnt_slices<max_slices:
+            print('processed ', cnt_slices, ' out of ', max_slices)
+            lung_mask, _, _ = load_itk(os.path.join(self.raw_dir, 'train', 'Lungmasks', 'VESSEL12_{:02d}.mhd'.format(i)))
+            ct_scan, origin, spacing = load_itk(
+                os.path.join(self.raw_dir, 'train', 'Scans', 'VESSEL12_{:02d}.mhd'.format(i)))
+            ct_scan_masked = lung_mask*ct_scan
+            ct_scan_masked.astype(np.float, copy=False)
+            ct_scan_masked = (ct_scan_masked-ct_scan_masked.min())/(ct_scan_masked.max()-ct_scan_masked.min())
 
-            if self.pre_filter is not None and not self.pre_filter(data):
-                continue
+            vessel_mask, _ = load_vessel_mask_pre(ct_scan.shape, os.path.join(self.raw_dir, 'train', 'Annotations',
+                                                                              'VESSEL12_{:02d}_OutputVolume.npy'.format(
+                                                                                  i)))
 
-            if self.pre_transform is not None:
-                data = self.pre_transform(data)
+            processed_num = len(ct_scan) if cnt_slices+len(ct_scan)>max_slices else cnt_slices+len(ct_scan)
+            cnt_slices+=processed_num
 
-            torch.save(data, os.path.join(self.processed_dir, 'data_{}.pt'.format(i)))
-            i += 1
+
+            for i in range(processed_num):
+                # Read data from `raw_path`.
+                grid = grid_tensor((512, 512), connectivity=4)
+                grid.x = torch.tensor(ct_scan_masked[i, :, :].reshape(512 * 512)).float()
+                grid.y = torch.tensor([vessel_mask[i, :, :].reshape(512 * 512)]).float()
+                data = grid
+
+                if self.pre_filter is not None and not self.pre_filter(data):
+                    continue
+
+                if self.pre_transform is not None:
+                    data = self.pre_transform(data)
+
+                torch.save(data, os.path.join(self.processed_dir, 'data_{}.pt'.format(i)))
+
 
     def get(self, idx):
         idx += self.offset
