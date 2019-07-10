@@ -89,9 +89,9 @@ class _GVESSEL12(Dataset):
         split = self.test_rate
         L = int(split*1325)
         if self.train:
-            return ['data_{}.pt'.format(i) for i in range(1325-L)]
+            return ['data_{:02d}.pt'.format(i) for i in range(1325-L)]
         else:
-            return ['data_{}.pt'.format(i) for i in range(L,1325)]
+            return ['data_{:02d}.pt'.format(i) for i in range(L,1325)]
 
     def download(self):
         pass
@@ -103,6 +103,7 @@ class _GVESSEL12(Dataset):
         split = self.test_rate
         L = int(split*1325)
         max_slices = 1325-L if self.train else L
+        offset = 0 if self.train else L
         cnt_slices = 0
         scan_i=20
         while cnt_slices<max_slices:
@@ -119,7 +120,7 @@ class _GVESSEL12(Dataset):
                                                                               'VESSEL12_{:02d}_OutputVolume.npy'.format(
                                                                                   scan_i)))
 
-            processed_num = len(ct_scan) if cnt_slices+len(ct_scan)>max_slices else cnt_slices+len(ct_scan)
+            processed_num = len(ct_scan) if cnt_slices+len(ct_scan)<max_slices else max_slices-cnt_slices
             cnt_slices+=processed_num
 
 
@@ -136,7 +137,7 @@ class _GVESSEL12(Dataset):
                 if self.pre_transform is not None:
                     data = self.pre_transform(data)
 
-                torch.save(data, os.path.join(self.processed_dir, 'data_{}.pt'.format(i)))
+                torch.save(data, os.path.join(self.processed_dir, 'data_{:02d}.pt'.format(i+offset+cnt_slices)))
 
 
     def get(self, idx):
