@@ -129,7 +129,7 @@ class _GVESSEL12(Dataset):
             # process images and store them
             processed_num = len(ct_scan) if cnt_slices+len(ct_scan)<max_slices else max_slices-cnt_slices
             for i in range(processed_num):
-                print('---> file:', i+offset+cnt_slices)
+                # print('---> file:', i+offset+cnt_slices)
                 # Read data from `raw_path`.
                 grid = grid_tensor((512, 512), connectivity=4)
                 grid.x = torch.tensor(ct_scan_masked[i, :, :].reshape(512 * 512)).float()
