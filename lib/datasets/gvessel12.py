@@ -153,7 +153,7 @@ class _GVESSEL12(Dataset):
         # compute offset
         split = self.test_rate
         L = int(split*1325)
-        offset = 0 if self.train else L
+        offset = 0 if self.train else 1325-L
         # get the file
         idx += offset
         data = torch.load(os.path.join(self.processed_dir, 'data_{:04d}.pt'.format(idx)))
