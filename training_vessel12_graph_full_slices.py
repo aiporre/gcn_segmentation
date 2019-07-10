@@ -25,6 +25,8 @@ def process_command_line():
                         help="parameter gamam of the gaussians")
     parser.add_argument("-f", "--figdir", type=str, default='./fig',
                         help="path to save figs")
+    parser.add_argument("-b", "--batch", type=int, default=2,
+                        help="batch size of trainer and evaluator")
     return parser.parse_args()
 
 # CONSTANST
@@ -33,14 +35,15 @@ args = process_command_line()
 EPOCHS = args.epochs
 MODEL_PATH = './u-net-vessel12-g.pth'
 EPOCHS = 1
+BATCH = args.batch
 dataset = GVESSEL12(data_dir=args.vesseldir)
 model = GFCN()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 
-trainer = Trainer(model=model,dataset=dataset, batch_size=4,to_tensor=False, device=device)
+trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device)
 trainer.load_model(model, MODEL_PATH)
-evaluator = Evaluator(dataset=dataset,to_tensor=False, device=device)
+evaluator = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device)
 
 def train(lr=0.001, progress_bar=False):
     for _ in range(EPOCHS):
