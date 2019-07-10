@@ -109,6 +109,49 @@ def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=No
         data = transform(data)
     return data
 
+class GFCNA(torch.nn.Module):
+    def __init__(self):
+        super(GFCNA, self).__init__()
+        self.conv1 = SplineConv(1, 32, dim=2, kernel_size=5)
+        self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
+        self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)
+        self.conv4 = SplineConv(32, 1, dim=2, kernel_size=5)
+
+    def forward(self, data):
+        data.x = F.elu(self.conv1(data.x, data.edge_index, data.edge_attr))
+        weight = normalized_cut_2d(data.edge_index, data.pos)
+        cluster1 = graclus(data.edge_index, weight, data.x.size(0))
+        pos1 = data.pos
+        edge_index1 = data.edge_index
+        batch1 = data.batch if hasattr(data,'batch') else None
+        # weights1, centroids1 = bweights(data, cluster1)
+        data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
+
+        data.x = F.elu(self.conv2(data.x, data.edge_index, data.edge_attr))
+        weight = normalized_cut_2d(data.edge_index, data.pos)
+        cluster2 = graclus(data.edge_index, weight, data.x.size(0))
+        pos2 = data.pos
+        edge_index2 = data.edge_index
+        batch2 = data.batch if hasattr(data,'batch') else None
+        # weights2, centroids2 = bweights(data, cluster2)
+        data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
+
+        # upsample
+        # data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
+        #                                  batch=batch2, transform=None)
+        data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
+        data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr))
+
+        # data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
+        #                                  batch=batch1, transform=None)
+        data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
+        data.x = F.elu(self.conv4(data.x, data.edge_index, data.edge_attr))
+
+        # TODO handle contract on trainer and  evaluator
+
+        x, batch = data.x, torch.zeros(data.num_nodes)
+
+        return F.sigmoid(x)
 
 class GFCN(torch.nn.Module):
     def __init__(self):

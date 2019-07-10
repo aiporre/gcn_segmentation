@@ -1,6 +1,6 @@
 import argparse
 
-from lib.models import GFCN
+from lib.models import GFCN, G
 from lib.datasets import GVESSEL12
 from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
@@ -37,7 +37,7 @@ MODEL_PATH = './u-net-vessel12-g.pth'
 EPOCHS = 1
 BATCH = args.batch
 dataset = GVESSEL12(data_dir=args.vesseldir)
-model = GFCN()
+model = GFCNA()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 
