@@ -135,7 +135,7 @@ class _GVESSEL12(Dataset):
                 if self.pre_transform is not None:
                     data = self.pre_transform(data)
 
-                torch.save(data, os.path.join(self.processed_dir, 'data_{:03d}.pt'.format(i+offset+cnt_slices)))
+                torch.save(data, os.path.join(self.processed_dir, 'data_{:04d}.pt'.format(i+offset+cnt_slices)))
 
             # update counter
             cnt_slices+=processed_num
