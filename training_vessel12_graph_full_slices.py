@@ -35,9 +35,12 @@ MODEL_PATH = './u-net-vessel12-g.pth'
 EPOCHS = 1
 dataset = GVESSEL12(data_dir=args.vesseldir)
 model = GFCN()
-trainer = Trainer(model=model,dataset=dataset, batch_size=4,to_tensor=False)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = model.to(device)
+
+trainer = Trainer(model=model,dataset=dataset, batch_size=4,to_tensor=False, device=device)
 trainer.load_model(model, MODEL_PATH)
-evaluator = Evaluator(dataset=dataset,to_tensor=False)
+evaluator = Evaluator(dataset=dataset,to_tensor=False, device=device)
 
 def train(lr=0.001, progress_bar=False):
     for _ in range(EPOCHS):

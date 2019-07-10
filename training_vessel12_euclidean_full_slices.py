@@ -9,9 +9,11 @@ EPOCHS = 1
 
 dataset = VESSEL12()
 model = UNet(n_channels=1, n_classes=1)
-trainer = Trainer(model=model,dataset=dataset, batch_size=4)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+trainer = Trainer(model=model,dataset=dataset, batch_size=4, device=device)
 trainer.load_model(model, MODEL_PATH)
-evaluator = Evaluator(dataset=dataset)
+evaluator = Evaluator(dataset=dataset, device=device)
 
 def train():
     for _ in range(EPOCHS):
