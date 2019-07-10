@@ -60,10 +60,10 @@ class GVESSEL12(Datasets):
         self.test_rate = test_rate
         if annotated_slices:
             train_dataset = _GVESSEL12A(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate)
-            test_dataset = _GVESSEL12A(self.data_dir, False, transform=T.Cartesian(), test_rate=test_rate)
+            test_dataset = _GVESSEL12A(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate)
         else:
             train_dataset = _GVESSEL12(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate)
-            test_dataset = _GVESSEL12(self.data_dir, False, transform=T.Cartesian(), test_rate=test_rate)
+            test_dataset = _GVESSEL12(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate)
 
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
         test = GraphDataset(test_dataset, batch_size=self.batch_size, shuffle=False)
@@ -129,6 +129,7 @@ class _GVESSEL12(Dataset):
             # process images and store them
             processed_num = len(ct_scan) if cnt_slices+len(ct_scan)<max_slices else max_slices-cnt_slices
             for i in range(processed_num):
+                print('---> file:',i+offset+cnt_slices)
                 # Read data from `raw_path`.
                 grid = grid_tensor((512, 512), connectivity=4)
                 grid.x = torch.tensor(ct_scan_masked[i, :, :].reshape(512 * 512)).float()
