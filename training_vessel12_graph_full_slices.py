@@ -1,6 +1,6 @@
 import argparse
 
-from lib.models import GFCN, G
+from lib.models import GFCN, GFCNA
 from lib.datasets import GVESSEL12
 from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
