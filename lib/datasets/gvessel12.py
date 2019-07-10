@@ -134,9 +134,9 @@ class _GVESSEL12(Dataset):
 
         for image, mask in zip(images, masks):
             # Read data from `raw_path`.
-            grid = grid_tensor((28, 28), connectivity=4)
-            grid.x = torch.tensor(image.reshape(28 * 28)).float()
-            grid.y = torch.tensor([mask.reshape(28 * 28)]).float()
+            grid = grid_tensor((512, 512), connectivity=4)
+            grid.x = torch.tensor(image.reshape(512 * 512)).float()
+            grid.y = torch.tensor([mask.reshape(512 * 512)]).float()
             data = grid
 
             if self.pre_filter is not None and not self.pre_filter(data):
