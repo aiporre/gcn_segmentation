@@ -104,9 +104,9 @@ class _GVESSEL12(Dataset):
         L = int(split*1325)
         max_slices = 1325-L if self.train else L
         cnt_slices = 0
-        i=20
+        scan_i=20
         while cnt_slices<max_slices:
-            i+=1
+            scan_i+=1
             print('processed ', cnt_slices, ' out of ', max_slices)
             lung_mask, _, _ = load_itk(os.path.join(self.raw_dir, 'train', 'Lungmasks', 'VESSEL12_{:02d}.mhd'.format(i)))
             ct_scan, origin, spacing = load_itk(
@@ -117,7 +117,7 @@ class _GVESSEL12(Dataset):
 
             vessel_mask, _ = load_vessel_mask_pre(ct_scan.shape, os.path.join(self.raw_dir, 'train', 'Annotations',
                                                                               'VESSEL12_{:02d}_OutputVolume.npy'.format(
-                                                                                  i)))
+                                                                                  scan_i)))
 
             processed_num = len(ct_scan) if cnt_slices+len(ct_scan)>max_slices else cnt_slices+len(ct_scan)
             cnt_slices+=processed_num
