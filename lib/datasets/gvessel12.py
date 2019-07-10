@@ -89,9 +89,9 @@ class _GVESSEL12(Dataset):
         split = self.test_rate
         L = int(split*1325)
         if self.train:
-            return ['data_{:03d}.pt'.format(i) for i in range(1325-L)]
+            return ['data_{:04d}.pt'.format(i) for i in range(1325-L)]
         else:
-            return ['data_{:03d}.pt'.format(i) for i in range(L,1325)]
+            return ['data_{:04d}.pt'.format(i) for i in range(L,1325)]
 
     def download(self):
         pass
@@ -141,7 +141,12 @@ class _GVESSEL12(Dataset):
 
 
     def get(self, idx):
-        idx += self.offset
-        data = torch.load(os.path.join(self.processed_dir, 'data_{}.pt'.format(idx)))
+        # compute offset
+        split = self.test_rate
+        L = int(split*1325)
+        offset = 0 if self.train else L
+        # get the file
+        idx += offset
+        data = torch.load(os.path.join(self.processed_dir, 'data_{:04d}.pt'.format(idx)))
         return data
 
