@@ -37,7 +37,7 @@ MODEL_PATH = './u-net-vessel12-g.pth'
 EPOCHS = 1
 BATCH = args.batch
 dataset = GVESSEL12(data_dir=args.vesseldir)
-model = GFCNA()
+model = GFCN()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 

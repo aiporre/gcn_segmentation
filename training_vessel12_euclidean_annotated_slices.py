@@ -15,7 +15,7 @@ EPOCHS = 200
 dataset = VESSEL12('./data/vessel12/', annotated_slices=True)
 model = UNet(n_channels=1, n_classes=1)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+model.to(device)
 trainer = Trainer(model=model,dataset=dataset, batch_size=4, device=device)
 trainer.load_model(model, MODEL_PATH)
 evaluator = Evaluator(dataset=dataset,device=device)
