@@ -34,13 +34,8 @@ def consecutive_cluster(src):
 def recover_grid(source, pos, edge_index, cluster, batch=None, transform=None):
     device = cluster.device
     cluster, perm = consecutive_cluster(cluster)
-<<<<<<< HEAD
-    weights = torch.ones((1, len(cluster))).to(device)
-    Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0), weights)
-=======
     #     weights = weights.to(device)
     # print('======> cluster:', cluster.size())
->>>>>>> 0ef8fd5... changes in dataset and FCN models GFCN comb pools
 
     if batch is not None:
         data = Batch(x=source.x[cluster], edge_index=edge_index, pos=pos, batch=batch)
@@ -65,29 +60,7 @@ def bweights(source, cluster):
     cluster_codes, inversion = cluster.unique(return_inverse=True)
 
     if source.x.dim() == 1:
-<<<<<<< HEAD
-        centroids = torch.stack([source.x[cluster == i].mean() for i in cluster_codes])
-    #         cluster_count = torch.stack([source.x[cluster==i].count() for i in cluster_codes])
-    else:
-        # the max dim is 2
-        centroids = torch.stack([source.x[cluster == i].mean(dim=0) for i in cluster_codes])
-    #         cluster_count = torch.stack([source.x[cluster==i].count() for i in cluster_codes])
 
-    # alternative 1
-    #     aux = torch.empty(cluster.size(0)).scatter_(0,perm,centroids)
-    #     weights = data.x/aux
-    # alternative 2
-    #     weights = source.x.clone()
-    #     for i in range(len(weights)):
-    #         weights[i] = weights[i]/centroids[cluster[i]]
-    # alternative 3
-    aux = centroids[inversion]
-    weights = source.x/aux
-
-    weights[weights != weights] = 0
-    return weights.t(), centroids
-
-=======
         centroids = torch.stack([source.x[cluster == i].mean() for i in cluster_codes]).requires_grad_(False)
 #             cluster_count = torch.stack([source.x[cluster==i].count() for i in cluster_codes])
     else:
@@ -107,7 +80,7 @@ def bweights(source, cluster):
 
     weights[weights != weights] = 0
     return weights
->>>>>>> 0ef8fd5... changes in dataset and FCN models GFCN comb pools
+
 
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
     device = cluster.device

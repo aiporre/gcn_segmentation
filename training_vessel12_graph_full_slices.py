@@ -1,6 +1,6 @@
 import argparse
 
-from lib.models import GFCN, G
+from lib.models import GFCN, GFCNA
 from lib.datasets import GVESSEL12
 from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
@@ -38,11 +38,7 @@ EPOCHS = args.epochs
 BATCH = args.batch
 dataset = GVESSEL12(data_dir=args.vesseldir)
 model = GFCNA()
-<<<<<<< HEAD
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-=======
-device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
->>>>>>> 0ef8fd5... changes in dataset and FCN models GFCN comb pools
 model = model.to(device)
 
 trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device)
