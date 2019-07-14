@@ -36,15 +36,19 @@ class Trainer(object):
 
         features = features.to(self.device)
         target = target.to(self.device)
+        self.optimizer.zero_grad()
 
         prediction = self.model(features)
 
         prediction_flat = prediction.view(-1)
         target_flat = target.view(-1)
+        if not (prediction_flat >= 0.).all():
+            print('ERROR predition flat negative', prediction.min())
 
+        if not (prediction_flat <= 1.).all():
+            print('ERROR priction greater one', prediction.max())
         loss = self.criterion(prediction_flat,target_flat)
 
-        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
