@@ -38,7 +38,7 @@ EPOCHS = args.epochs
 BATCH = args.batch
 dataset = GVESSEL12(data_dir=args.vesseldir)
 model = GFCNA()
-device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 
 trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device)
