@@ -15,7 +15,7 @@ import numpy as np
 from lib.graph import grid_tensor
 from .download import maybe_download_and_extract
 from imageio import imread
-
+TOTAL_SLICES = 1030
 
 
 
@@ -93,11 +93,11 @@ class _GVESSEL12(Dataset):
     @property
     def processed_file_names(self):
         split = self.test_rate
-        L = int(split*1325)
+        L = int(split*TOTAL_SLICES)
         if self.train:
-            return ['data_{:04d}.pt'.format(i) for i in range(1325-L)]
+            return ['data_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L)]
         else:
-            return ['data_{:04d}.pt'.format(i) for i in range(1325-L,1325)]
+            return ['data_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L,TOTAL_SLICES)]
 
     def download(self):
         pass
@@ -107,9 +107,9 @@ class _GVESSEL12(Dataset):
 
     def process(self):
         split = self.test_rate
-        L = int(split*1325)
-        max_slices = 1325-L if self.train else L
-        offset = 0 if self.train else 1325-L
+        L = int(split*TOTAL_SLICES)
+        max_slices = TOTAL_SLICES-L if self.train else L
+        offset = 0 if self.train else TOTAL_SLICES-L
         cnt_slices = 0
         scan_i=20
         while cnt_slices<max_slices:
@@ -118,16 +118,25 @@ class _GVESSEL12(Dataset):
             lung_mask, _, _ = load_itk(os.path.join(self.raw_dir, 'train', 'Lungmasks', 'VESSEL12_{:02d}.mhd'.format(scan_i)))
             ct_scan, origin, spacing = load_itk(
                 os.path.join(self.raw_dir, 'train', 'Scans', 'VESSEL12_{:02d}.mhd'.format(scan_i)))
+            lung_mask = lung_mask.astype(np.float)
+            ct_scan = ct_scan.astype(np.float)
+
             ct_scan_masked = lung_mask*ct_scan
-            ct_scan_masked.astype(np.float, copy=False)
+            # nz_slides = (ct_scan_masked.max(axis=(1,2))-ct_scan_masked.min(axis=(1,2))) != 0
+
             ct_scan_masked = (ct_scan_masked-ct_scan_masked.min())/(ct_scan_masked.max()-ct_scan_masked.min())
 
+            # ct_scan_masked = ct_scan_masked[nz_slides]
             vessel_mask, _ = load_vessel_mask_pre(ct_scan.shape, os.path.join(self.raw_dir, 'train', 'Annotations',
                                                                               'VESSEL12_{:02d}_OutputVolume.npy'.format(
                                                                                   scan_i)))
+            usesful_scans = vessel_mask.sum(axis=(1,2))>1000
 
+            ct_scan_masked = ct_scan_masked[usesful_scans]
+            vessel_mask = vessel_mask[usesful_scans]
             # process images and store them
-            processed_num = len(ct_scan) if cnt_slices+len(ct_scan)<max_slices else max_slices-cnt_slices
+            processed_num = len(vessel_mask) if cnt_slices+len(vessel_mask)<max_slices else max_slices-cnt_slices
+            print('processing...: ' , processed_num)
             for i in range(processed_num):
                 # print('---> file:', i+offset+cnt_slices)
                 # Read data from `raw_path`.
@@ -152,8 +161,8 @@ class _GVESSEL12(Dataset):
     def get(self, idx):
         # compute offset
         split = self.test_rate
-        L = int(split*1325)
-        offset = 0 if self.train else 1325-L
+        L = int(split*TOTAL_SLICES)
+        offset = 0 if self.train else TOTAL_SLICES-L
         # get the file
         idx += offset
         data = torch.load(os.path.join(self.processed_dir, 'data_{:04d}.pt'.format(idx)))
