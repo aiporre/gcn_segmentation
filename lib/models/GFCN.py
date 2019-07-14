@@ -83,16 +83,21 @@ def bweights(source, cluster):
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
     device = cluster.device
     cluster, perm = consecutive_cluster(cluster)
-#     weights = weights.to(device)
-    print('======> weights:', weights.size())
-    print('======> cluster:', cluster.size())
-    
-    if batch is not None:
-        data = Batch( x=source.x[cluster]*weights, edge_index=edge_index, pos=pos, batch=batch)
-    else:
-        data = Data( x=source.x[cluster]*weights, edge_index=edge_index, pos=pos)
-#     print('reconstructed data.x.shape' , data.x.shape)
+    print_debug('======> weights:', weights.size())
+    print_debug('======> cluster:', cluster.size())
+    weights = weights.unsqueeze(0) if weights.dim() == 1 else weights
+    Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0), weights)
 
+    if source.x.dim() == 1:
+        x = source.x.unsqueeze(0).mm(Q).squeeze()
+    else:
+        # the max dimension is 2
+        x = Q.transpose(0, 1).mm(source.x)
+        print('x.shape: ', x.shape)
+    if batch is not None:
+        data = Batch(x=x, edge_index=edge_index, pos=pos, batch=batch)
+    else:
+        data = Data(x=x, edge_index=edge_index, pos=pos)
 
     if transform is not None:
         data = transform(data)
