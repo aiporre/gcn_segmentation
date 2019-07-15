@@ -54,7 +54,7 @@ def train(lr = 0.001, progress_bar=False):
         print('loss epoch',np.array(loss).mean())
         loss_all +=loss
         with torch.no_grad():
-            score = evaluator.DCM(model)
+            score = evaluator.DCM(model, progress_bar=progress_bar)
             print('DCM score:', score)
     plt.plot(loss_all)
     plt.xlabel('iterations')

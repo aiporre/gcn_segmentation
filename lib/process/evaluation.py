@@ -26,7 +26,7 @@ class Evaluator(object):
             features = features.to(self.device)
             label = label.to(self.device)
             prediction = model(features)
-            pred_mask = (prediction > 0.2).float()
+            pred_mask = (prediction > 0.5).float()
             # reorganize prediction according to the batch.
             if not pred_mask.size(0) == label.size(0):
                 b = label.size(0)
