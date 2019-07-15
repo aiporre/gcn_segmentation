@@ -1,6 +1,6 @@
 import argparse
 
-from lib.models import UNet
+from lib.models import FCN
 from lib.datasets import VESSEL12
 from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
@@ -39,7 +39,7 @@ EPOCHS = args.epochs
 BATCH = args.batch
 dataset = VESSEL12(data_dir=args.vesseldir)
 
-model = UNet(n_channels=1, n_classes=1)
+model = FCN(n_channels=1, n_class=1)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
 
