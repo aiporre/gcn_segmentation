@@ -321,10 +321,82 @@ class UNet(nn.Module):
         return torch.sigmoid(x)
 
 class FCN(nn.Module):
-    def __init__(self, n_channels, n_classes):
+    def __init__(self, n_channels, n_class=1):
         super(FCN, self).__init__()
-        self.inc = inconv(n_channels, 64)
-        self.down1 = down(64, 128)
+        # conv1
+        self.conv1_1 = nn.Conv2d(n_channels, 64, 3, padding=100)
+        self.relu1_1 = nn.ReLU(inplace=True)
+        self.conv1_2 = nn.Conv2d(64, 64, 3, padding=1)
+        self.relu1_2 = nn.ReLU(inplace=True)
+        self.pool1 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/2
+
+        # conv2
+        self.conv2_1 = nn.Conv2d(64, 128, 3, padding=1)
+        self.relu2_1 = nn.ReLU(inplace=True)
+        self.conv2_2 = nn.Conv2d(128, 128, 3, padding=1)
+        self.relu2_2 = nn.ReLU(inplace=True)
+        self.pool2 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/4
+
+        # conv3
+        self.conv3_1 = nn.Conv2d(128, 256, 3, padding=1)
+        self.relu3_1 = nn.ReLU(inplace=True)
+        self.conv3_2 = nn.Conv2d(256, 256, 3, padding=1)
+        self.relu3_2 = nn.ReLU(inplace=True)
+        self.pool3 = nn.MaxPool2d(2, stride=2, ceil_mode=True)  # 1/8
+
+        # fc6
+        self.fc6 = nn.Conv2d(256, 2048, 7)
+        self.relu6 = nn.ReLU(inplace=True)
+        self.drop6 = nn.Dropout2d()
+
+        # fc7
+        self.fc7 = nn.Conv2d(2048, 2048, 1)
+        self.relu7 = nn.ReLU(inplace=True)
+        self.drop7 = nn.Dropout2d()
+
+        self.score_fr = nn.Conv2d(2048, n_class, 1)
+        self.score_pool2 = nn.Conv2d(128, n_class, 1)
+
+        self.upscore2 = nn.ConvTranspose2d(
+            n_class, n_class, 4, stride=2, bias=False)
+        self.upscore16 = nn.ConvTranspose2d(
+            n_class, n_class, 32, stride=16, bias=False)
+
+    def forward(self, x):
+        h = x
+        h = self.relu1_1(self.conv1_1(h))
+        h = self.relu1_2(self.conv1_2(h))
+        h = self.pool1(h)
+
+        h = self.relu2_1(self.conv2_1(h))
+        h = self.relu2_2(self.conv2_2(h))
+        h = self.pool2(h)
+        pool2 = h # 1/4
+
+        h = self.relu3_1(self.conv3_1(h))
+        h = self.relu3_2(self.conv3_2(h))
+        h = self.pool3(h) # 1/8
+
+        h = self.relu6(self.fc6(h))
+        h = self.drop6(h)
+
+        h = self.relu7(self.fc7(h))
+        h = self.drop7(h)
+
+        h = self.score_fr(h) # class channels
+        h = self.upscore2(h) # x2
+        upscore2 = h  # 1/4
+
+        h = self.score_pool2(pool2)
+        h = h[:, :, 5:5+upscore2.size()[2], 5:5+upscore2.size()[3]]
+        score_pool4c = h  # 1/16
+
+        h = upscore2+score_pool4c
+
+        h = self.upscore16(h)
+        h = h[:, :, 27:27+x.size()[2], 27:27+x.size()[3]].contiguous()
+
+        return F.sigmoid(h)
 
 
 if __name__ == "__main__":

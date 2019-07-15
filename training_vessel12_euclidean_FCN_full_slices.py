@@ -21,7 +21,7 @@ def process_command_line():
                         help="learning rate")
     parser.add_argument("-g", "--epochs", type=int, default=10,
                         help=" number of epochs")
-    parser.add_argument("-d", "--vesseldir", type=str, default=VESSEL_DIR,
+    parser.add_argument("-d", "--vesseldir", type=str, default='./data/vessel12',
                         help="directory of vessels")
     parser.add_argument("-f", "--figsdir", type=str, default='./figs',
                         help="path to save figs")
@@ -33,7 +33,7 @@ def process_command_line():
 
 args = process_command_line()
 
-MODEL_PATH = './FCN-vessel12_full_slices.pth'
+MODEL_PATH = './u-net-vessel12_full_slices.pth'
 EPOCHS = 1
 EPOCHS = args.epochs
 BATCH = args.batch
