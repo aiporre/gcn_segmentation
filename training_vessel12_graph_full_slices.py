@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import torch
 from config import VESSEL_DIR
 from lib.utils import savefigs
+import numpy as np
 
 
 
@@ -46,16 +47,22 @@ trainer.load_model(model, MODEL_PATH)
 evaluator = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device)
 
 def train(lr=0.001, progress_bar=False):
+    loss_all =[]
     for _ in range(EPOCHS):
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
-        print('loss',loss)
+        print('loss epoch', np.array(loss).mean())
+        loss_all += loss
         with torch.no_grad():
             score = evaluator.DCM(model, progress_bar=progress_bar)
             print('DCM score:', score)
+    plt.plot(loss_all)
+    plt.xlabel('iterations')
+    plt.ylabel('loss')
+    plt.title('loss history epochs')
     print('end of training')
     trainer.save_model(MODEL_PATH)
 
-def eval(lr=0.001, progress_bar=False, fig_dir='./fig'):
+def eval(lr=0.001, progress_bar=False, fig_dir='./figs'):
     # print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
