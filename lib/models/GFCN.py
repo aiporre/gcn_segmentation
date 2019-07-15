@@ -84,9 +84,9 @@ def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=No
 
     cluster, perm = consecutive_cluster(cluster)
     source.x = source.x.squeeze()
-    print('cluster.requires_grad()', cluster.requires_grad())
-    print('X.requires_grad()', source.x.requires_grad())
-    print('weights.requires_grad()', weights.requires_grad())
+    print('cluster.requires_grad()', cluster.requires_grad)
+    print('X.requires_grad()', source.x.requires_grad)
+    print('weights.requires_grad()', weights.requires_grad)
     source.x = source.x[cluster]*weights
     source.edge_index = edge_index
     source.pos = pos
