@@ -8,15 +8,37 @@ import numpy as np
 import argparse
 
 
-# CONSTANST
-MODEL_PATH = './u-net-vessel12_annotated_slices.pth'
-EPOCHS = 200
+def process_command_line():
+    """Parse the command line arguments.
+    """
+    parser = argparse.ArgumentParser(description="Training Euclidean all",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("-t", "--progressbar", type=bool, default=False,
+                        help="progress bar continuous")
+    parser.add_argument("-lr", "--lr", type=float, default=0.001,
+                        help="learning rate")
+    parser.add_argument("-g", "--epochs", type=int, default=10,
+                        help=" number of epochs")
+    parser.add_argument("-d", "--vesseldir", type=str, default='./data/vessel12',
+                        help="directory of vessels")
+    parser.add_argument("-f", "--figsdir", type=str, default='./figs',
+                        help="path to save figs")
+    parser.add_argument("-b", "--batch", type=int, default=2,
+                        help="batch size of trainer and evaluator")
+    return parser.parse_args()
 
-dataset = VESSEL12('./data/vessel12/', annotated_slices=True)
+# CONSTANST
+
+args = process_command_line()
+MODEL_PATH = './u-net-vessel12_annotated_slices.pth'
+EPOCHS = args.epochs
+BATCH = args.batch
+dataset = VESSEL12(data_dir=args.vesseldir, annotated_slices=True)
+
 model = UNet(n_channels=1, n_classes=1)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-trainer = Trainer(model=model,dataset=dataset, batch_size=4, device=device)
+trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH, device=device)
 trainer.load_model(model, MODEL_PATH)
 evaluator = Evaluator(dataset=dataset,device=device)
 
@@ -45,30 +67,7 @@ def eval(progress_bar = False, figs_dir='./figs'):
     plt.show()
 
 
-
-def process_command_line():
-    """Parse the command line arguments.
-    """
-    parser = argparse.ArgumentParser(description="Machine Learning exercise 5.",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-t", "--progressbar", type=bool, default=False,
-                        help="progress bar continuous")
-    parser.add_argument("-lr", "--lr", type=float, default=0.001,
-                        help="learning rate")
-    parser.add_argument("-g", "--epochs", type=int, default=10,
-                        help="parameter gamam of the gaussians")
-
-    parser.add_argument("-f", "--figsdir", type=str, default='./fig',
-                        help="path to save figs")
-
-    return parser.parse_args()
-
-
-
-if __name__ == '__main__':
-    args = process_command_line()
-    EPOCHS = args.epochs
-    train(lr=args.lr, progress_bar=args.progressbar)
-    eval(progress_bar=args.progressbar, figs_dir=args.figsdir)
+train(lr=args.lr, progress_bar=args.progressbar)
+eval(progress_bar=args.progressbar, figs_dir=args.figsdir)
 
 
