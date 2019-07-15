@@ -83,6 +83,8 @@ def bweights(source, cluster):
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
     with torch.no_grad():
         cluster, perm = consecutive_cluster(cluster)
+        print('weights.size()', source.x.size())
+        print('weights.size()', weights.size())
         source.x = source.x[cluster]*weights
         source.edge_index = edge_index
         source.pos = pos
