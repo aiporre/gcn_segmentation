@@ -9,9 +9,9 @@ data = MNIST('data/mnist', val_size=10000)
 
 class MNISTTest(TestCase):
     def test_init(self):
-        self.assertEqual(data.train.num_examples, 50000)
-        self.assertEqual(data.val.num_examples, 10000)
-        self.assertEqual(data.test.num_examples, 10000)
+        self.assertEqual(data.train.num_examples, 8000)
+        self.assertEqual(data.val.num_examples, 2000)
+        self.assertEqual(data.test.num_examples, 2000)
 
     def test_shapes(self):
         images, labels = data.train.next_batch(32, shuffle=False)
