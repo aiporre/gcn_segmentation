@@ -45,7 +45,7 @@ model.to(device)
 
 trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH, device=device)
 trainer.load_model(model, MODEL_PATH)
-evaluator = Evaluator(dataset=dataset, device=device)
+evaluator = Evaluator(dataset=dataset, batch_size=BATCH, device=device)
 
 def train(lr = 0.001, progress_bar=False):
     loss_all = []
