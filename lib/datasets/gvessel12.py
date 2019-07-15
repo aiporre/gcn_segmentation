@@ -208,6 +208,7 @@ class _GVESSEL12A(Dataset):
         return len(self.processed_file_names)
 
     def process(self):
+        self.download()
         # compute split
         split = self.test_rate
         L = int(split*9)
