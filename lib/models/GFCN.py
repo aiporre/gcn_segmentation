@@ -60,7 +60,9 @@ def pweights(x, cluster):
     with torch.no_grad():
         cluster, perm = consecutive_cluster(cluster)
         g = scatter_('add', x, cluster)
-        return x/g[cluster]
+        w = x/g[cluster]
+        w[w != w] = 0
+        return w
 
 
 
@@ -284,25 +286,10 @@ class GFCN(torch.nn.Module):
 
         data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
                                          batch=batch2, transform=T.Cartesian(cat=False))
-        # data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
-        # print('x tensor s nana:' , torch.isnan(data.x).any())
 
-
-
-
-        # print('x tensor s nana:' , torch.isnan(data.x).any())
-        data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
-                                         batch=batch1, transform=T.Cartesian(cat=False))
-        # data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
+        # LAYER 4  (32,V1)->(1,V0)
         data.x = F.elu(self.conv4(data.x, data.edge_index, data.edge_attr))
-        # print('x tensor s nana:' , torch.isnan(data.x).any())
+        data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
+                                        batch=batch1, transform=T.Cartesian(cat=False))
 
-        # TODO handle contract on trainer and  evaluator
-
-        x = data.x
-        # print('x is infinite', torch.isinf(x).any())
-        # print('weights1 is nana:', torch.isnan(weights1).any())
-        # print('x tensor s nana:' , torch.isnan(x).any())
-        # print('weights2 is nan:', torch.isnan(weights2).any())
-
-        return F.sigmoid(x)
+        return F.sigmoid(data.x)
