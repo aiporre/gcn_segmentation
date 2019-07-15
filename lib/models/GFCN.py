@@ -83,13 +83,16 @@ def bweights(source, cluster):
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
     with torch.no_grad():
         cluster, perm = consecutive_cluster(cluster)
+        source.x = source.x[cluster]*weights
+        source.edge_index = edge_index
+        source.pos = pos
         if batch is not None:
-            data = Batch(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos, batch=batch)
+            source.batch = batch
         else:
-            data = Data(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos)
+            source.batch = batch
         if transform is not None:
-            data = transform(data)
-    return data
+            source = transform(source)
+    return source
 
 class GFCNB(torch.nn.Module):
     def __init__(self):
