@@ -3,7 +3,7 @@ import torch_geometric.transforms as T
 import torch.nn.functional as F
 from torch_geometric.utils import normalized_cut
 from torch_geometric.data import Data, Batch
-from torch_geometric.nn import graclus, max_pool
+from torch_geometric.nn import graclus, max_pool, avg_pool
 from torch_geometric.nn import SplineConv
 from lib.utils import print_debug
 
@@ -81,26 +81,14 @@ def bweights(source, cluster):
     return weights
 
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
-    device = cluster.device
-    cluster, perm = consecutive_cluster(cluster)
-    print_debug('======> weights:', weights.size())
-    print_debug('======> cluster:', cluster.size())
-    weights = weights.unsqueeze(0) if weights.dim() == 1 else weights
-    Q = torch.zeros((source.num_nodes, cluster.shape[0])).to(device).scatter_(0, cluster.unsqueeze(0), weights)
-
-    if source.x.dim() == 1:
-        x = source.x.unsqueeze(0).mm(Q).squeeze()
-    else:
-        # the max dimension is 2
-        x = Q.transpose(0, 1).mm(source.x)
-        print('x.shape: ', x.shape)
-    if batch is not None:
-        data = Batch(x=x, edge_index=edge_index, pos=pos, batch=batch)
-    else:
-        data = Data(x=x, edge_index=edge_index, pos=pos)
-
-    if transform is not None:
-        data = transform(data)
+    with torch.no_grad():
+        cluster, perm = consecutive_cluster(cluster)
+        if batch is not None:
+            data = Batch(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos, batch=batch)
+        else:
+            data = Data(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos)
+        if transform is not None:
+            data = transform(data)
     return data
 
 class GFCNB(torch.nn.Module):
@@ -266,7 +254,7 @@ class GFCN(torch.nn.Module):
         edge_index1 = data.edge_index
         batch1 = data.batch if hasattr(data,'batch') else None
         weights1 = bweights(data, cluster1)
-        data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
+        data = avg_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         data.x = F.elu(self.conv2(data.x, data.edge_index, data.edge_attr))
         weight = normalized_cut_2d(data.edge_index, data.pos)
@@ -275,29 +263,29 @@ class GFCN(torch.nn.Module):
         edge_index2 = data.edge_index
         batch2 = data.batch if hasattr(data,'batch') else None
         weights2 = bweights(data, cluster2)
-        data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
+        data = avg_pool(cluster2, data, transform=T.Cartesian(cat=False))
 
         # upsample
-        print('x tensor s nana:' , torch.isnan(data.x).any())
+        # print('x tensor s nana:' , torch.isnan(data.x).any())
         data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
                                          batch=batch2, transform=T.Cartesian(cat=False))
         # data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
-        print('x tensor s nana:' , torch.isnan(data.x).any())
+        # print('x tensor s nana:' , torch.isnan(data.x).any())
         data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr))
 
-        print('x tensor s nana:' , torch.isnan(data.x).any())
+        # print('x tensor s nana:' , torch.isnan(data.x).any())
         data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
                                          batch=batch1, transform=T.Cartesian(cat=False))
         # data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
         data.x = F.elu(self.conv4(data.x, data.edge_index, data.edge_attr))
-        print('x tensor s nana:' , torch.isnan(data.x).any())
+        # print('x tensor s nana:' , torch.isnan(data.x).any())
 
         # TODO handle contract on trainer and  evaluator
 
         x = data.x
-        print('x is infinite', torch.isinf(x).any())
-        print('weights1 is nana:', torch.isnan(weights1).any())
-        print('x tensor s nana:' , torch.isnan(x).any())
-        print('weights2 is nan:', torch.isnan(weights2).any())
+        # print('x is infinite', torch.isinf(x).any())
+        # print('weights1 is nana:', torch.isnan(weights1).any())
+        # print('x tensor s nana:' , torch.isnan(x).any())
+        # print('weights2 is nan:', torch.isnan(weights2).any())
 
         return F.sigmoid(x)
