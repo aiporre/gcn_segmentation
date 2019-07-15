@@ -242,7 +242,7 @@ class _GVESSEL12A(Dataset):
     def get(self, idx):
         # compute offset
         split = self.test_rate
-        L = int(split*1325)
+        L = int(split*9)
         offset = 0 if self.train else L
         # get the file
         idx += offset
