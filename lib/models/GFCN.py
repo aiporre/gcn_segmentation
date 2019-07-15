@@ -1,7 +1,7 @@
 import torch
 import torch_geometric.transforms as T
 import torch.nn.functional as F
-from torch_geometric.utils import normalized_cut
+from torch_geometric.utils import normalized_cut, scatter_
 from torch_geometric.data import Data, Batch
 from torch_geometric.nn import graclus, max_pool, avg_pool
 from torch_geometric.nn import SplineConv
@@ -55,26 +55,24 @@ def consecutive_cluster(src):
     return inv, perm
 
 
+def pweights(x, cluster):
+    ''' Computes the percentage weights in the simplex formed by the cluster '''
+    with torch.no_grad():
+        cluster, perm = consecutive_cluster(cluster)
+        g = scatter_('add', x, cluster)
+        return x/g[cluster]
+
+
+
 def bweights(source, cluster):
     cluster, perm = consecutive_cluster(cluster)
     cluster_codes, inversion = cluster.unique(return_inverse=True)
 
     if source.x.dim() == 1:
         centroids = torch.stack([source.x[cluster == i].mean() for i in cluster_codes]).requires_grad_(False)
-#             cluster_count = torch.stack([source.x[cluster==i].count() for i in cluster_codes])
     else:
-        #   the max dim is 2
         centroids = torch.stack([source.x[cluster == i].mean(dim=0) for i in cluster_codes]).requires_grad_(False)
-#         cluster_count = torch.stack([source.x[cluster==i].count() for i in cluster_codes])
 
-# alternative 1
-#     aux = torch.empty(cluster.size(0)).scatter_(0,perm,centroids)
-#     weights = data.x/aux
-# alternative 2
-#     weights = source.x.clone()
-#     for i in range(len(weights)):
-#         weights[i] = weights[i]/centroids[cluster[i]]
-# alternative 3
     weights = source.x/centroids[inversion]
 
     weights[weights != weights] = 0
@@ -238,6 +236,9 @@ class GFCNA(torch.nn.Module):
 
         return F.sigmoid(x)
 
+
+
+
 class GFCN(torch.nn.Module):
     def __init__(self):
         super(GFCN, self).__init__()
@@ -247,31 +248,47 @@ class GFCN(torch.nn.Module):
         self.conv4 = SplineConv(32, 1, dim=2, kernel_size=5)
 
     def forward(self, data):
-        data.x = F.elu(self.conv1(data.x, data.edge_index, data.edge_attr))
-        weight = normalized_cut_2d(data.edge_index, data.pos)
-        cluster1 = graclus(data.edge_index, weight, data.x.size(0))
+
+        ## LAYER 1 (1,V0)->(32,V1)
+        # pre-pool1
         pos1 = data.pos
         edge_index1 = data.edge_index
-        batch1 = data.batch if hasattr(data,'batch') else None
-        weights1 = bweights(data, cluster1)
-        data = avg_pool(cluster1, data, transform=T.Cartesian(cat=False))
-
-        data.x = F.elu(self.conv2(data.x, data.edge_index, data.edge_attr))
+        x_pre = data.x.clone().detach()
+        batch1 = data.batch if hasattr(data, 'batch') else None
+        # convolution
+        data.x = F.elu(self.conv1(data.x, data.edge_index, data.edge_attr))
+        # clustering
         weight = normalized_cut_2d(data.edge_index, data.pos)
-        cluster2 = graclus(data.edge_index, weight, data.x.size(0))
+        cluster1 = graclus(data.edge_index, weight, data.x.size(0))
+        weights1 = pweights(x_pre,cluster1)
+        #pooling
+        data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
+
+        ## LAYER 2 (32,V1)->(64,V2)
+        # pre-pool2
         pos2 = data.pos
         edge_index2 = data.edge_index
-        batch2 = data.batch if hasattr(data,'batch') else None
-        weights2 = bweights(data, cluster2)
-        data = avg_pool(cluster2, data, transform=T.Cartesian(cat=False))
+        batch2 = data.batch if hasattr(data, 'batch') else None
+        x_pre = data.x.clone().detach()
+        # convolution
+        data.x = F.elu(self.conv2(data.x, data.edge_index, data.edge_attr))
+        # clustering
+        weight = normalized_cut_2d(data.edge_index, data.pos)
+        cluster2 = graclus(data.edge_index, weight, data.x.size(0))
+        weights2 = pweights(x_pre, cluster2)
+        # pooling
+        data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
 
-        # upsample
-        # print('x tensor s nana:' , torch.isnan(data.x).any())
+        # LAYER 3  (64,V2)->(32,V1)
+        data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr)) # (32,V2)
+
         data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
                                          batch=batch2, transform=T.Cartesian(cat=False))
         # data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
         # print('x tensor s nana:' , torch.isnan(data.x).any())
-        data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr))
+
+
+
 
         # print('x tensor s nana:' , torch.isnan(data.x).any())
         data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
