@@ -83,6 +83,7 @@ class GraphDataset(object):
 
     def next_batch(self, batch_size, shuffle=True):
         if not batch_size == self._batch_size:
+            self.shuffle =shuffle
             self.enforce_batch(batch_size)
             self._index_in_epoch = 0
 

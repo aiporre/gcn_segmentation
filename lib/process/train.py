@@ -36,7 +36,6 @@ class Trainer(object):
 
         features = features.to(self.device)
         target = target.to(self.device)
-        self.optimizer.zero_grad()
 
         prediction = self.model(features)
 
@@ -48,8 +47,11 @@ class Trainer(object):
         if not (prediction_flat <= 1.).all():
             print('ERROR priction greater one', prediction.max())
         loss = self.criterion(prediction_flat,target_flat)
-
+        self.optimizer.zero_grad()
         loss.backward()
+        # for param in self.model.parameters():
+        #     if param.grad is not None:
+        #         print('param.grad.data: ', param.grad.data.mean().item(),'±',param.grad.data.std().item())
         self.optimizer.step()
 
         return loss.item()
