@@ -1,13 +1,11 @@
-import argparse
-
-from lib.models import UNet
+from lib.models import FCN
 from lib.datasets import VESSEL12
 from lib.process import Trainer, Evaluator
+from lib.utils import savefigs
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
-from config import VESSEL_DIR
-from lib.utils import savefigs
+import argparse
 
 
 def process_command_line():
@@ -21,7 +19,7 @@ def process_command_line():
                         help="learning rate")
     parser.add_argument("-g", "--epochs", type=int, default=10,
                         help=" number of epochs")
-    parser.add_argument("-d", "--vesseldir", type=str, default=VESSEL_DIR,
+    parser.add_argument("-d", "--vesseldir", type=str, default='./data/vessel12',
                         help="directory of vessels")
     parser.add_argument("-f", "--figsdir", type=str, default='./figs',
                         help="path to save figs")
@@ -32,20 +30,17 @@ def process_command_line():
 # CONSTANST
 
 args = process_command_line()
-
-MODEL_PATH = './u-net-vessel12_full_slices.pth'
-EPOCHS = 1
+MODEL_PATH = './FCN-vessel12_annotated_slices.pth'
 EPOCHS = args.epochs
 BATCH = args.batch
-dataset = VESSEL12(data_dir=args.vesseldir)
+dataset = VESSEL12(data_dir=args.vesseldir, annotated_slices=True)
 
-model = UNet(n_channels=1, n_classes=1)
+model = FCN(n_channels=1, n_classes=1)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
-
 trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH, device=device)
 trainer.load_model(model, MODEL_PATH)
-evaluator = Evaluator(dataset=dataset, batch_size=BATCH, device=device)
+evaluator = Evaluator(dataset=dataset,device=device)
 
 def train(lr = 0.001, progress_bar=False):
     loss_all = []
@@ -54,7 +49,7 @@ def train(lr = 0.001, progress_bar=False):
         print('loss epoch',np.array(loss).mean())
         loss_all +=loss
         with torch.no_grad():
-            score = evaluator.DCM(model, progress_bar=progress_bar)
+            score = evaluator.DCM(model)
             print('DCM score:', score)
     plt.plot(loss_all)
     plt.xlabel('iterations')
@@ -64,14 +59,15 @@ def train(lr = 0.001, progress_bar=False):
     print('end of training')
     trainer.save_model(MODEL_PATH)
 
-
 def eval(progress_bar = False, figs_dir='./figs'):
     # print('DCM factor: ' , evaluator.DCM(model,progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
-    savefigs(fig_name='unet_e{}_lr{}_annotated_slices'.format(EPOCHS,0.001), fig=fig, fig_dir=figs_dir)
+    savefigs(fig_name='FCN_e{}_lr{}_annotated_slices'.format(EPOCHS,0.001), fig=fig, fig_dir=figs_dir)
     plt.show()
 
 
 train(lr=args.lr, progress_bar=args.progressbar)
 eval(progress_bar=args.progressbar, figs_dir=args.figsdir)
+
+

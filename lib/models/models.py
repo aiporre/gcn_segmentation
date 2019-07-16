@@ -321,7 +321,7 @@ class UNet(nn.Module):
         return torch.sigmoid(x)
 
 class FCN(nn.Module):
-    def __init__(self, n_channels, n_class=1):
+    def __init__(self, n_channels, n_classes=1):
         super(FCN, self).__init__()
         # conv1
         self.conv1_1 = nn.Conv2d(n_channels, 64, 3, padding=100)
@@ -354,13 +354,13 @@ class FCN(nn.Module):
         self.relu7 = nn.ReLU(inplace=True)
         self.drop7 = nn.Dropout2d()
 
-        self.score_fr = nn.Conv2d(2048, n_class, 1)
-        self.score_pool2 = nn.Conv2d(128, n_class, 1)
+        self.score_fr = nn.Conv2d(2048, n_classes, 1)
+        self.score_pool2 = nn.Conv2d(128, n_classes, 1)
 
         self.upscore2 = nn.ConvTranspose2d(
-            n_class, n_class, 4, stride=2, bias=False)
+            n_classes, n_classes, 4, stride=2, bias=False)
         self.upscore16 = nn.ConvTranspose2d(
-            n_class, n_class, 32, stride=16, bias=False)
+            n_classes, n_classes, 32, stride=16, bias=False)
 
     def forward(self, x):
         h = x

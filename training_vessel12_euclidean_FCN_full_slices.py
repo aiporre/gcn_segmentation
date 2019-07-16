@@ -21,7 +21,7 @@ def process_command_line():
                         help="learning rate")
     parser.add_argument("-g", "--epochs", type=int, default=10,
                         help=" number of epochs")
-    parser.add_argument("-d", "--vesseldir", type=str, default='./data/vessel12',
+    parser.add_argument("-d", "--vesseldir", type=str, default=VESSEL_DIR,
                         help="directory of vessels")
     parser.add_argument("-f", "--figsdir", type=str, default='./figs',
                         help="path to save figs")
@@ -33,13 +33,13 @@ def process_command_line():
 
 args = process_command_line()
 
-MODEL_PATH = './u-net-vessel12_full_slices.pth'
+MODEL_PATH = './FCN-vessel12_full_slices.pth'
 EPOCHS = 1
 EPOCHS = args.epochs
 BATCH = args.batch
 dataset = VESSEL12(data_dir=args.vesseldir)
 
-model = FCN(n_channels=1, n_class=1)
+model = FCN(n_channels=1, n_classes=1)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
 
@@ -69,7 +69,7 @@ def eval(progress_bar = False, figs_dir='./figs'):
     # print('DCM factor: ' , evaluator.DCM(model,progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
-    savefigs(fig_name='unet_e{}_lr{}_annotatedslices'.format(EPOCHS,0.001), fig=fig, fig_dir=figs_dir)
+    savefigs(fig_name='FCN_e{}_lr{}_full_slices'.format(EPOCHS,0.001), fig=fig, fig_dir=figs_dir)
     plt.show()
 
 

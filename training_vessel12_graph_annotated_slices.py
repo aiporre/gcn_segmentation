@@ -34,7 +34,7 @@ def process_command_line():
 
 args = process_command_line()
 EPOCHS = args.epochs
-MODEL_PATH = './GFCN-vessel12-a.pth'
+MODEL_PATH = './GFCN-vessel12-annotated_slices.pth'
 EPOCHS = args.epochs
 BATCH = args.batch
 dataset = GVESSEL12(data_dir=args.vesseldir, annotated_slices=True)
@@ -66,7 +66,7 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs'):
     # print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
-    savefigs(fig_name='gfcn_e{}_lr{}_annotatedslices'.format(EPOCHS, lr),fig_dir=fig_dir, fig=fig)
+    savefigs(fig_name='gfcn_e{}_lr{}_annotated_slices'.format(EPOCHS, lr),fig_dir=fig_dir, fig=fig)
     plt.show()
 
 train(lr=args.lr, progress_bar=args.progressbar)
