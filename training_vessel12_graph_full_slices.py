@@ -1,7 +1,7 @@
 import argparse
 
 from lib.models import GFCN, GFCNA, PointNet
-from lib.datasets import GVESSEL12
+from lib.datasets import GVESSEL12, Crop
 from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
 import torch
@@ -36,10 +36,16 @@ def process_command_line():
 
 args = process_command_line()
 EPOCHS = args.epochs
-MODEL_PATH = './GFCN-vessel12-full_slices.pth'
+MODEL_PATH = './{}-vessel12-annotated_slices.pth'.format(args.net)
 EPOCHS = args.epochs
 BATCH = args.batch
-dataset = GVESSEL12(data_dir=args.vesseldir)
+
+if args.pre_transfrom:
+    pre_transform = Crop(300,150,100,100)
+else:
+    pre_transform = None
+
+dataset = GVESSEL12(data_dir=args.vesseldir, pre_transform=pre_transform)
 if args.net=='GFCN':
     model = GFCN()
 elif args.net=='GFCNA':
@@ -72,12 +78,12 @@ def train(lr=0.001, progress_bar=False):
     print('end of training')
     trainer.save_model(MODEL_PATH)
 
-def eval(lr=0.001, progress_bar=False, fig_dir='./figs'):
+def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     # print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
-    savefigs(fig_name='gfcn_e{}_lr{}_annotated_slices'.format(EPOCHS, lr),fig_dir=fig_dir, fig=fig)
+    savefigs(fig_name='{}_e{}_lr{}_annotated_slices'.format(prefix,EPOCHS, lr),fig_dir=fig_dir, fig=fig)
     plt.show()
 
 train(lr=args.lr, progress_bar=args.progressbar)
-eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir)
+eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
