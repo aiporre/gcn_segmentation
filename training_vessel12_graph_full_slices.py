@@ -40,7 +40,7 @@ MODEL_PATH = './{}-vessel12-annotated_slices.pth'.format(args.net)
 EPOCHS = args.epochs
 BATCH = args.batch
 
-if args.pre_transfrom:
+if args.pre_transform:
     pre_transform = Crop(300,150,100,100)
 else:
     pre_transform = None
