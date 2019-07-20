@@ -2,7 +2,10 @@ import numpy as np
 import scipy.sparse as sp
 
 from .distortion import filter_adj
-from torch_geometric.data import Data
+try:
+    from torch_geometric.data import Data
+except:
+    print('Warning: torch geometric not installed error importing. ')
 import torch
 from itertools import product
 

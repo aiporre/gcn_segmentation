@@ -54,16 +54,20 @@ def load_vessel_mask_csv(shape, path):
 
 
 class GVESSEL12(Datasets):
-    def __init__(self, data_dir=VESSEL_DIR, batch_size=32, test_rate=0.2, annotated_slices=False):
+    def __init__(self, data_dir=VESSEL_DIR, batch_size=32, test_rate=0.2, annotated_slices=False, pre_transform=None):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.test_rate = test_rate
         if annotated_slices:
-            train_dataset = _GVESSEL12A(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate)
-            test_dataset = _GVESSEL12A(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate)
+            train_dataset = _GVESSEL12A(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate,
+                                       pre_transform=pre_transform)
+            test_dataset = _GVESSEL12A(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate,
+                                       pre_transform=pre_transform)
         else:
-            train_dataset = _GVESSEL12(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate)
-            test_dataset = _GVESSEL12(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate)
+            train_dataset = _GVESSEL12(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate,
+                                       pre_transform=pre_transform)
+            test_dataset = _GVESSEL12(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate,
+                                      pre_transform=pre_transform)
 
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
         test = GraphDataset(test_dataset, batch_size=self.batch_size, shuffle=False)
@@ -140,16 +144,21 @@ class _GVESSEL12(Dataset):
             for i in range(processed_num):
                 # print('---> file:', i+offset+cnt_slices)
                 # Read data from `raw_path`.
-                grid = grid_tensor((512, 512), connectivity=4)
-                grid.x = torch.tensor(ct_scan_masked[i, :, :].reshape(512 * 512)).float()
-                grid.y = torch.tensor([vessel_mask[i, :, :].reshape(512 * 512)]).float()
-                data = grid
+                image = ct_scan_masked[i, :, :]
+                mask = vessel_mask[i, :, :]
+                if self.pre_transform is not None:
+                    data = (image, mask)
+                    data = self.pre_transform(data)
+                else:
+                    grid = grid_tensor((512, 512), connectivity=4)
+                    grid.x = torch.tensor(image.reshape(512 * 512)).float()
+                    grid.y = torch.tensor([mask.reshape(512 * 512)]).float()
+                    data = grid
 
                 if self.pre_filter is not None and not self.pre_filter(data):
                     continue
 
-                if self.pre_transform is not None:
-                    data = self.pre_transform(data)
+
 
                 torch.save(data, os.path.join(self.processed_dir, 'data_{:04d}.pt'.format(i+offset+cnt_slices)))
 
@@ -225,16 +234,17 @@ class _GVESSEL12A(Dataset):
             lb = lb/lb.max()
 
             # Read data from `raw_path`.
-            grid = grid_tensor((512, 512), connectivity=4)
-            grid.x = torch.tensor(im.reshape(512 * 512)).float()
-            grid.y = torch.tensor([lb.reshape(512 * 512)]).float()
-            data = grid
+            if self.pre_transform is not None:
+                data = (im, lb)
+                data = self.pre_transform(data)
+            else:
+                grid = grid_tensor((512, 512), connectivity=4)
+                grid.x = torch.tensor(im.reshape(512*512)).float()
+                grid.y = torch.tensor([lb.reshape(512*512)]).float()
+                data = grid
 
             if self.pre_filter is not None and not self.pre_filter(data):
                 continue
-
-            if self.pre_transform is not None:
-                data = self.pre_transform(data)
 
             torch.save(data, os.path.join(self.processed_dir, 'vessel_a_{}.pt'.format(scan_i)))
 
