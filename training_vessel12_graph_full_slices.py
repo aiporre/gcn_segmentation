@@ -30,6 +30,8 @@ def process_command_line():
                         help="batch size of trainer and evaluator")
     parser.add_argument("-n", "--net", type=str, default= 'GFCN',
                         help="batch size of trainer and evaluator")
+    parser.add_argument("-p", "--pre-transform", type=bool, default=False,
+                        help="use a pretransfrom to the dataset")
     return parser.parse_args()
 
 # CONSTANST
