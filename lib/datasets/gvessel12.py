@@ -125,7 +125,7 @@ class _GVESSEL12(Dataset):
             lung_mask = lung_mask.astype(np.float)
             ct_scan = ct_scan.astype(np.float)
 
-            lung_mask = (lung_mask-lung_mask.min())/(lung_mask.max()-lung_mask.min())
+            ct_scan = (ct_scan-ct_scan.min())/(ct_scan.max()-ct_scan.min())
             ct_scan_masked = lung_mask*ct_scan
             # nz_slides = (ct_scan_masked.max(axis=(1,2))-ct_scan_masked.min(axis=(1,2))) != 0
 
