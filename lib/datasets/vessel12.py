@@ -6,7 +6,7 @@ import SimpleITK as sitk
 import os
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import Normalize
-import pyqtgraph as pg
+# import pyqtgraph as pg
 import pandas as pd
 from .download import maybe_download_and_extract
 from imageio import imread
