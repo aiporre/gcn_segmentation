@@ -4,6 +4,7 @@ from .pascal_voc import PascalVOC
 from .queue import PreprocessQueue
 from .m2nist import M2NIST
 from .vessel12 import VESSEL12
+from .transforms import Crop
 try:
     from .gvessel12 import GVESSEL12
 except ImportError:
@@ -14,4 +15,4 @@ try:
 except ImportError:
     print('Warning: Error while importing lib.GMINST module. Pytorch Geometric not installed')
 
-__all__ = ['MNIST', 'Cifar10', 'PascalVOC', 'PreprocessQueue', 'M2NIST', 'GMNIST', 'VESSEL12', 'GVESSEL12']
+__all__ = ['MNIST', 'Cifar10', 'PascalVOC', 'PreprocessQueue', 'M2NIST', 'GMNIST', 'VESSEL12', 'GVESSEL12', 'Crop']
