@@ -1,6 +1,6 @@
 import argparse
 
-from lib.models import GFCN, GFCNA
+from lib.models import GFCN, GFCNA, PointNet
 from lib.datasets import GVESSEL12
 from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
@@ -28,6 +28,8 @@ def process_command_line():
                         help="path to save figs")
     parser.add_argument("-b", "--batch", type=int, default=2,
                         help="batch size of trainer and evaluator")
+    parser.add_argument("-n", "--net", type=str, default= 'GFCN',
+                        help="batch size of trainer and evaluator")
     return parser.parse_args()
 
 # CONSTANST
@@ -38,7 +40,15 @@ MODEL_PATH = './GFCN-vessel12-full_slices.pth'
 EPOCHS = args.epochs
 BATCH = args.batch
 dataset = GVESSEL12(data_dir=args.vesseldir)
-model = GFCNA()
+if args.net=='GFCN':
+    model = GFCN()
+elif args.net=='GFCNA':
+    model = GFCNA()
+elif args.net=='PointNet':
+    model = PointNet()
+else:
+    model = GFCNA()
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 

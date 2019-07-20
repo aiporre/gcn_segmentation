@@ -4,8 +4,9 @@ from .dataset import Datasets, Dataset
 from config import VESSEL_DIR
 import SimpleITK as sitk
 import os
-# import matplotlib.pyplot as plt
-# import pyqtgraph as pg
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import Normalize
+import pyqtgraph as pg
 import pandas as pd
 from .download import maybe_download_and_extract
 from imageio import imread
@@ -65,37 +66,37 @@ def read_dataset_mhd(data_dir, annotated_slices=True):
 
         # this is legacy code commented because this is not industrial code XD
         # # alternatively, we may curate the 9 slices there fore we need to know which slices were annotated
-        # if annotated_slices:
-        #     vessel_mask_annotations, z_slices = load_vessel_mask_csv(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_Annotations.csv'.format(i)))
-        #     ct_scan_masked = ct_scan_masked[z_slices]
-        #     vessel_mask = vessel_mask[z_slices]
+        if annotated_slices:
+            vessel_mask_annotations, z_slices = load_vessel_mask_csv(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_Annotations.csv'.format(i)))
+            # ct_scan_masked = ct_scan_masked[z_slices]
+            # vessel_mask = vessel_mask[z_slices]
 
 
         # plotting stuff...
-        # print('vessel_mask: ', vessel_mask.shape)
-        # print('origin: ', origin)
-        # print('spacing', spacing)
-        # print('z_slices', z_slices)
-        # im1 = ct_scan_masked/ct_scan_masked.max()
-        # im2 = vessel_mask/vessel_mask.max()
-        # # im1[im2==1]=2
-        # # pg.image(im1)
-        # # input('click to end')
-        # im2[vessel_mask_annotations==1]=-0.5
-        # vmax = np.abs(im2).max()
-        # vmin = -vmax
-        # cmap = plt.cm.RdYlBu
-        #
-        # for z_slice in z_slices:
-        #     plt.figure()
-        #     plt.imshow(im1[z_slice,:,:],cmap='gray')
-        #     alphas = np.ones_like(im2[z_slice,:,:])
-        #     alphas[im2[z_slice,:,:]==0]=0
-        #     colors = Normalize(vmin, vmax, clip=True)(im2[z_slice,:,:])
-        #     colors = cmap(colors)
-        #     colors[..., -1] = alphas
-        #     plt.imshow(colors)
-        #     plt.show()
+        print('vessel_mask: ', vessel_mask.shape)
+        print('origin: ', origin)
+        print('spacing', spacing)
+        print('z_slices', z_slices)
+        im1 = ct_scan_masked/ct_scan_masked.max()
+        im2 = vessel_mask/vessel_mask.max()
+        # im1[im2==1]=2
+        # pg.image(im1)
+        # input('click to end')
+        im2[vessel_mask_annotations==1]=-0.5
+        vmax = np.abs(im2).max()
+        vmin = -vmax
+        cmap = plt.cm.RdYlBu
+
+        for z_slice in z_slices:
+            plt.figure()
+            plt.imshow(im1[z_slice,:,:],cmap='gray')
+            alphas = np.ones_like(im2[z_slice,:,:])
+            alphas[im2[z_slice,:,:]==0]=0
+            colors = Normalize(vmin, vmax, clip=True)(im2[z_slice,:,:])
+            colors = cmap(colors)
+            colors[..., -1] = alphas
+            plt.imshow(colors)
+            plt.show()
         images += [ct_scan_masked[i,:,:] for i in range(len(ct_scan_masked))]
         labels += [vessel_mask[i, :, :] for i in range(len(vessel_mask))]
     # TODO: split is hardcoded
