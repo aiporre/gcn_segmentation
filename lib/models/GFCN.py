@@ -159,7 +159,8 @@ class GFCNB(torch.nn.Module):
 
         x = data.x
 
-        return F.sigmoid(x)
+        # return F.sigmoid(x)
+        return x
 
 class GFCNA(torch.nn.Module):
     def __init__(self):
@@ -241,7 +242,7 @@ class GFCNA(torch.nn.Module):
 
         x = data.x
 
-        return F.sigmoid(x)
+        return x
 
 
 
@@ -297,4 +298,5 @@ class GFCN(torch.nn.Module):
         data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
                                         batch=batch1, transform=T.Cartesian(cat=False))
 
-        return F.sigmoid(data.x)
+        # return F.sigmoid(data.x)
+        return x

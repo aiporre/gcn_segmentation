@@ -23,7 +23,7 @@ class Trainer(object):
                               momentum=0.9,
                               weight_decay=0.0005)
 
-        self.criterion = nn.BCELoss()
+        self.criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([150]))
 
     def train_batch(self):
         '''
