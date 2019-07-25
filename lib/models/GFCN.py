@@ -3,10 +3,11 @@ import torch_geometric.transforms as T
 import torch.nn.functional as F
 from torch_geometric.utils import normalized_cut, scatter_
 from torch_geometric.data import Data, Batch
-from torch_geometric.nn import graclus, max_pool, avg_pool
+from torch_geometric.nn import graclus, max_pool, avg_pool, fps, radius, knn_interpolate
+
 from torch_geometric.nn import SplineConv
 from lib.utils import print_debug
-
+from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
 
 
 def normalized_cut_2d(edge_index, pos):
@@ -346,14 +347,77 @@ class GFCNC(torch.nn.Module):
 
         # TODO handle contract on trainer and  evaluator
 
-        x = data.x
+#### MODEL
+class down(torch.nn.Module):
+    def __init__(self, ratio, r, in_channels, out_channels, dim, kernel_size):
+        super(down, self).__init__()
+        self.ratio = ratio
+        self.r = r
+        self.conv = SplineConv(in_channels, out_channels, dim=dim, kernel_size=kernel_size)
 
-        return x
+    def forward(self, data):
+        x = F.elu(self.conv(data.x, data.edge_index, data.edge_attr))
+        idx = fps(data.pos, data.batch, ratio=self.ratio)
+        row, col = radius(data.pos, data.pos[idx], self.r, data.batch, data.batch[idx],
+                          max_num_neighbors=64)
+        edge_index = torch.stack([col, row], dim=0).to(data.edge_index.device)
+        pos, batch = data.pos[idx], data.batch[idx]
+
+        data.x = x[idx]
+        data.edge_index = edge_index
+        data.pos = pos
+        data.batch = batch
+        data.edge_attr = data.edge_attr[idx]
+
+        #         data = t(data)
+        return data
+
+
+class up(torch.nn.Module):
+    def __init__(self, k, nn):
+        super(up, self).__init__()
+        self.k = k
+        self.nn = nn
+
+    def forward(self, x, pos, batch, x_skip, pos_skip, batch_skip):
+        x = knn_interpolate(x, pos, pos_skip, batch, batch_skip, k=self.k)
+
+        if x_skip is not None:
+            print('x.size()', x.size(), 'x_skip.size()', x_skip.size())
+            x = torch.cat([x, x_skip], dim=1).to(x.device)
+        x = self.nn(x)
+        return x, pos_skip, batch_skip
+
+
+def MLP(channels, batch_norm=True):
+    return Seq(*[
+        Seq(Lin(channels[i - 1], channels[i]), ReLU(), BN(channels[i]))
+        for i in range(1, len(channels))
+    ])
+
+
+class GFCND(torch.nn.Module):
+    def __init__(self):
+        super(GFCND, self).__init__()
+        print('model GFCN-A')
+        self.down1 = down(0.5, 0.3, 1, 32, dim=2, kernel_size=5)
+        #         self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
+        #         self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)
+        self.up1 = up(3, MLP([1 + 32, 32, 32, 1]))
+
+    def forward(self, data):
+        ## LAYER 1 (1,V0)->(32,V1)
+        input_state = (data.x.clone().unsqueeze(-1), data.pos, data.batch)
+        data = self.down1(data)
+        down1_state = (data.x.clone(), data.pos, data.batch)
+        x, _, _ = self.up1(*down1_state, *input_state)
+        return F.sigmoid(x)
 
 
 class GFCN(torch.nn.Module):
     def __init__(self):
         super(GFCN, self).__init__()
+        print('model GFCN-org..')
         self.conv1 = SplineConv(1, 32, dim=2, kernel_size=5)
         self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
         self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)

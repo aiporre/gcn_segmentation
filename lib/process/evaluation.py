@@ -3,6 +3,7 @@ from torch.autograd import Function, Variable
 import matplotlib.pyplot as plt
 from .progress_bar import printProgressBar
 from lib.utils import print_debug
+from torch import sigmoid
 import numpy as np
 class Evaluator(object):
     def __init__(self, dataset, batch_size=64, to_tensor=True, device=None):
@@ -25,7 +26,7 @@ class Evaluator(object):
             label = torch.tensor(label).float() if self.to_tensor else label
             features = features.to(self.device)
             label = label.to(self.device)
-            prediction = model(features)
+            prediction = sigmoid(model(features))
             pred_mask = (prediction > 0.5).float()
             # reorganize prediction according to the batch.
             if not pred_mask.size(0) == label.size(0):
@@ -54,7 +55,7 @@ class Evaluator(object):
         input = torch.tensor(image).float() if self.to_tensor else image.clone()
         input = input.to(self.device)
         prediction = model(input)
-        pred_mask = (prediction > 0.5).float()
+        pred_mask = (sigmoid(prediction) > 0.5).float()
 
         if not isinstance(image,np.ndarray):
             dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that

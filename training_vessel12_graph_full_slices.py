@@ -38,12 +38,12 @@ def process_command_line():
 
 args = process_command_line()
 EPOCHS = args.epochs
-MODEL_PATH = './{}-vessel12-annotated_slices.pth'.format(args.net)
+MODEL_PATH = './{}-vessel12-full_slices.pth'.format(args.net)
 EPOCHS = args.epochs
 BATCH = args.batch
 
 if args.pre_transform:
-    pre_transform = Crop(300,150,100,100)
+    pre_transform = Crop(30,150,256,256)
 else:
     pre_transform = None
 
