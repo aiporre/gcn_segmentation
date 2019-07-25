@@ -1,6 +1,6 @@
 import argparse
 
-from lib.models import GFCN, GFCNA, PointNet
+from lib.models import GFCN, GFCNA, GFCNC, GFCNB, PointNet
 from lib.datasets import GVESSEL12, Crop
 from lib.process import Trainer, Evaluator
 import matplotlib.pyplot as plt
@@ -50,8 +50,12 @@ else:
 dataset = GVESSEL12(data_dir=args.vesseldir, pre_transform=pre_transform)
 if args.net=='GFCN':
     model = GFCN()
-elif args.net=='GFCNA':
+elif args.net == 'GFCNA':
     model = GFCNA()
+elif args.net == 'GFCNB':
+    model = GFCNB()
+elif args.net == 'GFCNC':
+    model = GFCNC()
 elif args.net=='PointNet':
     model = PointNet()
 else:
