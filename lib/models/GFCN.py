@@ -34,19 +34,23 @@ def consecutive_cluster(src):
 
 def recover_grid(source, pos, edge_index, cluster, batch=None, transform=None):
     device = cluster.device
-    cluster, perm = consecutive_cluster(cluster)
+    cluster, _ = consecutive_cluster(cluster)
     #     weights = weights.to(device)
     # print('======> cluster:', cluster.size())
-
+    source.x = source.x[cluster]
+    source.edge_index = edge_index
+    source.pos = pos
+    source.batch = batch
     if batch is not None:
-        data = Batch(x=source.x[cluster], edge_index=edge_index, pos=pos, batch=batch)
-    else:
-        data = Data(x=source.x[cluster], edge_index=edge_index, pos=pos)
+        source.batch = batch
+        # data = Batch(x=source.x[cluster], edge_index=edge_index, pos=pos, batch=batch)
+    #else:
+        #data = Data(x=source.x[cluster], edge_index=edge_index, pos=pos)
     #     print('reconstructed data.x.shape' , data.x.shape)
 
     if transform is not None:
-        data = transform(data)
-    return data
+        source = transform(source)
+    return source
 
 
 def consecutive_cluster(src):
@@ -262,7 +266,7 @@ class GFCNC(torch.nn.Module):
 
         self.conv4a = SplineConv(128, 256, dim=2, kernel_size=1)
         self.conv4b = SplineConv(256, 256, dim=2, kernel_size=1)
-        self.bn4 = torch.nn.BatchNorm1d(128)
+        self.bn4 = torch.nn.BatchNorm1d(256)
 
         self.score_fr = SplineConv(256, 1, dim=2, kernel_size=1)
         self.score_pool2 = SplineConv(64, 1, dim=2, kernel_size=3)
@@ -311,14 +315,14 @@ class GFCNC(torch.nn.Module):
 
 
         # 128/256,V_3/V_4
-        data.x = F.elu(self.conv3a(data.x, data.edge_index, data.edge_attr))
-        data.x = F.elu(self.conv3b(data.x, data.edge_index, data.edge_attr))
-        data.x = self.bn3(data.x)
+        data.x = F.elu(self.conv4a(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.conv4b(data.x, data.edge_index, data.edge_attr))
+        data.x = self.bn4(data.x)
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster4 = graclus(data.edge_index, weight, data.x.size(0))
-        # pos4 = data.pos
-        # edge_index4 = data.edge_index
-        # batch4 = data.batch if hasattr(data, 'batch') else None
+        pos4 = data.pos
+        edge_index4 = data.edge_index
+        batch4 = data.batch if hasattr(data, 'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
         data = max_pool(cluster4, data, transform=T.Cartesian(cat=False))
 
@@ -329,7 +333,7 @@ class GFCNC(torch.nn.Module):
         # compute score of latent space (V4.128)=>(V4.1)
         data.x = F.elu(self.score_fr(data.x, data.edge_index, data.edge_attr))
         # upsample V4=>V3
-        data = recover_grid(data, pos3, edge_index3, cluster3, batch=batch3, transform=T.Cartesian(cat=False))
+        data = recover_grid(data, pos4, edge_index4, cluster4, batch=batch4, transform=T.Cartesian(cat=False))
 
         # compute score of pool3  (V3.128)=>(V3,1)
         pool3.x = F.elu(self.score_pool3(pool3.x, pool3.edge_index, pool3.edge_attr))
@@ -338,14 +342,16 @@ class GFCNC(torch.nn.Module):
         #                                  batch=batch1, transform=None)
         data.x = data.x+pool3.x
         # upsample V3=>V2
-        data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
+        data = recover_grid(data, pos3, edge_index3, cluster3, batch=batch3, transform=T.Cartesian(cat=False))
         # compute score of pool2 (V2.64)=>(V2.1)
         pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
         data.x = data.x+pool2.x
         # upsample V2=>V1
+        data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
         data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
 
         # TODO handle contract on trainer and  evaluator
+        return data.x
 
 #### MODEL
 class down(torch.nn.Module):
