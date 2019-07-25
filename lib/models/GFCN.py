@@ -314,12 +314,12 @@ class GFCNC(torch.nn.Module):
         data.x = F.elu(self.conv3b(data.x, data.edge_index, data.edge_attr))
         data.x = self.bn3(data.x)
         weight = normalized_cut_2d(data.edge_index, data.pos)
-        cluster3 = graclus(data.edge_index, weight, data.x.size(0))
-        pos3 = data.pos
-        edge_index3 = data.edge_index
-        batch3 = data.batch if hasattr(data, 'batch') else None
+        cluster4 = graclus(data.edge_index, weight, data.x.size(0))
+        # pos4 = data.pos
+        # edge_index4 = data.edge_index
+        # batch4 = data.batch if hasattr(data, 'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
-        data = max_pool(cluster3, data, transform=T.Cartesian(cat=False))
+        data = max_pool(cluster4, data, transform=T.Cartesian(cat=False))
 
         # LAYERS:
         # 256/1, V4/V3
