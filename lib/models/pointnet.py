@@ -79,6 +79,7 @@ class PointNet(torch.nn.Module):
         self.lin3 = torch.nn.Linear(128, 1)
 
     def forward(self, data):
+        data.x = data.x.unsqueeze(-1)
         sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
         sa2_out = self.sa2_module(*sa1_out)

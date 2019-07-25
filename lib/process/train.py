@@ -18,12 +18,9 @@ class Trainer(object):
         self.device = kwargs['device'] if 'device' in kwargs.keys() else torch.device('cpu')
 
     def update_lr(self, lr):
-        self.optimizer = optim.SGD(self.model.parameters(),
-                              lr=lr,
-                              momentum=0.9,
-                              weight_decay=0.0005)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
-        self.criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([150]))
+        self.criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([150.0]).to(self.device))
 
     def train_batch(self):
         '''
@@ -41,11 +38,6 @@ class Trainer(object):
 
         prediction_flat = prediction.view(-1)
         target_flat = target.view(-1)
-        if not (prediction_flat >= 0.).all():
-            print('ERROR predition flat negative', prediction.min())
-
-        if not (prediction_flat <= 1.).all():
-            print('ERROR priction greater one', prediction.max())
         loss = self.criterion(prediction_flat,target_flat)
         self.optimizer.zero_grad()
         loss.backward()
