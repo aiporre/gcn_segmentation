@@ -20,7 +20,7 @@ class Trainer(object):
     def update_lr(self, lr):
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
-        self.criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([150.0]).to(self.device))
+        self.criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([12.0]).to(self.device))
 
     def train_batch(self):
         '''

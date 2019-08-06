@@ -276,6 +276,7 @@ class GFCNC(torch.nn.Module):
 
     def forward(self, data):
         # (1/32,V_0/V_1)
+        # aux = data.x.clone()
         data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
         data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
         data.x = self.bn1(data.x)
@@ -285,6 +286,7 @@ class GFCNC(torch.nn.Module):
         edge_index1 = data.edge_index
         batch1 = data.batch if hasattr(data,'batch') else None
         # weights1, centroids1 = bweights(data, cluster1)
+        # weights1 = pweights(aux, cluster1)
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         # (32/64,V_1/V_2)
@@ -338,8 +340,6 @@ class GFCNC(torch.nn.Module):
         # compute score of pool3  (V3.128)=>(V3,1)
         pool3.x = F.elu(self.score_pool3(pool3.x, pool3.edge_index, pool3.edge_attr))
 
-        # data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
-        #                                  batch=batch1, transform=None)
         data.x = data.x+pool3.x
         # upsample V3=>V2
         data = recover_grid(data, pos3, edge_index3, cluster3, batch=batch3, transform=T.Cartesian(cat=False))
@@ -349,9 +349,10 @@ class GFCNC(torch.nn.Module):
         # upsample V2=>V1
         data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
         data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
+        # data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1, batch=batch1, transform=None)
 
         # TODO handle contract on trainer and  evaluator
-        return data.x
+        return F.sigmoid(data.x)
 
 #### MODEL
 class down(torch.nn.Module):

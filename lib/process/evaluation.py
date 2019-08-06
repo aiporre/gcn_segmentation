@@ -62,7 +62,7 @@ class Evaluator(object):
             dimension = np.sqrt(dimension).astype(int)
             mask = mask.cpu().detach().numpy().reshape((dimension,dimension))
             image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
-            prediction = prediction.reshape((dimension, dimension))
+            prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
             pred_mask = pred_mask.reshape((dimension,dimension))
 
 
