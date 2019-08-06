@@ -352,7 +352,7 @@ class GFCNC(torch.nn.Module):
         # data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1, batch=batch1, transform=None)
 
         # TODO handle contract on trainer and  evaluator
-        return F.sigmoid(data.x)
+        return data.x
 
 #### MODEL
 class down(torch.nn.Module):
