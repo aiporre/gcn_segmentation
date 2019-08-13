@@ -4,6 +4,7 @@ from .pascal_voc import PascalVOC
 from .queue import PreprocessQueue
 from .m2nist import M2NIST
 from .vessel12 import VESSEL12
+from .vessel_synth import SVESSEL
 from .transforms import Crop
 try:
     from .gvessel12 import GVESSEL12
