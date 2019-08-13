@@ -37,7 +37,7 @@ def load_itk(filename):
 
 def load_vessel_mask_pre(shape, path):
     vessel_mask = np.load(os.path.join(path))
-    return vessel_mask, range(200,205)
+    return vessel_mask
 
 def load_vessel_mask_csv(shape, path):
     ''' Reads annotation csv and produces the vessel mask with coordinates Z,Y,X'''
@@ -130,7 +130,7 @@ class _GVESSEL12(Dataset):
             # nz_slides = (ct_scan_masked.max(axis=(1,2))-ct_scan_masked.min(axis=(1,2))) != 0
 
             # ct_scan_masked = ct_scan_masked[nz_slides]
-            vessel_mask, _ = load_vessel_mask_pre(ct_scan.shape, os.path.join(self.raw_dir, 'train', 'Annotations',
+            vessel_mask = load_vessel_mask_pre(ct_scan.shape, os.path.join(self.raw_dir, 'train', 'Annotations',
                                                                               'VESSEL12_{:02d}_OutputVolume.npy'.format(
                                                                                   scan_i)))
             usesful_scans = vessel_mask.sum(axis=(1,2))>1000

@@ -47,7 +47,7 @@ def load_vessel_mask_csv(shape, path):
     return vessel_mask, z_slices
 
 
-def read_dataset_mhd(data_dir, annotated_slices=True):
+def read_dataset_mhd(data_dir):
     '''
         Reads the directory and conforms the structure of generic datasets:
         {'train': {'images': list of images, 'labels': list of labels}
