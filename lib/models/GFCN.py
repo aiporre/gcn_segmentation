@@ -102,6 +102,7 @@ def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=No
     return source
 
 class GFCNB(torch.nn.Module):
+    ''' GFCN equivalent to the FCN32s'''
     def __init__(self):
         super(GFCNB, self).__init__()
         self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
@@ -168,6 +169,7 @@ class GFCNB(torch.nn.Module):
         return x
 
 class GFCNA(torch.nn.Module):
+    ''' GFCN equivalent to the FCN16s'''
     def __init__(self):
         super(GFCNA, self).__init__()
         self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
@@ -250,6 +252,7 @@ class GFCNA(torch.nn.Module):
         return x
 
 class GFCNC(torch.nn.Module):
+    ''' model G-FCN 8s equivalent'''
     def __init__(self):
         super(GFCNC, self).__init__()
         self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
@@ -404,9 +407,10 @@ def MLP(channels, batch_norm=True):
 
 
 class GFCND(torch.nn.Module):
+    ''' GFCN using the point net++'''
     def __init__(self):
         super(GFCND, self).__init__()
-        print('model GFCN-A')
+        print('model GFCN-D')
         self.down1 = down(0.5, 0.3, 1, 32, dim=2, kernel_size=5)
         #         self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
         #         self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)
@@ -422,6 +426,7 @@ class GFCND(torch.nn.Module):
 
 
 class GFCN(torch.nn.Module):
+    ''' swallow GFCN32s with barycentric upsampling'''
     def __init__(self):
         super(GFCN, self).__init__()
         print('model GFCN-org..')
