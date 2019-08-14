@@ -42,6 +42,38 @@ class Evaluator(object):
 
         return DCM_accum/N
 
+    def bin_scores(self, model, progress_bar=True):
+        correct = 0
+        TP = 0
+        FP = 0
+        FN = 0
+        N = len(self.dataset)
+        L = self.dataset.num_batches
+        if progress_bar:
+            printProgressBar(0, L, prefix='Binary Scores:', suffix='Complete', length=50)
+        i = 0
+        for image, label in self.dataset.batches():
+            # feature and label conversion
+            features = torch.tensor(image).float() if self.to_tensor else image
+            label = torch.tensor(label).float() if self.to_tensor else label
+            # to device
+            features = features.to(self.device)
+            label = label.to(self.device)
+
+            pred = model(features).max(1)[1]
+            correct += pred.eq(label).sum().item()
+            mask_pos = label.eq(1)
+            mask_neg = label.eq(0)
+            TP += pred[mask_pos].eq(label[mask_pos]).sum().item()
+            FP += pred[mask_pos].ne(label[mask_pos]).sum().item()
+            FN += pred[mask_neg].ne(label[mask_neg]).sum().item()
+            i += 1
+            if progress_bar:
+                printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
+            else:
+                print('Training Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+        return correct/N, TP/(TP+FP), TP/(TP+FN)
+
     def plot_prediction(self,model, index=0, fig=None, figsize=(10,10)):
         if not fig:
             fig = plt.figure(figsize=figsize)
