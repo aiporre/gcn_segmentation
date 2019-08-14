@@ -1,4 +1,6 @@
 import numpy as np
+from scipy import ndimage
+
 from .dataset import Datasets, Dataset
 # CONSTANT WHERE TO FIND THE DATA
 from config import VESSEL_DIR
@@ -49,6 +51,10 @@ def load_vessel_mask_csv(shape, path):
     # unique list of z annotated slices
     z_slices = np.unique(z)
     return vessel_mask, z_slices
+
+def erode_mask(mask):
+    return ndimage.binary_erosion(mask, structure=np.ones((1, 7, 7)))
+
 
 
 
@@ -120,6 +126,8 @@ class _GVESSEL12(Dataset):
             scan_i+=1
             print('processed ', cnt_slices, ' out of ', max_slices)
             lung_mask, _, _ = load_itk(os.path.join(self.raw_dir, 'train', 'Lungmasks', 'VESSEL12_{:02d}.mhd'.format(scan_i)))
+            lung_mask = erode_mask(lung_mask)
+
             ct_scan, origin, spacing = load_itk(
                 os.path.join(self.raw_dir, 'train', 'Scans', 'VESSEL12_{:02d}.mhd'.format(scan_i)))
             lung_mask = lung_mask.astype(np.float)
@@ -133,6 +141,8 @@ class _GVESSEL12(Dataset):
             vessel_mask = load_vessel_mask_pre(ct_scan.shape, os.path.join(self.raw_dir, 'train', 'Annotations',
                                                                               'VESSEL12_{:02d}_OutputVolume.npy'.format(
                                                                                   scan_i)))
+            vessel_mask = lung_mask*vessel_mask
+
             usesful_scans = vessel_mask.sum(axis=(1,2))>1000
 
             ct_scan_masked = ct_scan_masked[usesful_scans]

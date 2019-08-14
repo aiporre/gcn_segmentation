@@ -1,4 +1,6 @@
 import numpy as np
+from scipy import ndimage
+
 from .dataset import Datasets, Dataset
 # CONSTANT WHERE TO FIND THE DATA
 from config import VESSEL_DIR
@@ -45,6 +47,10 @@ def load_vessel_mask_csv(shape, path):
     return vessel_mask, z_slices
 
 
+def erode_mask(mask):
+    return ndimage.binary_erosion(mask, structure=np.ones((1, 7, 7)))
+
+
 def read_dataset_mhd(data_dir, annotated_slices=True):
     '''
         Reads the directory and conforms the structure of generic datasets:
@@ -57,12 +63,14 @@ def read_dataset_mhd(data_dir, annotated_slices=True):
     for i in [21,22,23]:
         # reading the ct-scan masked with the lungs
         lung_mask, _, _ = load_itk(os.path.join(data_dir, 'train', 'Lungmasks', 'VESSEL12_{:02d}.mhd'.format(i)))
+        lung_mask = erode_mask(lung_mask)
         ct_scan, origin, spacing = load_itk(os.path.join(data_dir, 'train', 'Scans', 'VESSEL12_{:02d}.mhd'.format(i)))
         ct_scan_masked = lung_mask*ct_scan
         ct_scan_masked.astype(np.float,copy=False)
         ct_scan_masked = (ct_scan_masked-ct_scan_masked.min())/(ct_scan_masked.max()-ct_scan_masked.min())
 
         vessel_mask, _ = load_vessel_mask_pre(ct_scan.shape, os.path.join(data_dir, 'train', 'Annotations', 'VESSEL12_{:02d}_OutputVolume.npy'.format(i)))
+        vessel_mask = lung_mask*vessel_mask
 
         # this is legacy code commented because this is not industrial code XD
         # # alternatively, we may curate the 9 slices there fore we need to know which slices were annotated
