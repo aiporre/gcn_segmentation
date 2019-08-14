@@ -16,7 +16,7 @@ class Evaluator(object):
 
     def DCM(self, model, progress_bar=True):
         DCM_accum = 0
-        N = len(self.dataset)
+        N = 0
         L = self.dataset.num_batches
         if progress_bar:
             printProgressBar(0, L, prefix='DCM:', suffix='Complete', length=50)
@@ -33,6 +33,7 @@ class Evaluator(object):
                 b = label.size(0)
                 pred_mask = pred_mask.view(b, -1)
             DCM_accum += dice_coeff(pred_mask, label).item()
+            N += label.numel()
             i += 1
             if progress_bar:
                 printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
@@ -42,12 +43,12 @@ class Evaluator(object):
 
         return DCM_accum/N
 
-    def bin_scores(self, model, progress_bar=True):
+    def bin_scores(self, model, progress_bar=False):
         correct = 0
         TP = 0
         FP = 0
         FN = 0
-        N = len(self.dataset)
+        N = 0
         L = self.dataset.num_batches
         if progress_bar:
             printProgressBar(0, L, prefix='Binary Scores:', suffix='Complete', length=50)
@@ -58,20 +59,24 @@ class Evaluator(object):
             label = torch.tensor(label).float() if self.to_tensor else label
             # to device
             features = features.to(self.device)
-            label = label.to(self.device)
+            label = label.long().to(self.device)
 
             pred = model(features).max(1)[1]
+            if not pred.size(0) == label.size(0):
+                b = label.size(0)
+                pred = pred.view(b, -1)
             correct += pred.eq(label).sum().item()
-            mask_pos = label.eq(1)
-            mask_neg = label.eq(0)
-            TP += pred[mask_pos].eq(label[mask_pos]).sum().item()
-            FP += pred[mask_pos].ne(label[mask_pos]).sum().item()
-            FN += pred[mask_neg].ne(label[mask_neg]).sum().item()
+            N += label.numel()
+            mask_pos = label.eq(1).squeeze()
+            mask_neg = label.eq(0).squeeze()
+            TP += pred[:, mask_pos].eq(label[:, mask_pos]).sum().item()
+            FP += pred[:, mask_pos].ne(label[:, mask_pos]).sum().item()
+            FN += pred[:, mask_neg].ne(label[:, mask_neg]).sum().item()
             i += 1
             if progress_bar:
-                printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
+                printProgressBar(i, L, prefix='PAR:', suffix='Complete', length=50)
             else:
-                print('Training Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+                print('Bin Scores: in batch ', i+1, ' out of ', L, '(Completed {}%)'.format(100.0*(i+1)/L))
         return correct/N, TP/(TP+FP), TP/(TP+FN)
 
     def plot_prediction(self,model, index=0, fig=None, figsize=(10,10)):
