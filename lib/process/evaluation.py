@@ -38,8 +38,8 @@ class Evaluator(object):
             if progress_bar:
                 printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
             else:
-                print('Training Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
-        self.dataset.enforce_batch(1)
+                print('DCS Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+        # self.dataset.enforce_batch(1)
 
         return DCM_accum/N
 
@@ -49,6 +49,7 @@ class Evaluator(object):
         FP = 0
         FN = 0
         N = 0
+        eps = 0.0001
         L = self.dataset.num_batches
         if progress_bar:
             printProgressBar(0, L, prefix='Binary Scores:', suffix='Complete', length=50)
@@ -65,19 +66,23 @@ class Evaluator(object):
             if not pred.size(0) == label.size(0):
                 b = label.size(0)
                 pred = pred.view(b, -1)
+            if len(label.shape)>2:
+                b = label.size(0)
+                label = label.view(b, -1)
+                pred = pred.view(b, -1)
             correct += pred.eq(label).sum().item()
             N += label.numel()
-            mask_pos = label.eq(1).squeeze()
-            mask_neg = label.eq(0).squeeze()
-            TP += pred[:, mask_pos].eq(label[:, mask_pos]).sum().item()
-            FP += pred[:, mask_pos].ne(label[:, mask_pos]).sum().item()
-            FN += pred[:, mask_neg].ne(label[:, mask_neg]).sum().item()
+            mask_pos = label.eq(1).squeeze().nonzero()
+            mask_neg = label.eq(0).squeeze().nonzero()
+            TP += pred[:,mask_pos].eq(label[:,mask_pos]).sum().item()
+            FP += pred[:,mask_pos].ne(label[:,mask_pos]).sum().item()
+            FN += pred[:,mask_neg].ne(label[:,mask_neg]).sum().item()
             i += 1
             if progress_bar:
-                printProgressBar(i, L, prefix='PAR:', suffix='Complete', length=50)
+                printProgressBar(i, L, prefix='Acc, Rec, Pre:', suffix='Complete', length=50)
             else:
                 print('Bin Scores: in batch ', i+1, ' out of ', L, '(Completed {}%)'.format(100.0*(i+1)/L))
-        return correct/N, TP/(TP+FP), TP/(TP+FN)
+        return correct/N, TP/(TP+FP+eps), TP/(TP+FN+eps)
 
     def plot_prediction(self,model, index=0, fig=None, figsize=(10,10)):
         if not fig:

@@ -16,11 +16,12 @@ class Trainer(object):
         self.dataset.enforce_batch(self._batch_size)
         self.to_tensor = kwargs['to_tensor'] if 'to_tensor' in kwargs.keys() else True
         self.device = kwargs['device'] if 'device' in kwargs.keys() else torch.device('cpu')
+        self.criterion = kwargs['criterion'] if 'criterion' in kwargs.keys() else nn.BCEWithLogitsLoss()
+
 
     def update_lr(self, lr):
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
 
-        self.criterion = nn.BCEWithLogitsLoss()
 
     def train_batch(self):
         '''
