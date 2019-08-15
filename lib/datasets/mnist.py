@@ -54,7 +54,7 @@ class MNIST(Datasets):
             a[image>0.3] = 0
             patterns[i,0,:,:] = a
 
-        return images #+patterns
+        return images +patterns
 
     def _preprocess_labels(self, images):
         threshold = 0.3
