@@ -64,7 +64,7 @@ class Evaluator(object):
             features = features.to(self.device)
             label = label.long().to(self.device)
             prediction = model(features)
-            pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
+            pred = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
             if not pred.size(0) == label.size(0):
                 b = label.size(0)
                 pred = pred.view(b, -1)
