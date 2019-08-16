@@ -90,10 +90,10 @@ else:
 
 if args.criterion == 'BCE':
     criterion = nn.BCELoss()
-    sigmoid=True
+    sigmoid=False
 elif args.criterion == 'BCElogistic':
     criterion = nn.BCEWithLogitsLoss()
-    sigmoid = False
+    sigmoid = True
 elif args.criterion == 'DCS':
     criterion = DCS()
     sigmoid = False # it necesary to compute the signmout in the evaluation
