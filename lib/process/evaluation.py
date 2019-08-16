@@ -6,12 +6,13 @@ from lib.utils import print_debug
 from torch import sigmoid
 import numpy as np
 class Evaluator(object):
-    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None):
+    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False):
         self.dataset = dataset.test
         self._batch_size = batch_size
         self.dataset.enforce_batch(self._batch_size)
         self.to_tensor = to_tensor
         self.device = device if device is not None else torch.device('cpu')
+        self.sigmoid = sigmoid
 
 
     def DCM(self, model, progress_bar=True):
@@ -27,7 +28,7 @@ class Evaluator(object):
             features = features.to(self.device)
             label = label.to(self.device)
             prediction = model(features)
-            pred_mask = (prediction > 0.5).float()
+            pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
             # reorganize prediction according to the batch.
             if not pred_mask.size(0) == label.size(0):
                 b = label.size(0)
@@ -62,8 +63,8 @@ class Evaluator(object):
             # to device
             features = features.to(self.device)
             label = label.long().to(self.device)
-
-            pred = model(features).max(1)[1]
+            prediction = model(features)
+            pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
             if not pred.size(0) == label.size(0):
                 b = label.size(0)
                 pred = pred.view(b, -1)
@@ -100,7 +101,7 @@ class Evaluator(object):
         input = input.to(self.device)
         prediction = model(input)
         # pred_mask = (sigmoid(prediction) > 0.5).float()
-        pred_mask = (prediction > 0.5).float()
+        pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
 
         if not isinstance(image,np.ndarray):
             dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that

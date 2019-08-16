@@ -53,7 +53,7 @@ def process_command_line():
 
 args = process_command_line()
 EPOCHS = args.epochs
-MODEL_PATH = './{}-vessel12-full_slices.pth'.format(args.net)
+MODEL_PATH = './{}-ds{}.pth'.format(args.net, args.dataset)
 EPOCHS = args.epochs
 BATCH = args.batch
 
@@ -92,18 +92,20 @@ if args.criterion == 'BCE':
     criterion = nn.BCELoss()
 elif args.criterion == 'BCElogistic':
     criterion = nn.BCEWithLogitsLoss()
+    sigmoid = True
 else:
     criterion = nn.BCELoss()
+    sigmoid = False
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device)
-    evaluator = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device)
+    evaluator = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid)
     trainer.load_model(model, MODEL_PATH)
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device)
-    evaluator = Evaluator(dataset=dataset, batch_size=BATCH, device=device)
+    evaluator = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid)
     trainer.load_model(model, MODEL_PATH)
 
 
@@ -115,12 +117,12 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     P = []
     R = []
     for _ in range(EPOCHS):
-        model.train()
-        loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
-        mean_loss = np.array(loss).mean()
-        loss_epoch.append(mean_loss)
-        print('loss epoch', mean_loss)
-        loss_all += loss
+        # model.train()
+        # loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
+        # mean_loss = np.array(loss).mean()
+        loss_epoch.append(0)#mean_loss)
+        # print('loss epoch', mean_loss)
+        loss_all += [1]#,loss
         with torch.no_grad():
             model.eval()
             DCS.append(evaluator.DCM(model, progress_bar=progress_bar))
@@ -130,17 +132,22 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
             R.append(r)
             print('DCS score:', DCS[-1], 'accuracy ', a, 'precision', p, 'recall', r )
     fig = plt.figure(figsize=(10,10))
-    plt.subplot(1,3,1)
+    loss_all = np.array(loss_all)
+    measurements = np.array([DCS,P,A,R])
+    np.save('{}_e{}_lr{}_ds{}_lossall'.format(prefix, EPOCHS, lr, args.dataset), measurements)
+    np.save('{}_e{}_lr{}_ds{}_measurements'.format(prefix, EPOCHS, lr, args.dataset),measurements)
+
+    plt.subplot(3,1,1)
     plt.plot(loss_all)
     plt.xlabel('iterations')
     plt.ylabel('loss')
     plt.title('loss history')
-    plt.subplot(1, 3, 2)
+    plt.subplot(3,1,2)
     plt.plot(loss_epoch)
     plt.xlabel('epochs')
     plt.ylabel('loss')
     plt.title('loss history')
-    plt.subplot(1, 3, 3)
+    plt.subplot(3,1,3)
     plt.plot(DCS)
     plt.plot(P)
     plt.plot(A)

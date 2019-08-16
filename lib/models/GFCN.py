@@ -478,5 +478,5 @@ class GFCN(torch.nn.Module):
         data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
                                         batch=batch1, transform=T.Cartesian(cat=False))
 
-        # return F.sigmoid(data.x)
-        return x
+        return F.sigmoid(data.x)
+        # return x
