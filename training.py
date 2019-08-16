@@ -9,7 +9,7 @@ from lib.models import UNet
 from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop
 
 
-from lib.process import Trainer, Evaluator, DiceCoeff
+from lib.process import Trainer, Evaluator, DCS
 import matplotlib.pyplot as plt
 import torch
 from torch import nn
@@ -46,7 +46,7 @@ def process_command_line():
     parser.add_argument("-p", "--pre-transform", type=bool, default=False,
                         help="use a pretransfrom to the dataset")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
-                        help="criterion: BCE or DCS or BCElogistic")
+                        help="criterion: BCE or DCS or BCElogistic or DCSsigmoid")
     return parser.parse_args()
 
 # CONSTANST
@@ -95,8 +95,11 @@ elif args.criterion == 'BCElogistic':
     criterion = nn.BCEWithLogitsLoss()
     sigmoid = False
 elif args.criterion == 'DCS':
-    criterion = DiceCoeff()
+    criterion = DCS()
     sigmoid = True
+elif args.criterion == 'DCSsigmoid':
+    criterion = DCS(pre_sigmoid=True)
+    sigmoid = False
 else:
     criterion = nn.BCELoss()
     sigmoid = True
@@ -104,11 +107,11 @@ else:
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
 if args.dataset[0] == 'G':
-    trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device)
+    trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device, criterion=criterion)
     evaluator = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid)
     trainer.load_model(model, MODEL_PATH)
 else:
-    trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device)
+    trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion)
     evaluator = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid)
     trainer.load_model(model, MODEL_PATH)
 
@@ -120,12 +123,12 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     A = []
     P = []
     R = []
-    for _ in range(EPOCHS):
+    for e in range(EPOCHS):
         model.train()
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
         mean_loss = np.array(loss).mean()
         loss_epoch.append(mean_loss)
-        print('loss epoch', mean_loss)
+        print('EPOCH ', e, 'loss epoch', mean_loss)
         loss_all += loss
         with torch.no_grad():
             model.eval()
