@@ -9,7 +9,7 @@ from lib.models import UNet
 from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop
 
 
-from lib.process import Trainer, Evaluator
+from lib.process import Trainer, Evaluator, DiceCoeff
 import matplotlib.pyplot as plt
 import torch
 from torch import nn
@@ -46,7 +46,7 @@ def process_command_line():
     parser.add_argument("-p", "--pre-transform", type=bool, default=False,
                         help="use a pretransfrom to the dataset")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
-                        help="criterion")
+                        help="criterion: BCE or DCS or BCElogistic")
     return parser.parse_args()
 
 # CONSTANST
@@ -94,6 +94,9 @@ if args.criterion == 'BCE':
 elif args.criterion == 'BCElogistic':
     criterion = nn.BCEWithLogitsLoss()
     sigmoid = False
+elif args.criterion == 'BCElogistic':
+    criterion = DiceCoeff()
+    sigmoid = True
 else:
     criterion = nn.BCELoss()
     sigmoid = True
