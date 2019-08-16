@@ -184,8 +184,10 @@ class GFCNA(torch.nn.Module):
         self.conv3b = SplineConv(128, 128, dim=2, kernel_size=1)
         self.bn3 = torch.nn.BatchNorm1d(128)
 
-        self.score_fr = SplineConv(128, 1, dim=2, kernel_size=1)
-        self.score_pool2 = SplineConv(64, 1, dim=2, kernel_size=3)
+        self.score_fr = SplineConv(128, 32, dim=2, kernel_size=1)
+        self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
+
+        self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
 
 
 
