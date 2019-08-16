@@ -94,7 +94,7 @@ if args.criterion == 'BCE':
 elif args.criterion == 'BCElogistic':
     criterion = nn.BCEWithLogitsLoss()
     sigmoid = False
-elif args.criterion == 'BCElogistic':
+elif args.criterion == 'DCS':
     criterion = DiceCoeff()
     sigmoid = True
 else:
