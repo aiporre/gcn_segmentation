@@ -118,12 +118,12 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     P = []
     R = []
     for _ in range(EPOCHS):
-        # model.train()
-        # loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
-        # mean_loss = np.array(loss).mean()
-        loss_epoch.append(0)#mean_loss)
-        # print('loss epoch', mean_loss)
-        loss_all += [1]#,loss
+        model.train()
+        loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
+        mean_loss = np.array(loss).mean()
+        loss_epoch.append(mean_loss)
+        print('loss epoch', mean_loss)
+        loss_all += loss
         with torch.no_grad():
             model.eval()
             DCS.append(evaluator.DCM(model, progress_bar=progress_bar))
