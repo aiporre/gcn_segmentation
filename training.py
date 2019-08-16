@@ -90,12 +90,13 @@ else:
 
 if args.criterion == 'BCE':
     criterion = nn.BCELoss()
+    sigmoid=True
 elif args.criterion == 'BCElogistic':
     criterion = nn.BCEWithLogitsLoss()
-    sigmoid = True
+    sigmoid = False
 else:
     criterion = nn.BCELoss()
-    sigmoid = False
+    sigmoid = True
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device)
