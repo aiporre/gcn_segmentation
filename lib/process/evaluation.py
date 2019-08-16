@@ -15,7 +15,7 @@ class Evaluator(object):
 
 
     def DCM(self, model, progress_bar=True):
-        DCM_accum = 0
+        DCM_accum = []
         N = 0
         L = self.dataset.num_batches
         if progress_bar:
@@ -26,22 +26,23 @@ class Evaluator(object):
             label = torch.tensor(label).float() if self.to_tensor else label
             features = features.to(self.device)
             label = label.to(self.device)
-            prediction = sigmoid(model(features))
+            prediction = model(features)
             pred_mask = (prediction > 0.5).float()
             # reorganize prediction according to the batch.
             if not pred_mask.size(0) == label.size(0):
                 b = label.size(0)
                 pred_mask = pred_mask.view(b, -1)
-            DCM_accum += dice_coeff(pred_mask, label).item()
+            DCM_accum.append(dice_coeff(pred_mask, label).item())
             N += label.numel()
-            i += 1
             if progress_bar:
                 printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
             else:
                 print('DCS Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+            i += 1
+
         # self.dataset.enforce_batch(1)
 
-        return DCM_accum/N
+        return np.array(DCM_accum).mean()
 
     def bin_scores(self, model, progress_bar=False):
         correct = 0
@@ -77,11 +78,12 @@ class Evaluator(object):
             TP += pred[:,mask_pos].eq(label[:,mask_pos]).sum().item()
             FP += pred[:,mask_pos].ne(label[:,mask_pos]).sum().item()
             FN += pred[:,mask_neg].ne(label[:,mask_neg]).sum().item()
-            i += 1
+
             if progress_bar:
                 printProgressBar(i, L, prefix='Acc, Rec, Pre:', suffix='Complete', length=50)
             else:
                 print('Bin Scores: in batch ', i+1, ' out of ', L, '(Completed {}%)'.format(100.0*(i+1)/L))
+            i += 1
         return correct/N, TP/(TP+FP+eps), TP/(TP+FN+eps)
 
     def plot_prediction(self,model, index=0, fig=None, figsize=(10,10)):
@@ -97,7 +99,8 @@ class Evaluator(object):
         input = torch.tensor(image).float() if self.to_tensor else image.clone()
         input = input.to(self.device)
         prediction = model(input)
-        pred_mask = (sigmoid(prediction) > 0.5).float()
+        # pred_mask = (sigmoid(prediction) > 0.5).float()
+        pred_mask = (prediction > 0.5).float()
 
         if not isinstance(image,np.ndarray):
             dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that

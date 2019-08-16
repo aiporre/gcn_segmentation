@@ -139,11 +139,12 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     trainer.save_model(MODEL_PATH)
 
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
-    # print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
+    model.eval()
+    print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
     plt.show()
 
-train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
+# train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
 eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
