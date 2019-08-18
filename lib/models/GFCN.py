@@ -274,10 +274,11 @@ class GFCNC(torch.nn.Module):
         self.conv4b = SplineConv(256, 256, dim=2, kernel_size=1)
         self.bn4 = torch.nn.BatchNorm1d(256)
 
-        self.score_fr = SplineConv(256, 1, dim=2, kernel_size=1)
-        self.score_pool2 = SplineConv(64, 1, dim=2, kernel_size=3)
-        self.score_pool3 = SplineConv(128, 1, dim=2, kernel_size=3)
+        self.score_fr = SplineConv(256, 32, dim=2, kernel_size=1)
+        self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
+        self.score_pool3 = SplineConv(128, 32, dim=2, kernel_size=3)
 
+        self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
 
 
     def forward(self, data):
@@ -358,6 +359,9 @@ class GFCNC(torch.nn.Module):
         # data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1, batch=batch1, transform=None)
 
         # TODO handle contract on trainer and  evaluator
+        data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+
+
         return data.x
 
 #### MODEL
