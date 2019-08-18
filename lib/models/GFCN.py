@@ -248,6 +248,7 @@ class GFCNA(torch.nn.Module):
         data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
 
         # TODO handle contract on trainer and  evaluator
+        data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
 
         x = data.x
 
