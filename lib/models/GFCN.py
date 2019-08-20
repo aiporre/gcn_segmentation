@@ -446,8 +446,8 @@ class GFCND(torch.nn.Module):
 
     def __init__(self):
         super(GFCND, self).__init__()
-        self.down1 = Downsampling(k_range=16, ratio=0.5, in_channels=1, out_channels=64, dim=2, kernel_size=5)
-        self.down2 = Downsampling(k_range=16, ratio=0.5, in_channels=64, out_channels=256, dim=2, kernel_size=3)
+        self.down1 = Downsampling(k_range=64, ratio=0.5, in_channels=1, out_channels=64, dim=2, kernel_size=5)
+        self.down2 = Downsampling(k_range=256, ratio=0.5, in_channels=64, out_channels=256, dim=2, kernel_size=3)
         self.up1 = Upsampling(k=3, in_channels=256, out_channels=128, dim=2, kernel_size=3)
         self.up2 = Upsampling(k=3, in_channels=128, out_channels=32, dim=2, kernel_size=5)
 
