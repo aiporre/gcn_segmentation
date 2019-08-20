@@ -68,9 +68,9 @@ class _GMNIST(Dataset):
         print('processing: images.shape ', images.shape)
         for i in range(samples):
             a = patterns_list[np.random.randint(0, len(patterns_list))]
-            image = images[i, :, :].reshape(a.shape)
+            image = images[i, :].reshape(a.shape)
             a[image > 0.3] = 0
-            patterns[i, 0, :, :] = a
+            patterns[i,:] = a
         images = images + patterns
 
         masks = (images > 0.1).astype(np.float)
