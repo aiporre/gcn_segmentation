@@ -1,5 +1,6 @@
 import os
 from .dataset import Datasets, Dataset, GraphDataset
+from .mnist import get_pattern
 import torch
 from torch_geometric.data import (Dataset, Data)
 import torch_geometric.transforms as T
@@ -60,6 +61,17 @@ class _GMNIST(Dataset):
         mnist = input_data.read_data_sets(
             self.raw_dir, one_hot=True, validation_size=0)
         images = mnist.train.images[0:8000] if self.train else mnist.test.images[8000:10000]
+
+        samples = images.shape[0]
+        patterns = np.zeros_like(images)
+        patterns_list = [get_pattern() for _ in range(100)]
+        for i in range(samples):
+            a = patterns_list[np.random.randint(0, len(patterns_list))]
+            image = images[i, 0, :, :].reshape(a.shape)
+            a[image > 0.3] = 0
+            patterns[i, 0, :, :] = a
+        images = images + patterns
+
         masks = (images > 0.1).astype(np.float)
 
         for image, mask in zip(images, masks):
