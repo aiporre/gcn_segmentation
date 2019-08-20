@@ -121,7 +121,10 @@ class Dataset(object):
 
     @property
     def num_batches(self):
-        return int(self.num_examples/self._batch_size)+1
+        K = self.num_examples % self._batch_size
+        K1 = int(self.num_examples / self._batch_size)
+        K1 = K1 if(K== 0) else K1+1
+        return K1
 
     def _random_shuffle_examples(self):
         perm = np.arange(self.num_examples)
