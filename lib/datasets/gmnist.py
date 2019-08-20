@@ -64,10 +64,11 @@ class _GMNIST(Dataset):
 
         samples = images.shape[0]
         patterns = np.zeros_like(images)
+        np.random.seed(0)
         patterns_list = [get_pattern().reshape(28*28) for _ in range(100)]
         print('processing: images.shape ', images.shape)
         for j in range(samples):
-            a = patterns_list[np.random.randint(0, len(patterns_list))]
+            a = patterns_list[np.random.randint(0, len(patterns_list))].copy()
             image = images[j, :].reshape(a.shape)
             a[image > 0.3] = 0
             patterns[j,:] = a

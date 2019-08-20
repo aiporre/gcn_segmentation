@@ -47,9 +47,10 @@ class MNIST(Datasets):
                             self.num_channels)).transpose(0, 3, 1, 2)
         samples = images.shape[0]
         patterns = np.zeros_like(images)
+        np.random.seed(0)
         patterns_list = [get_pattern() for _ in range(100)]
         for i in range(samples):
-            a = patterns_list[np.random.randint(0,len(patterns_list))]
+            a = patterns_list[np.random.randint(0,len(patterns_list))].copy()
             image = images[i,0,:,:].reshape(a.shape)
             a[image>0.3] = 0
             patterns[i,0,:,:] = a
@@ -57,7 +58,7 @@ class MNIST(Datasets):
         return images +patterns
 
     def _preprocess_labels(self, images):
-        threshold = 0.3
+        threshold = 0.1
         images = np.reshape(images, (-1, self.height, self.width,
                             self.num_channels))
         masks = (images > threshold).astype(np.float)
