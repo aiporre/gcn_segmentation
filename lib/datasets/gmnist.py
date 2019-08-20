@@ -65,6 +65,7 @@ class _GMNIST(Dataset):
         samples = images.shape[0]
         patterns = np.zeros_like(images)
         patterns_list = [get_pattern() for _ in range(100)]
+        print('processing: images.shape ', images.shape)
         for i in range(samples):
             a = patterns_list[np.random.randint(0, len(patterns_list))]
             image = images[i, :, :].reshape(a.shape)
