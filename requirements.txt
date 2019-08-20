@@ -7,3 +7,4 @@ numpy_groupies
 cached-property
 SimpleITK
 pyqtgraph
+torchfcn
