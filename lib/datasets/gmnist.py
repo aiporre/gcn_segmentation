@@ -66,11 +66,11 @@ class _GMNIST(Dataset):
         patterns = np.zeros_like(images)
         patterns_list = [get_pattern().reshape(28*28) for _ in range(100)]
         print('processing: images.shape ', images.shape)
-        for i in range(samples):
+        for j in range(samples):
             a = patterns_list[np.random.randint(0, len(patterns_list))]
-            image = images[i, :].reshape(a.shape)
+            image = images[j, :].reshape(a.shape)
             a[image > 0.3] = 0
-            patterns[i,:] = a
+            patterns[j,:] = a
         images = images + patterns
 
         masks = (images > 0.1).astype(np.float)
