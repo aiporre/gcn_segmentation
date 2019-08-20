@@ -1,7 +1,7 @@
 import argparse
 
 try:
-    from lib.models import GFCN, GFCNA, GFCNC, GFCNB, PointNet
+    from lib.models import GFCN, GFCNA, GFCNC, GFCNB, PointNet, GFCND
     from lib.datasets import GMNIST, GSVESSEL, GVESSEL12
 except:
     print('No module torch geometric')
@@ -81,6 +81,8 @@ elif args.net == 'GFCNB':
     model = GFCNB()
 elif args.net == 'GFCNC':
     model = GFCNC()
+elif args.net == 'GFCND':
+    model = GFCND()
 elif args.net=='PointNet':
     model = PointNet()
 elif args.net == 'UNet':

@@ -3,7 +3,7 @@ import torch_geometric.transforms as T
 import torch.nn.functional as F
 from torch_geometric.utils import normalized_cut, scatter_
 from torch_geometric.data import Data, Batch
-from torch_geometric.nn import graclus, max_pool, avg_pool, fps, radius, knn_interpolate
+from torch_geometric.nn import graclus, max_pool, avg_pool, fps, radius, knn_interpolate, TopKPooling
 
 from torch_geometric.nn import SplineConv
 from lib.utils import print_debug
@@ -367,7 +367,7 @@ class GFCNC(torch.nn.Module):
 #### MODEL
 class down(torch.nn.Module):
     def __init__(self, ratio, r, in_channels, out_channels, dim, kernel_size):
-        super(down, self).__init__()
+        super(Downsampling, self).__init__()
         self.ratio = ratio
         self.r = r
         self.conv = SplineConv(in_channels, out_channels, dim=dim, kernel_size=kernel_size)
@@ -390,47 +390,84 @@ class down(torch.nn.Module):
         return data
 
 
-class up(torch.nn.Module):
-    def __init__(self, k, nn):
-        super(up, self).__init__()
+#### MODEL TOP-K + knn-interpolate
+class Downsampling(torch.nn.Module):
+    def __init__(self, k_range, ratio, in_channels, out_channels, dim, kernel_size):
+        super(Downsampling, self).__init__()
+        self.pool = TopKPooling(k_range, ratio=ratio)
+        hidden_channels = int(out_channels/2)
+        self.conva = SplineConv(in_channels, hidden_channels, dim=dim, kernel_size=kernel_size)
+        self.convb = SplineConv(hidden_channels, out_channels, dim=dim, kernel_size=kernel_size)
+        self.convc = SplineConv(out_channels, out_channels, dim=dim, kernel_size=kernel_size)
+
+    def forward(self, data):
+        data.x = F.elu(self.conva(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.convb(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.convc(data.x, data.edge_index, data.edge_attr))
+        # Backsampling
+        backsampling = data.clone()
+        backsampling.x = data.x.clone().unsqueeze(-1) if data.x.dim() == 1 else data.x.clone()
+        # Pooling projection with TOP-K operator
+        x, edge_index, edge_attr, perm, score = self.pool(data.x, data.edge_index, edge_attr=data.edge_attr,
+                                                          batch=data.batch)
+        print(perm.shape)
+        print(score.shape)
+        data.x = x
+        data.edge_index = edge_index
+        data.pos = data.pos[score]
+        data.batch = perm
+        data.edge_attr = edge_attr
+
+        return data, backsampling
+
+
+class Upsampling(torch.nn.Module):
+    def __init__(self, k, in_channels, out_channels, dim, kernel_size):
+        super(Upsampling, self).__init__()
         self.k = k
-        self.nn = nn
+        self.conva = SplineConv(in_channels, in_channels, dim=dim, kernel_size=kernel_size)
+        self.convb = SplineConv(in_channels, out_channels, dim=dim, kernel_size=kernel_size)
 
-    def forward(self, x, pos, batch, x_skip, pos_skip, batch_skip):
-        x = knn_interpolate(x, pos, pos_skip, batch, batch_skip, k=self.k)
+    def forward(self, data, backsampling):
+        data.x = F.elu(self.conva(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.convb(data.x, data.edge_index, data.edge_attr))
 
-        if x_skip is not None:
-            print('x.size()', x.size(), 'x_skip.size()', x_skip.size())
-            x = torch.cat([x, x_skip], dim=1).to(x.device)
-        x = self.nn(x)
-        return x, pos_skip, batch_skip
-
-
-def MLP(channels, batch_norm=True):
-    return Seq(*[
-        Seq(Lin(channels[i - 1], channels[i]), ReLU(), BN(channels[i]))
-        for i in range(1, len(channels))
-    ])
+        data.x = knn_interpolate(data.x, data.pos, backsampling.pos, data.batch, backsampling.batch, k=self.k)
+        data.pos = backsampling.pos
+        data.edge_index = backsampling.edge_index
+        data.edge_attr = backsampling.edge_attr
+        data.batch = backsampling.batch
+        return data
 
 
 class GFCND(torch.nn.Module):
-    ''' GFCN using the point net++'''
+    ''' GFCN equivalent to the FCN32s with topk'''
+
+
     def __init__(self):
         super(GFCND, self).__init__()
-        print('model GFCN-D')
-        self.down1 = down(0.5, 0.3, 1, 32, dim=2, kernel_size=5)
-        #         self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
-        #         self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)
-        self.up1 = up(3, MLP([1 + 32, 32, 32, 1]))
+        self.down1 = Downsampling(k_range=16, ratio=0.5, in_channels=1, out_channels=64, dim=2, kernel_size=5)
+        self.down2 = Downsampling(k_range=16, ratio=0.5, in_channels=64, out_channels=256, dim=2, kernel_size=3)
+        self.up1 = Upsampling(k=3, in_channels=256, out_channels=128, dim=2, kernel_size=3)
+        self.up2 = Upsampling(k=3, in_channels=128, out_channels=32, dim=2, kernel_size=5)
+
+        self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
 
     def forward(self, data):
-        ## LAYER 1 (1,V0)->(32,V1)
-        input_state = (data.x.clone().unsqueeze(-1), data.pos, data.batch)
-        data = self.down1(data)
-        down1_state = (data.x.clone(), data.pos, data.batch)
-        x, _, _ = self.up1(*down1_state, *input_state)
-        return F.sigmoid(x)
-
+        # V0,1 -> V1,64
+        data, backsampling_1 = self.down1(data)
+        # V1,64 -> V2,256
+        data, backsampling_2 = self.down2(data)
+        # V2,256 -> V1,128
+        data = self.up1(data, backsampling_2)
+        # V1,128 -> V0,32
+        data = self.up2(data, backsampling_1)
+        # convout
+        # V0,32 -> V0,1
+        data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        x = data.x
+        # return F.sigmoid(x)
+        return x
 
 class GFCN(torch.nn.Module):
     ''' swallow GFCN32s with barycentric upsampling'''
