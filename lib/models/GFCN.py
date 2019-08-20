@@ -410,8 +410,6 @@ class Downsampling(torch.nn.Module):
         # Pooling projection with TOP-K operator
         x, edge_index, edge_attr, perm, score = self.pool(data.x, data.edge_index, edge_attr=data.edge_attr,
                                                           batch=data.batch)
-        print(perm.shape)
-        print(score.shape)
         data.x = x
         data.edge_index = edge_index
         data.pos = data.pos[score]
