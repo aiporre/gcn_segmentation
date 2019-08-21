@@ -4,7 +4,7 @@ import numpy as np
 
 from .mnist import MNIST
 
-data = MNIST('data/mnist', val_size=10000)
+data = MNIST('data/mnist', val_size=10000, background=True)
 
 
 class MNISTTest(TestCase):

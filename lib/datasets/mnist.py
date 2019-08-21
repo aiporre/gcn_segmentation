@@ -8,7 +8,7 @@ from .dataset import Datasets, Dataset
 
 
 class MNIST(Datasets):
-    def __init__(self,  data_dir='data/M2NIST', val_size=5000, background=False):
+    def __init__(self,  data_dir='data/M2NIST', val_size=5000, background=True):
         mnist = input_data.read_data_sets(
             data_dir, one_hot=True, validation_size=val_size)
 
@@ -42,7 +42,7 @@ class MNIST(Datasets):
     def num_channels(self):
         return 1
 
-    def _preprocess_images(self, images, background=True):
+    def _preprocess_images(self, images, background):
         images = np.reshape(images, (-1, self.height, self.width,
                             self.num_channels)).transpose(0, 3, 1, 2)
         patterns = np.zeros_like(images)
