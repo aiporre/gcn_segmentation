@@ -8,19 +8,19 @@ from .dataset import Datasets, Dataset
 
 
 class MNIST(Datasets):
-    def __init__(self,  data_dir='data/M2NIST', val_size=5000):
+    def __init__(self,  data_dir='data/M2NIST', val_size=5000, background=False):
         mnist = input_data.read_data_sets(
             data_dir, one_hot=True, validation_size=val_size)
 
-        images = self._preprocess_images(mnist.train.images[0:8000])
+        images = self._preprocess_images(mnist.train.images[0:8000], background=background)
         labels = self._preprocess_labels(mnist.train.images[0:8000])
         train = Dataset(images, labels)
 
-        images = self._preprocess_images(mnist.validation.images[0:2000])
+        images = self._preprocess_images(mnist.validation.images[0:2000], background=background)
         labels = self._preprocess_labels(mnist.validation.images[0:2000])
         val = Dataset(images, labels)
 
-        images = self._preprocess_images(mnist.test.images[8000:10000])
+        images = self._preprocess_images(mnist.test.images[8000:10000], background=background)
         labels = self._preprocess_labels(mnist.test.images[8000:10000])
         test = Dataset(images, labels)
 
@@ -42,18 +42,19 @@ class MNIST(Datasets):
     def num_channels(self):
         return 1
 
-    def _preprocess_images(self, images):
+    def _preprocess_images(self, images, background=True):
         images = np.reshape(images, (-1, self.height, self.width,
                             self.num_channels)).transpose(0, 3, 1, 2)
-        samples = images.shape[0]
-        patterns = np.zeros_like(images)
-        np.random.seed(0)
-        patterns_list = [get_pattern() for _ in range(100)]
-        for i in range(samples):
-            a = patterns_list[np.random.randint(0,len(patterns_list))].copy()
-            image = images[i,0,:,:].reshape(a.shape)
-            a[image>0.3] = 0
-            patterns[i,0,:,:] = a
+        if background:
+            samples = images.shape[0]
+            patterns = np.zeros_like(images)
+            np.random.seed(0)
+            patterns_list = [get_pattern() for _ in range(100)]
+            for i in range(samples):
+                a = patterns_list[np.random.randint(0,len(patterns_list))].copy()
+                image = images[i,0,:,:].reshape(a.shape)
+                a[image>0.3] = 0
+                patterns[i,0,:,:] = a
 
         return images +patterns
 

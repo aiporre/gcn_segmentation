@@ -45,6 +45,8 @@ def process_command_line():
                             help="network to be used")
     parser.add_argument("-p", "--pre-transform", type=bool, default=False,
                         help="use a pretransfrom to the dataset")
+    parser.add_argument("-z", "--background", type=bool, default=True,
+                        help="use a background in the MNIST dataset.")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
                         help="criterion: BCE or DCS or BCElogistic or DCSsigmoid")
     return parser.parse_args()
@@ -62,9 +64,9 @@ if args.pre_transform:
 else:
     pre_transform = None
 if args.dataset == 'MNIST':
-    dataset = MNIST()
+    dataset = MNIST(background=args.background)
 elif args.dataset == 'GMNIST':
-    dataset = GMNIST()
+    dataset = GMNIST(background=args.background)
 elif args.dataset == 'VESSEL12':
     dataset = VESSEL12(data_dir=args.vesseldir, pre_transform=pre_transform)
 elif args.dataset == 'GVESSEL12':
