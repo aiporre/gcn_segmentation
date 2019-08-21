@@ -107,12 +107,12 @@ class GFCNB(torch.nn.Module):
         super(GFCNB, self).__init__()
         self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 64, dim=2, kernel_size=5)
-        self.conv1c = SplineConv(64, 64, dim=2, kernel_size=5)
+        # self.conv1c = SplineConv(64, 64, dim=2, kernel_size=5)
         self.bn1 = torch.nn.BatchNorm1d(64)
 
         self.conv2a = SplineConv(64, 128, dim=2, kernel_size=3)
-        self.conv2b = SplineConv(128, 128, dim=2, kernel_size=3)
-        self.conv2c = SplineConv(128, 256, dim=2, kernel_size=3)
+        self.conv2b = SplineConv(128, 256, dim=2, kernel_size=3)
+        # self.conv2c = SplineConv(128, 256, dim=2, kernel_size=3)
 
         self.conv3a = SplineConv(256, 256, dim=2, kernel_size=3)
         self.conv3b = SplineConv(256, 128, dim=2, kernel_size=3)
@@ -125,7 +125,7 @@ class GFCNB(torch.nn.Module):
     def forward(self, data):
         data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
         data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
-        data.x = F.elu(self.conv1c(data.x, data.edge_index, data.edge_attr))
+        # data.x = F.elu(self.conv1c(data.x, data.edge_index, data.edge_attr))
         data.x = self.bn1(data.x)
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster1 = graclus(data.edge_index, weight, data.x.size(0))
@@ -137,7 +137,7 @@ class GFCNB(torch.nn.Module):
 
         data.x = F.elu(self.conv2a(data.x, data.edge_index, data.edge_attr))
         data.x = F.elu(self.conv2b(data.x, data.edge_index, data.edge_attr))
-        data.x = F.elu(self.conv2c(data.x, data.edge_index, data.edge_attr))
+        # data.x = F.elu(self.conv2c(data.x, data.edge_index, data.edge_attr))
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster2 = graclus(data.edge_index, weight, data.x.size(0))
         pos2 = data.pos
@@ -174,7 +174,7 @@ class GFCNA(torch.nn.Module):
         super(GFCNA, self).__init__()
         self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
-        self.bn1 = torch.nn.BatchNorm1d(32)
+        # self.bn1 = torch.nn.BatchNorm1d(32)
 
         self.conv2a = SplineConv(32, 64, dim=2, kernel_size=3)
         self.conv2b = SplineConv(64, 64, dim=2, kernel_size=3)
@@ -195,7 +195,7 @@ class GFCNA(torch.nn.Module):
         # (1/32,V_0/V_1)
         data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
         data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
-        data.x = self.bn1(data.x)
+        # data.x = self.bn1(data.x)
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster1 = graclus(data.edge_index, weight, data.x.size(0))
         pos1 = data.pos
@@ -247,7 +247,7 @@ class GFCNA(torch.nn.Module):
         data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
         data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
 
-        # TODO handle contract on trainer and  evaluator
+        #
         data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
 
         x = data.x
