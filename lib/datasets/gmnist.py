@@ -25,7 +25,6 @@ class GMNIST(Datasets):
         super(GMNIST, self).__init__(train=train, test=test, val=test)
 
 
-
 class _GMNIST(Dataset):
 
     def __init__(self,
@@ -37,7 +36,7 @@ class _GMNIST(Dataset):
         self.offset = 0 if train else 8000
         self.train = train
         super(_GMNIST, self).__init__(root, transform, pre_transform,
-                                               pre_filter)
+                                      pre_filter)
 
     @property
     def raw_file_names(self):
@@ -48,7 +47,7 @@ class _GMNIST(Dataset):
         if self.train:
             return ['data_{}.pt'.format(i) for i in range(8000)]
         else:
-            return ['data_{}.pt'.format(i) for i in range(8000,10000)]
+            return ['data_{}.pt'.format(i) for i in range(8000, 10000)]
 
     def download(self):
         pass
@@ -61,19 +60,18 @@ class _GMNIST(Dataset):
         mnist = input_data.read_data_sets(
             self.raw_dir, one_hot=True, validation_size=0)
         images = mnist.train.images[0:8000] if self.train else mnist.test.images[8000:10000]
+        masks = (images > 0.1).astype(np.float)
 
         samples = images.shape[0]
         patterns = np.zeros_like(images)
-        patterns_list = [get_pattern().reshape(28*28) for _ in range(100)]
+        patterns_list = [get_pattern().reshape(28 * 28) for _ in range(100)]
         print('processing: images.shape ', images.shape)
         for j in range(samples):
             a = patterns_list[np.random.randint(0, len(patterns_list))]
             image = images[j, :].reshape(a.shape)
             a[image > 0.3] = 0
-            patterns[j,:] = a
+            patterns[j, :] = a
         images = images + patterns
-
-        masks = (images > 0.1).astype(np.float)
 
         for image, mask in zip(images, masks):
             # Read data from `raw_path`.
