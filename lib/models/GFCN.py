@@ -108,7 +108,7 @@ class GFCNB(torch.nn.Module):
         self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 64, dim=2, kernel_size=5)
         # self.conv1c = SplineConv(64, 64, dim=2, kernel_size=5)
-        self.bn1 = torch.nn.BatchNorm1d(64)
+        # self.bn1 = torch.nn.BatchNorm1d(64)
 
         self.conv2a = SplineConv(64, 128, dim=2, kernel_size=3)
         self.conv2b = SplineConv(128, 256, dim=2, kernel_size=3)

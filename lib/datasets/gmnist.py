@@ -61,6 +61,7 @@ class _GMNIST(Dataset):
         mnist = input_data.read_data_sets(
             self.raw_dir, one_hot=True, validation_size=0)
         images = mnist.train.images[0:8000] if self.train else mnist.test.images[8000:10000]
+        masks = (images > 0.1).astype(np.float)
 
         samples = images.shape[0]
         patterns = np.zeros_like(images)
@@ -74,7 +75,6 @@ class _GMNIST(Dataset):
             patterns[j,:] = a
         images = images + patterns
 
-        masks = (images > 0.1).astype(np.float)
 
         for image, mask in zip(images, masks):
             # Read data from `raw_path`.
