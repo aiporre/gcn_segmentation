@@ -5,7 +5,7 @@ try:
     from lib.datasets import GMNIST, GSVESSEL, GVESSEL12
 except:
     print('No module torch geometric')
-from lib.models import UNet
+from lib.models import UNet, FCN
 from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop
 
 
@@ -45,6 +45,8 @@ def process_command_line():
                             help="network to be used")
     parser.add_argument("-p", "--pre-transform", type=bool, default=False,
                         help="use a pretransfrom to the dataset")
+    parser.add_argument("-z", "--background", type=bool, default=True,
+                        help="use a background in the MNIST dataset.")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
                         help="criterion: BCE or DCS or BCElogistic or DCSsigmoid")
     return parser.parse_args()
@@ -62,9 +64,9 @@ if args.pre_transform:
 else:
     pre_transform = None
 if args.dataset == 'MNIST':
-    dataset = MNIST()
+    dataset = MNIST(background=args.background)
 elif args.dataset == 'GMNIST':
-    dataset = GMNIST()
+    dataset = GMNIST(background=args.background)
 elif args.dataset == 'VESSEL12':
     dataset = VESSEL12(data_dir=args.vesseldir, pre_transform=pre_transform)
 elif args.dataset == 'GVESSEL12':
@@ -87,6 +89,9 @@ elif args.net=='PointNet':
     model = PointNet()
 elif args.net == 'UNet':
     model = UNet(n_channels=1, n_classes=1)
+elif args.net == 'FCN':
+    model = FCN(n_channels=1, n_classes=1)
+
 else:
     model = GFCNA()
 
@@ -94,14 +99,14 @@ if args.criterion == 'BCE':
     criterion = nn.BCELoss()
     sigmoid=False
 elif args.criterion == 'BCElogistic':
-    criterion = nn.BCEWithLogitsLoss()
-    sigmoid = True
+    criterion = nn.BCEWithLogitsLoss()# criterion accepts logit. network produce logit
+    sigmoid = True# evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'DCS':
-    criterion = DCS()
-    sigmoid = False # it necesary to compute the signmout in the evaluation
+    criterion = DCS() # DCS assume network computes prob.
+    sigmoid = False # not necesary to compute the signmout in the evaluation
 elif args.criterion == 'DCSsigmoid':
-    criterion = DCS(pre_sigmoid=True)
-    sigmoid = True
+    criterion = DCS(pre_sigmoid=True) # criterion accepts logit. network produce logit
+    sigmoid = True # evaluation flag to comput sigmoid because model output logit
 else:
     criterion = nn.BCELoss()
     sigmoid = True
