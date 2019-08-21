@@ -126,7 +126,8 @@ class GFCNB(torch.nn.Module):
         data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
         data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
         # data.x = F.elu(self.conv1c(data.x, data.edge_index, data.edge_attr))
-        data.x = self.bn1(data.x)
+        # data.x = self.bn1(data.x)
+
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster1 = graclus(data.edge_index, weight, data.x.size(0))
         pos1 = data.pos
