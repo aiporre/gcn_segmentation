@@ -42,7 +42,7 @@ def process_command_line():
     parser.add_argument("-s", "--dataset", type=str, default='MNIST',
                         help="dataset to be used")
     parser.add_argument("-n", "--net", type=str, default='GFCN',
-                            help="network to be used")
+                            help="network to be used. Options: (G)MNIST, (G)VESSEL12, (G)SVESSEL" )
     parser.add_argument("-p", "--pre-transform", type=bool, default=False,
                         help="use a pretransfrom to the dataset")
     parser.add_argument("-z", "--background", type=bool, default=True,
@@ -71,6 +71,11 @@ elif args.dataset == 'VESSEL12':
     dataset = VESSEL12(data_dir=args.vesseldir, pre_transform=pre_transform)
 elif args.dataset == 'GVESSEL12':
     dataset = GVESSEL12(data_dir=args.vesseldir, pre_transform=pre_transform)
+elif args.dataset == 'SVESSEL':
+    dataset = SVESSEL(data_dir=args.svesseldir)
+elif args.dataset == 'SVESSEL':
+    dataset = GSVESSEL(data_dir=args.svesseldir)
+
 else:
     dataset = MNIST()
 
