@@ -11,7 +11,7 @@ import torch_geometric.transforms as T
 import numpy as np
 from lib.graph import grid_tensor
 
-from .vessel_synth import read_dataset_mhd
+from .svessel import read_dataset_mhd
 
 TOTAL_SLICES = 5050
 
