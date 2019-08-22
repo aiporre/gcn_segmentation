@@ -2,23 +2,23 @@ import argparse
 
 try:
     from lib.datasets import GMNIST
-except:
-    print('No module torch geometric. Failed to import GMISNT')
+except Exception as e:
+    print('No module torch geometric. Failed to import GMISNT, ', str(e))
 
 try:
     from lib.datasets import GSVESSEL
-except:
-    print('No module torch geometric. Failed to import GSVESSEL')
+except Exception as e:
+    print('No module torch geometric. Failed to import GSVESSEL, ', str(e))
 
 try:
     from lib.datasets import GVESSEL12
-except:
-    print('No module torch geometric. Failed to import GVESSEL12')
+except Exception as e:
+    print('No module torch geometric. Failed to import GVESSEL12, ', str(e))
 
 try:
     from lib.models import GFCN, GFCNA, GFCNC, GFCNB, PointNet, GFCND
-except:
-    print('No module torch geometric. Failed to import models')
+except Exception as e:
+    print('No module torch geometric. Failed to import models, ', str(e))
 from lib.models import UNet, FCN
 from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop
 
