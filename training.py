@@ -73,7 +73,7 @@ elif args.dataset == 'GVESSEL12':
     dataset = GVESSEL12(data_dir=args.vesseldir, pre_transform=pre_transform)
 elif args.dataset == 'SVESSEL':
     dataset = SVESSEL(data_dir=args.svesseldir)
-elif args.dataset == 'SVESSEL':
+elif args.dataset == 'GSVESSEL':
     dataset = GSVESSEL(data_dir=args.svesseldir)
 
 else:
