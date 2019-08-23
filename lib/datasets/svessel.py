@@ -96,6 +96,9 @@ def read_dataset_mhd(data_dir):
             images += [ct_scan_real[i,:,:] for i in range(len(ct_scan_real))]
             labels += [vessel_mask[i, :, :] for i in range(len(vessel_mask))]
     # TODO: split is hardcoded
+    a = [lb.mean() for lb in labels]
+    labels = [lb for lb, avg in zip(labels, a) if avg > 0.001]
+    images = [im for im, avg in zip(images, a) if avg > 0.001]
     split = 0.2
     L = int(split*len(images))
     output['train']['images'], output['test']['images'] = np.stack(images[:-L], axis=0), np.stack(images[-L:], axis=0)
