@@ -95,6 +95,7 @@ class _GSVESSEL(Dataset):
         offset = 0 if self.train else TOTAL_SLICES-L
         vessel_data = read_dataset_mhd(self.raw_dir)
         vessel_data = vessel_data['train'] if self.train else vessel_data['test']
+        print('VESSEL_DATA: ', vessel_data['images'].shape, vessel_data['labels'].shape)
 
         for i in range(max_slices):
             print('processed ', i, ' out of ', max_slices)
