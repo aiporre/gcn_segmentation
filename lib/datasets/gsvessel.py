@@ -99,7 +99,7 @@ class _GSVESSEL(Dataset):
 
         for i in range(max_slices):
             print('processed ', i, ' out of ', max_slices)
-            image = vessel_data['images'][i, 0, :, :]
+            image = vessel_data['images'][i, :, :]
             mask = vessel_data['labels'][i, :, :]
             if self.pre_transform is not None:
                 data = (image, mask)
