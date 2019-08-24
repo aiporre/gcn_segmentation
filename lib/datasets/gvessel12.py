@@ -80,6 +80,9 @@ class GVESSEL12(Datasets):
 
         super(GVESSEL12, self).__init__(train=train, test=test, val=test)
 
+    @property
+    def classes(self):
+        return ['foreground', 'background']
 
 
 class _GVESSEL12(Dataset):
