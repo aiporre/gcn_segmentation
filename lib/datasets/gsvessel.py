@@ -13,7 +13,7 @@ from lib.graph import grid_tensor
 
 from .svessel import read_dataset_mhd
 
-TOTAL_SLICES = 5050
+TOTAL_SLICES =  4570 #5050
 
 
 
