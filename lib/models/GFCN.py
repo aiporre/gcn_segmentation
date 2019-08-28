@@ -91,16 +91,17 @@ def bweights(source, cluster):
 
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
 
-    cluster, perm = consecutive_cluster(cluster)
+    with torch.no_grad():
+        cluster, perm = consecutive_cluster(cluster)
 
-    if batch is not None:
-        data = Batch(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos, batch=batch)
-    else:
-        data = Data(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos)
+        if batch is not None:
+            data = Batch(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos, batch=batch)
+        else:
+            data = Data(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos)
 
-    if transform is not None:
-        data = transform(data)
-    return data
+        if transform is not None:
+            data = transform(data)
+        return data
 
 
 class GFCNB(torch.nn.Module):
@@ -475,10 +476,10 @@ class GFCN(torch.nn.Module):
     def __init__(self):
         super(GFCN, self).__init__()
         print('model GFCN-org..')
-        self.conv1 = SplineConv(1, 32, dim=2, kernel_size=5)
+        self.conv1 = SplineConv(1, 32, dim=2, kernel_size=2)
         self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
         self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)
-        self.conv4 = SplineConv(32, 32, dim=2, kernel_size=5)
+        self.conv4 = SplineConv(32, 32, dim=2, kernel_size=2)
 
 
         self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
