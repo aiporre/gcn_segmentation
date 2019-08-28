@@ -62,17 +62,18 @@ def consecutive_cluster(src):
 
 def pweights(x, cluster):
     ''' Computes the percentage weights in the simplex formed by the cluster '''
-    with torch.no_grad():
-        cluster, perm = consecutive_cluster(cluster)
-        y = torch.ones_like(x)
-        g = scatter_('add', x, cluster)
-        h = scatter_('add', y, cluster)
-        w = h[cluster]*x/g[cluster]
-        w[w != w] = 0
-        if w.dim() == 1:
-            w = w.unsqueeze(-1)
 
-        return w
+
+    cluster, perm = consecutive_cluster(cluster)
+    y = torch.ones_like(x)
+    g = scatter_('add', x, cluster)
+    h = scatter_('add', y, cluster)
+    w = h[cluster]*x/g[cluster]
+    w[w != w] = 0
+    if w.dim() == 1:
+        w = w.unsqueeze(-1)
+
+    return w
 
 
 def bweights(source, cluster):
@@ -91,17 +92,16 @@ def bweights(source, cluster):
 
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
 
-    with torch.no_grad():
-        cluster, perm = consecutive_cluster(cluster)
+    cluster, perm = consecutive_cluster(cluster)
 
-        if batch is not None:
-            data = Batch(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos, batch=batch)
-        else:
-            data = Data(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos)
+    if batch is not None:
+        data = Batch(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos, batch=batch)
+    else:
+        data = Data(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos)
 
-        if transform is not None:
-            data = transform(data)
-        return data
+    if transform is not None:
+        data = transform(data)
+    return data
 
 
 class GFCNB(torch.nn.Module):
@@ -476,10 +476,10 @@ class GFCN(torch.nn.Module):
     def __init__(self):
         super(GFCN, self).__init__()
         print('model GFCN-org..')
-        self.conv1 = SplineConv(1, 32, dim=2, kernel_size=2)
+        self.conv1 = SplineConv(1, 32, dim=2, kernel_size=5)
         self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
         self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)
-        self.conv4 = SplineConv(32, 32, dim=2, kernel_size=2)
+        self.conv4 = SplineConv(32, 32, dim=2, kernel_size=5)
 
 
         self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
