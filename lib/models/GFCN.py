@@ -60,11 +60,10 @@ def consecutive_cluster(src):
     return inv, perm
 
 
-def pweights(data, cluster):
+def pweights(x, cluster):
     ''' Computes the percentage weights in the simplex formed by the cluster '''
     with torch.no_grad():
         cluster, perm = consecutive_cluster(cluster)
-        x = data.x
         y = torch.ones_like(x)
         g = scatter_('add', x, cluster)
         h = scatter_('add', y, cluster)
