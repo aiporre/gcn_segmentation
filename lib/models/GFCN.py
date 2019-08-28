@@ -60,15 +60,17 @@ def consecutive_cluster(src):
     return inv, perm
 
 
-def pweights(x, cluster):
+def pweights(data, cluster):
     ''' Computes the percentage weights in the simplex formed by the cluster '''
     with torch.no_grad():
         cluster, perm = consecutive_cluster(cluster)
+        x = data.x
+        y = torch.ones_like(x)
         g = scatter_('add', x, cluster)
-        w = x/g[cluster]
+        h = scatter_('add', y, cluster)
+        w = h[cluster]*x/g[cluster]
         w[w != w] = 0
         return w
-
 
 
 def bweights(source, cluster):
@@ -88,18 +90,16 @@ def bweights(source, cluster):
 def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=None, transform=None):
 
     cluster, perm = consecutive_cluster(cluster)
-    source.x = source.x.squeeze()
-    source.x = source.x[cluster]*weights
-    source.edge_index = edge_index
-    source.pos = pos
 
     if batch is not None:
-        source.batch = batch
+        data = Batch(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos, batch=batch)
     else:
-        source.batch = batch
+        data = Data(x=source.x[cluster]*weights, edge_index=edge_index, pos=pos)
+
     if transform is not None:
-        source = transform(source)
-    return source
+        data = transform(data)
+    return data
+
 
 class GFCNB(torch.nn.Module):
     ''' GFCN equivalent to the FCN32s'''
@@ -476,7 +476,11 @@ class GFCN(torch.nn.Module):
         self.conv1 = SplineConv(1, 32, dim=2, kernel_size=5)
         self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
         self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)
-        self.conv4 = SplineConv(32, 1, dim=2, kernel_size=5)
+        self.conv4 = SplineConv(32, 32, dim=2, kernel_size=5)
+
+
+        self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
+
 
     def forward(self, data):
 
@@ -493,7 +497,7 @@ class GFCN(torch.nn.Module):
         cluster1 = graclus(data.edge_index, weight, data.x.size(0))
         weights1 = pweights(x_pre,cluster1)
         #pooling
-        data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
+        data = avg_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         ## LAYER 2 (32,V1)->(64,V2)
         # pre-pool2
@@ -508,7 +512,7 @@ class GFCN(torch.nn.Module):
         cluster2 = graclus(data.edge_index, weight, data.x.size(0))
         weights2 = pweights(x_pre, cluster2)
         # pooling
-        data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
+        data = avg_pool(cluster2, data, transform=T.Cartesian(cat=False))
 
         # LAYER 3  (64,V2)->(32,V1)
         data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr)) # (32,V2)
@@ -520,6 +524,6 @@ class GFCN(torch.nn.Module):
         data.x = F.elu(self.conv4(data.x, data.edge_index, data.edge_attr))
         data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
                                         batch=batch1, transform=T.Cartesian(cat=False))
+        data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
 
-        return F.sigmoid(data.x)
-        # return x
+        return data.x
