@@ -69,6 +69,9 @@ def pweights(x, cluster):
         h = scatter_('add', y, cluster)
         w = h[cluster]*x/g[cluster]
         w[w != w] = 0
+        if w.dim() == 1:
+            w = w.unsqueeze(-1)
+
         return w
 
 
