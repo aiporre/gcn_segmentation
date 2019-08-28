@@ -64,10 +64,10 @@ def pweights(x, cluster):
     ''' Computes the percentage weights in the simplex formed by the cluster '''
     with torch.no_grad():
         cluster, perm = consecutive_cluster(cluster)
-        # y = torch.ones_like(x)
+        y = torch.ones_like(x)
         g = scatter_('add', x, cluster)
-        # h = scatter_('add', y, cluster)
-        w = x/g[cluster]
+        h = scatter_('add', y, cluster)
+        w = h[cluster]*x/(g[cluster]+0.001)
         w[w != w] = 0
         if w.dim() == 1:
             w = w.unsqueeze(-1)
