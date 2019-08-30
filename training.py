@@ -69,6 +69,9 @@ def process_command_line():
                         help="use a background in the MNIST dataset.")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
                         help="criterion: BCE or DCS or BCElogistic or DCSsigmoid")
+    parser.add_argument("-u", "--upload", type=bool, default=False,
+                        help="Flag T=upload training to the ftp server F=don't upload")
+
     return parser.parse_args()
 
 # CONSTANST
@@ -178,7 +181,7 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
         if timer.is_time():
             loss_all = np.array(loss_all)
             measurements = np.array([DCS, P, A, R, loss_epoch])
-            trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, e, EPOCHS, fig_dir)
+            trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, e, EPOCHS, fig_dir, args.upload)
     loss_all = np.array(loss_all)
     measurements = np.array([DCS, P, A, R, loss_epoch])
     trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, EPOCHS, EPOCHS, fig_dir)

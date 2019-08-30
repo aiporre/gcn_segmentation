@@ -7,7 +7,7 @@ import torch.nn as nn
 import os
 import matplotlib.pyplot as plt
 
-from lib.utils import savefigs, get_npy_files
+from lib.utils import savefigs, get_npy_files, upload_training
 
 try:
     import dvn.misc as ms
@@ -115,12 +115,12 @@ class Trainer(object):
                 return loss_all, [], [], [], [], []
             return loss_all, measurements[0].tolist(), measurements[1].tolist(), measurements[2].tolist() ,measurements[3].tolist(), measurements[4].tolist()
 
-    def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir):
+    def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir, upload=False):
 
         check_point = {'lr':lr,'e':e,'E':EPOCHS}
         np.save('net-checkpoint.npy', check_point)
-        np.save('{}_E{}_lr{}_ds{}_lossall'.format(prefix, EPOCHS, lr, dataset_name), loss_all)
-        np.save('{}_E{}_lr{}_ds{}_measurements'.format(prefix, EPOCHS, lr, dataset_name), measurements)
+        np.save('{}_e{}_lr{}_ds{}_lossall'.format(prefix, EPOCHS, lr, dataset_name), loss_all)
+        np.save('{}_e{}_lr{}_ds{}_measurements'.format(prefix, EPOCHS, lr, dataset_name), measurements)
         if not len(loss_all)==0:
             fig = plt.figure(figsize=(15, 10))
             plt.subplot(3, 1, 1)
@@ -141,9 +141,10 @@ class Trainer(object):
             plt.xlabel('epochs')
             plt.ylabel('metrics')
             plt.title('Evaluation metrics')
-            savefigs(fig_name='{}_E{}_lr{}_ds{}_loss_history'.format(prefix, EPOCHS, lr, dataset_name), fig_dir=fig_dir,
+            savefigs(fig_name='{}_e{}_lr{}_ds{}_loss_history'.format(prefix, EPOCHS, lr, dataset_name), fig_dir=fig_dir,
                      fig=fig)
-
+        if upload:
+            upload_training(prefix=prefix,EPOCHS=EPOCHS,lr=lr,dataset_name=dataset_name)
 
 class KTrainer(Trainer):
     def __init__(self,model,dataset,**kwargs):
