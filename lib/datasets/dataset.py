@@ -115,6 +115,12 @@ class Dataset(object):
     def enforce_batch(self, batch_size):
         self._batch_size = batch_size
 
+    def get_images(self):
+        return self._images
+
+    def get_labels(self):
+        return self._labels
+
     @property
     def num_examples(self):
         return self._labels.shape[0]

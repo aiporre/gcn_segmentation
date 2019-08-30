@@ -1,7 +1,19 @@
+import keras
+import numpy as np
 import torch
+from dvn import FCN
 from torch import optim
 import torch.nn as nn
 import os
+import matplotlib.pyplot as plt
+
+from lib.utils import savefigs, get_npy_files
+
+try:
+    import dvn.misc as ms
+except Exception as e:
+    print('Warning: No module dvn. Failed to import deep vessel models, Exception: ', str(e))
+
 
 from .progress_bar import printProgressBar
 
@@ -17,10 +29,15 @@ class Trainer(object):
         self.to_tensor = kwargs['to_tensor'] if 'to_tensor' in kwargs.keys() else True
         self.device = kwargs['device'] if 'device' in kwargs.keys() else torch.device('cpu')
         self.criterion = kwargs['criterion'] if 'criterion' in kwargs.keys() else nn.BCEWithLogitsLoss()
+        self.lr = 0.01
+        self.optimizer = None
+        self._epoch = 0
 
 
     def update_lr(self, lr):
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+        if not self.lr==lr or self.optimizer is None:
+            self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+            self.lr = lr
 
 
     def train_batch(self):
@@ -75,3 +92,104 @@ class Trainer(object):
             self.model.load_state_dict(torch.load(path))
         else:
             print('Warning: there is no file :', path)
+
+
+    def get_range(self,EPOCHS):
+        return range(self._epoch,EPOCHS)
+
+    def load_checkpoint(self, prefix = 'NET'):
+        files = get_npy_files()
+        if files.__contains__('net-checkpoint.npy'):
+            d1 = np.load('net-checkpoint.npy', allow_pickle=True)
+            self._epoch = d1.item().get('e')
+
+        lossall_file = list(filter(lambda x: x.endswith('lossall.npy') and x.startswith(prefix), files))
+        measurements_file = list(filter(lambda x: x.endswith('measurements.npy') and x.startswith(prefix), files))
+        if len(lossall_file)==0 or len(measurements_file)==0:
+            return [], [], [], [], [], []
+        else:
+            print('Loading checkpoint')
+            loss_all = np.load(lossall_file[0])
+            measurements = np.load(measurements_file[0])
+            if len(measurements) ==0 :
+                return loss_all, [], [], [], [], []
+            return loss_all, measurements[0].tolist(), measurements[1].tolist(), measurements[2].tolist() ,measurements[3].tolist(), measurements[4].tolist()
+
+    def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir):
+
+        check_point = {'lr':lr,'e':e,'E':EPOCHS}
+        np.save('net-checkpoint.npy', check_point)
+        np.save('{}_E{}_lr{}_ds{}_lossall'.format(prefix, EPOCHS, lr, dataset_name), loss_all)
+        np.save('{}_E{}_lr{}_ds{}_measurements'.format(prefix, EPOCHS, lr, dataset_name), measurements)
+        if not len(loss_all)==0:
+            fig = plt.figure(figsize=(15, 10))
+            plt.subplot(3, 1, 1)
+            plt.plot(loss_all)
+            plt.xlabel('iterations')
+            plt.ylabel('loss')
+            plt.title('Loss history per iteration')
+            plt.subplot(3, 1, 2)
+            plt.plot(measurements[4])
+            plt.xlabel('epochs')
+            plt.ylabel('loss')
+            plt.title('Loss history avg per epoch')
+            plt.subplot(3, 1, 3)
+            plt.plot(measurements[0])
+            plt.plot(measurements[1])
+            plt.plot(measurements[2])
+            plt.plot(measurements[3])
+            plt.xlabel('epochs')
+            plt.ylabel('metrics')
+            plt.title('Evaluation metrics')
+            savefigs(fig_name='{}_E{}_lr{}_ds{}_loss_history'.format(prefix, EPOCHS, lr, dataset_name), fig_dir=fig_dir,
+                     fig=fig)
+
+
+class KTrainer(Trainer):
+    def __init__(self,model,dataset,**kwargs):
+        '''
+        Keras trainer
+        :param model:
+        :param dataset:
+        :param kwargs:
+        '''
+        super(KTrainer, self).__init__(model=model, dataset=dataset, **kwargs)
+
+    def update_lr(self, lr):
+        if not self.lr==lr or self.optimizer is None:
+            self.optimizer = keras.optimizers.SGD(lr=lr, decay=1e-6, momentum=0.9, nesterov=True)
+            self.lr = lr
+
+    def save_model(self, path):
+        path = path.replace(".pth",".dat")
+        self.model.save(filename=path)
+
+    def load_model(self, model, path):
+        self.model = model
+        path = path.replace(".pth",".dat")
+
+        if os.path.exists(path):
+            self.model = FCN.load(filename=path)
+        else:
+            print('Warning: there is no file :', path)
+    def train_batch(self):
+        print('Warning: Not-implemented')
+        return 0
+
+    def train_epoch(self, lr=0.01, progress_bar=True):
+        self.update_lr(lr=lr)
+        self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
+        X = self.dataset.get_images()
+        Y = self.dataset.get_labels()
+        Y = Y.astype(int)
+        Y = ms.to_one_hot(Y)
+        dim = 2 # TODO:Hard-Coded
+        Y = np.transpose(Y, axes=[0, dim+1]+list(range(1, dim+1)))
+        B = self.dataset._batch_size
+        history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
+        return history.history['loss']
+
+    # def compile(self):
+    #     self.update_lr(self.lr)
+    #     self.model.compile(optimizer=self.optimizer,
+    #                        metrics=[])  # compile the network (supports keras compile parameters)

@@ -30,6 +30,10 @@ class TrainerTest(TestCase):
         print(preds.shape)
         v = evaluator.bin_scores(net)
         print(v)
+        v = evaluator.DCM(net)
+        print(v)
+        v = evaluator.plot_prediction(net)
+        print(v)
 
 
         # predict (supports keras predict parameters)
