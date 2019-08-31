@@ -122,6 +122,7 @@ class Trainer(object):
     def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir, upload=False):
 
         check_point = {'lr':lr,'e':e,'E':EPOCHS}
+        print('Saved checkpoint ', e,  '/', EPOCHS)
         np.save('net-checkpoint.npy', check_point)
         np.save('{}_e{}_lr{}_ds{}_lossall'.format(prefix, EPOCHS, lr, dataset_name), loss_all)
         np.save('{}_e{}_lr{}_ds{}_measurements'.format(prefix, EPOCHS, lr, dataset_name), measurements)
@@ -148,6 +149,7 @@ class Trainer(object):
             savefigs(fig_name='{}_e{}_lr{}_ds{}_loss_history'.format(prefix, EPOCHS, lr, dataset_name), fig_dir=fig_dir,
                      fig=fig)
         if upload:
+            print('Uploading training')
             upload_training(prefix=prefix,EPOCHS=EPOCHS,lr=lr,dataset_name=dataset_name)
 
 class KTrainer(Trainer):

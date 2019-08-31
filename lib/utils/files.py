@@ -6,21 +6,27 @@ def upload_training(prefix,EPOCHS,lr,dataset_name, client="ftpclient",password="
     def upload(ftp, file):
         ext = os.path.splitext(file)[1]
         if ext in (".txt", ".htm", ".html"):
-            ftp.storlines("STOR " + file, open(file))
+            with open(file) as f:
+                ftp.storlines("STOR " + file, f)
         else:
-            ftp.storbinary("STOR " + file, open(file, "rb"), 1024)
+            with open(file, "rb") as f:
+                ftp.storbinary("STOR " + file, f, 1024)
     
     ftp = ftplib.FTP()
     ftp.connect(HOST,PORT)
     ftp.login(client, password)
     os.chdir(fig_dir)
+    print('uploading images')
     upload(ftp, "{}_e{}_lr{}_ds{}_loss_history.png".format(prefix,EPOCHS,lr,dataset_name))
     upload(ftp, "{}_e{}_lr{}_ds{}_performance.png".format(prefix,EPOCHS,lr,dataset_name))
     os.chdir('../')
+    print('uploading model')
     upload(ftp, "{}-ds{}.pth".format(prefix,dataset_name))
+    print('uploading metrics')
     upload(ftp, "{}_e{}_lr{}_ds{}_lossall.npy".format(prefix,EPOCHS,lr,dataset_name))
     upload(ftp, "{}_e{}_lr{}_ds{}_measurements.npy".format(prefix,EPOCHS,lr,dataset_name))
     ftp.close()
+    print('ftp client closed. Done uploading data.')
     
 
 def get_npy_files(path='./', extension='npy'):

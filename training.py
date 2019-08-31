@@ -184,6 +184,7 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
             loss_all = np.array(loss_all)
             measurements = np.array([DCS, P, A, R, loss_epoch])
             trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, e, EPOCHS, fig_dir, args.upload)
+            eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
     loss_all = np.array(loss_all)
     measurements = np.array([DCS, P, A, R, loss_epoch])
     trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, EPOCHS, EPOCHS, fig_dir)
@@ -192,11 +193,11 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
 
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     model.eval() if not DEEPVESSEL else None
-    print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
+    # print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
-    plt.show()
+    # plt.show()
 
 train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
 if DEEPVESSEL:
