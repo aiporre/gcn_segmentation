@@ -1,18 +1,22 @@
 import keras
 import numpy as np
 import torch
-from dvn import FCN
 from torch import optim
 import torch.nn as nn
 import os
 import matplotlib.pyplot as plt
 
 from lib.utils import savefigs, get_npy_files, upload_training
+try:
+    from dvn import FCN
+except Exception as e:
+    print('Warning: No module dvn. Failed to import deep vessel models (dvn.FCN), Exception: ', str(e))
 
 try:
     import dvn.misc as ms
+
 except Exception as e:
-    print('Warning: No module dvn. Failed to import deep vessel models, Exception: ', str(e))
+    print('Warning: No module dvn. Failed to import deep vessel models(dvn.misc), Exception: ', str(e))
 
 
 from .progress_bar import printProgressBar
