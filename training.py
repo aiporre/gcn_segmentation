@@ -71,6 +71,8 @@ def process_command_line():
                         help="criterion: BCE or DCS or BCElogistic or DCSsigmoid")
     parser.add_argument("-u", "--upload", type=bool, default=False,
                         help="Flag T=upload training to the ftp server F=don't upload")
+    parser.add_argument("-ct", "--checkpoint-timer", type=int, default=1800,
+                        help="time threshhold to store the training in the dataset.(seconds)")
 
     return parser.parse_args()
 
@@ -162,7 +164,7 @@ else:
 
 def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     loss_all, DCS, P, A, R, loss_epoch = trainer.load_checkpoint(prefix=prefix)
-    timer = Timer(3000)
+    timer = Timer(args.checkpoint_timer)
     for e in trainer.get_range(EPOCHS):
         model.train() if not DEEPVESSEL else None
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
