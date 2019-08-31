@@ -183,6 +183,7 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
         if timer.is_time():
             loss_all = np.array(loss_all)
             measurements = np.array([DCS, P, A, R, loss_epoch])
+            trainer.save_model(MODEL_PATH)
             trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, e, EPOCHS, fig_dir, args.upload)
     loss_all = np.array(loss_all)
     measurements = np.array([DCS, P, A, R, loss_epoch])
