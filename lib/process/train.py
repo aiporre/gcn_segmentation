@@ -123,7 +123,7 @@ class Trainer(object):
 
         check_point = {'lr':lr,'e':e,'E':EPOCHS}
         print('Saved checkpoint ', e,  '/', EPOCHS)
-        np.save('net-checkpoint.npy', check_point)
+        np.save("{}_e{}_lr{}_ds{}_checkpoint.npy".format(prefix,EPOCHS,lr,dataset_name), check_point)
         np.save('{}_e{}_lr{}_ds{}_lossall'.format(prefix, EPOCHS, lr, dataset_name), loss_all)
         np.save('{}_e{}_lr{}_ds{}_measurements'.format(prefix, EPOCHS, lr, dataset_name), measurements)
         if not len(loss_all)==0:

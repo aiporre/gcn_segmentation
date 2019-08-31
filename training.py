@@ -184,7 +184,6 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
             loss_all = np.array(loss_all)
             measurements = np.array([DCS, P, A, R, loss_epoch])
             trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, e, EPOCHS, fig_dir, args.upload)
-            eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
     loss_all = np.array(loss_all)
     measurements = np.array([DCS, P, A, R, loss_epoch])
     trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, EPOCHS, EPOCHS, fig_dir)
