@@ -411,13 +411,13 @@ class Downsampling(torch.nn.Module):
         backsampling = data.clone()
         backsampling.x = data.x.clone().unsqueeze(-1) if data.x.dim() == 1 else data.x.clone()
         # Pooling projection with TOP-K operator
-        x, edge_index, edge_attr, perm, score = self.pool(data.x, data.edge_index, edge_attr=data.edge_attr,
-                                                          batch=data.batch)
-        data.x = x
-        data.edge_index = edge_index
-        data.pos = data.pos[score]
-        data.batch = perm
-        data.edge_attr = edge_attr
+        values = self.pool(data.x, data.edge_index, edge_attr=data.edge_attr, batch=data.batch)
+        # x,edge_index,edge_attr,perm,score
+        data.x = values[0]
+        data.edge_index = values[1]
+        data.pos = data.pos[values[4]]
+        data.batch = values[3]
+        data.edge_attr = values[2]
 
         return data, backsampling
 
