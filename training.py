@@ -167,6 +167,8 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     timer = Timer(args.checkpoint_timer)
     for e in trainer.get_range(EPOCHS):
         model.train() if not DEEPVESSEL else None
+        print('lesn loss all', len(loss_all), 'ken los all one elemtn', len(loss_all[0]))
+
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
         mean_loss = np.array(loss).mean()
         loss_epoch.append(mean_loss)
