@@ -108,6 +108,7 @@ class Trainer(object):
         if not len(checkpoint_file)==0:
             d1 = np.load(checkpoint_file[0], allow_pickle=True)
             self._epoch = d1.item().get('e')
+            print('loaded checkpoint: ', self._epoch)
 
         lossall_file = list(filter(lambda x: x.endswith('lossall.npy') and x.startswith(prefix), files))
         measurements_file = list(filter(lambda x: x.endswith('measurements.npy') and x.startswith(prefix), files))
@@ -195,7 +196,7 @@ class KTrainer(Trainer):
         dim = 2 # TODO:Hard-Coded
         Y = np.transpose(Y, axes=[0, dim+1]+list(range(1, dim+1)))
         B = self.dataset._batch_size
-        history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
+        history = self.model.fit(x=X[0:10], y=Y[0:10], epochs=1, batch_size=B)
         return history.history['loss']
 
     # def compile(self):
