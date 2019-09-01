@@ -103,8 +103,10 @@ class Trainer(object):
 
     def load_checkpoint(self, prefix = 'NET'):
         files = get_npy_files()
-        if files.__contains__('net-checkpoint.npy'):
-            d1 = np.load('net-checkpoint.npy', allow_pickle=True)
+        checkpoint_file = list(filter(lambda x: x.endswith('checkpoint.npy') and x.startswith(prefix), files))
+
+        if not len(checkpoint_file)==0:
+            d1 = np.load(checkpoint_file[0], allow_pickle=True)
             self._epoch = d1.item().get('e')
 
         lossall_file = list(filter(lambda x: x.endswith('lossall.npy') and x.startswith(prefix), files))
