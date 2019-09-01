@@ -121,7 +121,7 @@ class Trainer(object):
             measurements = np.load(measurements_file[0])
             if len(measurements) ==0 :
                 return loss_all, [], [], [], [], []
-            return loss_all, measurements[0].tolist(), measurements[1].tolist(), measurements[2].tolist() ,measurements[3].tolist(), measurements[4].tolist()
+            return loss_all.tolist(), measurements[0].tolist(), measurements[1].tolist(), measurements[2].tolist() ,measurements[3].tolist(), measurements[4].tolist()
 
     def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir, upload=False):
 
