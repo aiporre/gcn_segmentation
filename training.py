@@ -173,8 +173,8 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
         mean_loss = np.array(loss).mean()
         loss_epoch.append(mean_loss)
         print('EPOCH ', e, 'loss epoch', mean_loss)
-        print('lesn loss all', len(loss_all), 'ken los all one elemtn', loss_all[0])
-        print('len loss', len(loss), 'lesn loss one element', loss[0])
+        print('lesn loss all', len(loss_all), 'ken los all one elemtn', type(loss_all))
+        print('len loss', len(loss), 'lesn loss one element', type(loss))
         new_loss = loss_all + loss
         loss_all = new_loss
         with torch.no_grad():
