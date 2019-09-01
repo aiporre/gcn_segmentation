@@ -175,7 +175,8 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
         print('EPOCH ', e, 'loss epoch', mean_loss)
         print('lesn loss all', len(loss_all), 'ken los all one elemtn', loss_all[0])
         print('len loss', len(loss), 'lesn loss one element', loss[0])
-        loss_all += loss
+        new_loss = loss_all + loss
+        loss_all = new_loss
         with torch.no_grad():
             model.eval() if not DEEPVESSEL else None
             DCS.append(evaluator.DCM(model, progress_bar=progress_bar))
