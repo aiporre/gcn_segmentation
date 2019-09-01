@@ -181,7 +181,8 @@ class KEvaluator(Evaluator):
             if progress_bar:
                 printProgressBar(i, L, prefix='Acc, Rec, Pre:', suffix='Complete', length=50)
             else:
-                print('Bin Scores: in batch ', i+1, ' out of ', L, '(Completed {}%)'.format(100.0*(i+1)/L))
+                if (i+1)%10==0:
+                    print('Bin Scores: in batch ', i+1, ' out of ', L, '(Completed {}%)'.format(100.0*(i+1)/L))
             i += 1
         return correct/N, TP/(TP+FP+eps), TP/(TP+FN+eps)
 
@@ -210,7 +211,8 @@ class KEvaluator(Evaluator):
             if progress_bar:
                 printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
             else:
-                print('DCS Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+                if (i+1)%10 == 0:
+                    print('DCS Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
             i += 1
 
         # self.dataset.enforce_batch(1)

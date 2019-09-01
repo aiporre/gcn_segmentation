@@ -83,7 +83,8 @@ class Trainer(object):
                 printProgressBar(i+1, L, prefix='Train Epoch:', suffix='Complete, '+suffix, length=50)
             else:
                 prtg = " ({0:3.2f}%) ".format(100.0*(i+1)/L)
-                print('Training Epoch: in batch ', i+1, ' out of ', L, prtg, 'status: '+suffix)
+                if (i+1)%10 == 0:
+                    print('Training Epoch: in batch ', i+1, ' out of ', L, prtg, 'status: '+suffix)
             loss.append(loss_batch)
         return loss
 
