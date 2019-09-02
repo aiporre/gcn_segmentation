@@ -80,6 +80,9 @@ class GVESSEL12(Datasets):
 
         super(GVESSEL12, self).__init__(train=train, test=test, val=test)
 
+    @property
+    def classes(self):
+        return ['foreground', 'background']
 
 
 class _GVESSEL12(Dataset):
@@ -105,9 +108,9 @@ class _GVESSEL12(Dataset):
         split = self.test_rate
         L = int(split*TOTAL_SLICES)
         if self.train:
-            return ['data_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L)]
+            return ['gvessel_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L)]
         else:
-            return ['data_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L,TOTAL_SLICES)]
+            return ['gvessel_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L,TOTAL_SLICES)]
 
     def download(self):
         pass
@@ -169,7 +172,7 @@ class _GVESSEL12(Dataset):
 
 
 
-                torch.save(data, os.path.join(self.processed_dir, 'data_{:04d}.pt'.format(i+offset+cnt_slices)))
+                torch.save(data, os.path.join(self.processed_dir, 'gvessel_{:04d}.pt'.format(i+offset+cnt_slices)))
 
             # update counter
             cnt_slices+=processed_num
@@ -183,7 +186,7 @@ class _GVESSEL12(Dataset):
         offset = 0 if self.train else TOTAL_SLICES-L
         # get the file
         idx += offset
-        data = torch.load(os.path.join(self.processed_dir, 'data_{:04d}.pt'.format(idx)))
+        data = torch.load(os.path.join(self.processed_dir, 'gvessel_{:04d}.pt'.format(idx)))
         return data
 
 

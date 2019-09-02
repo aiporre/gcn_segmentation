@@ -1,5 +1,5 @@
-from .train import Trainer
-from .evaluation import Evaluator, DCS
+from .train import Trainer, KTrainer
+from .evaluation import Evaluator, DCS, KEvaluator
 from .progress_bar import printProgressBar
 
-__all__ = ['Trainer', 'Evaluator', 'DCS']
+__all__ = ['Trainer', 'Evaluator', 'DCS', 'KTrainer', 'KEvaluator']

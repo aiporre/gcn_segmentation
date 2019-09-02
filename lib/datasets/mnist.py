@@ -12,8 +12,8 @@ class MNIST(Datasets):
         mnist = input_data.read_data_sets(
             data_dir, one_hot=True, validation_size=val_size)
 
-        images = self._preprocess_images(mnist.train.images[0:8000], background=background)
-        labels = self._preprocess_labels(mnist.train.images[0:8000])
+        images = self._preprocess_images(mnist.train.images[0:80], background=background)
+        labels = self._preprocess_labels(mnist.train.images[0:80])
         train = Dataset(images, labels)
 
         images = self._preprocess_images(mnist.validation.images[0:2000], background=background)

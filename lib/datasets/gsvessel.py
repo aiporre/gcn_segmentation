@@ -1,7 +1,7 @@
 import numpy as np
 from .dataset import Datasets, Dataset
 # CONSTANT WHERE TO FIND THE DATA
-from config import VESSEL_DIR
+from config import SVESSEL_DIR as VESSEL_DIR
 import SimpleITK as sitk
 import os
 from .dataset import Datasets, Dataset, GraphDataset
@@ -11,9 +11,9 @@ import torch_geometric.transforms as T
 import numpy as np
 from lib.graph import grid_tensor
 
-from .vessel_synth import read_dataset_mhd
+from .svessel import read_dataset_mhd
 
-TOTAL_SLICES = 5050
+TOTAL_SLICES =  4570 #5050
 
 
 
@@ -52,8 +52,9 @@ class GSVESSEL(Datasets):
         test = GraphDataset(test_dataset, batch_size=self.batch_size, shuffle=False)
 
         super(GSVESSEL, self).__init__(train=train, test=test, val=test)
-
-
+    @property
+    def classes(self):
+        return ['foreground', 'background']
 
 class _GSVESSEL(Dataset):
 
@@ -95,10 +96,11 @@ class _GSVESSEL(Dataset):
         offset = 0 if self.train else TOTAL_SLICES-L
         vessel_data = read_dataset_mhd(self.raw_dir)
         vessel_data = vessel_data['train'] if self.train else vessel_data['test']
+        print('VESSEL_DATA: ', vessel_data['images'].shape, vessel_data['labels'].shape)
 
         for i in range(max_slices):
             print('processed ', i, ' out of ', max_slices)
-            image = vessel_data['images'][i, 0, :, :]
+            image = vessel_data['images'][i, :, :]
             mask = vessel_data['labels'][i, :, :]
             if self.pre_transform is not None:
                 data = (image, mask)

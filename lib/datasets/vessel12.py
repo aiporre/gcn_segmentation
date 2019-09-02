@@ -80,31 +80,31 @@ def read_dataset_mhd(data_dir, annotated_slices=True):
             # vessel_mask = vessel_mask[z_slices]
 
 
-        # plotting stuff...
-        print('vessel_mask: ', vessel_mask.shape)
-        print('origin: ', origin)
-        print('spacing', spacing)
-        print('z_slices', z_slices)
-        im1 = ct_scan_masked/ct_scan_masked.max()
-        im2 = vessel_mask/vessel_mask.max()
+        # # plotting stuff...
+        # print('vessel_mask: ', vessel_mask.shape)
+        # print('origin: ', origin)
+        # print('spacing', spacing)
+        # print('z_slices', z_slices)
+        # im1 = ct_scan_masked/ct_scan_masked.max()
+        # im2 = vessel_mask/vessel_mask.max()
         # im1[im2==1]=2
         # pg.image(im1)
         # input('click to end')
-        im2[vessel_mask_annotations==1]=-0.5
-        vmax = np.abs(im2).max()
-        vmin = -vmax
-        cmap = plt.cm.RdYlBu
-
-        for z_slice in z_slices:
-            plt.figure()
-            plt.imshow(im1[z_slice,:,:],cmap='gray')
-            alphas = np.ones_like(im2[z_slice,:,:])
-            alphas[im2[z_slice,:,:]==0]=0
-            colors = Normalize(vmin, vmax, clip=True)(im2[z_slice,:,:])
-            colors = cmap(colors)
-            colors[..., -1] = alphas
-            plt.imshow(colors)
-            plt.show()
+        # im2[vessel_mask_annotations==1]=-0.5
+        # vmax = np.abs(im2).max()
+        # vmin = -vmax
+        # cmap = plt.cm.RdYlBu
+        #
+        # for z_slice in z_slices:
+        #     plt.figure()
+        #     plt.imshow(im1[z_slice,:,:],cmap='gray')
+        #     alphas = np.ones_like(im2[z_slice,:,:])
+        #     alphas[im2[z_slice,:,:]==0]=0
+        #     colors = Normalize(vmin, vmax, clip=True)(im2[z_slice,:,:])
+        #     colors = cmap(colors)
+        #     colors[..., -1] = alphas
+        #     plt.imshow(colors)
+        #     plt.show()
         images += [ct_scan_masked[i,:,:] for i in range(len(ct_scan_masked))]
         labels += [vessel_mask[i, :, :] for i in range(len(vessel_mask))]
     # TODO: split is hardcoded
@@ -140,22 +140,22 @@ def read_dataset_cured(data_dir):
 
 
 class VESSEL12(Datasets):
-    def __init__(self,  data_dir=VESSEL_DIR, annotated_slices=False):
+    def __init__(self,  data_dir=VESSEL_DIR, annotated_slices=False, pre_transform=None):
         if annotated_slices:
             vessel_data = read_dataset_cured(data_dir)
         else:
             vessel_data = read_dataset_mhd(data_dir)
 
-        images = self._preprocess_images(vessel_data['train']['images'])
-        labels = self._preprocess_labels(vessel_data['train']['labels'])
+        images = self._preprocess_images(vessel_data['train']['images'], pre_transform=pre_transform)
+        labels = self._preprocess_labels(vessel_data['train']['labels'], pre_transform=pre_transform)
         train = Dataset(images, labels)
 
-        images = self._preprocess_images(vessel_data['test']['images'])
-        labels = self._preprocess_labels(vessel_data['test']['labels'])
+        images = self._preprocess_images(vessel_data['test']['images'], pre_transform=pre_transform)
+        labels = self._preprocess_labels(vessel_data['test']['labels'], pre_transform=pre_transform)
         val = Dataset(images, labels)
 
-        images = self._preprocess_images(vessel_data['test']['images'])
-        labels = self._preprocess_labels(vessel_data['test']['labels'])
+        images = self._preprocess_images(vessel_data['test']['images'], pre_transform=pre_transform)
+        labels = self._preprocess_labels(vessel_data['test']['labels'], pre_transform=pre_transform)
         test = Dataset(images, labels)
 
         super(VESSEL12, self).__init__(train, val, test)
@@ -176,10 +176,14 @@ class VESSEL12(Datasets):
     def num_channels(self):
         return 1
 
-    def _preprocess_images(self, images):
+    def _preprocess_images(self, images, pre_transform=None):
+        if pre_transform is not None:
+            images = pre_transform(images)
         return np.expand_dims(images,axis=1)
 
-    def _preprocess_labels(self, images):
+    def _preprocess_labels(self, images,pre_transform=None):
+        if pre_transform is not None:
+            images = pre_transform(images)
         return images #np.expand_dims(images, axis=1)
         # threshold = 0.1
         # images = np.reshape(images, (-1, self.height, self.width,

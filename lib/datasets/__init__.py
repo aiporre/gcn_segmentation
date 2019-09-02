@@ -9,13 +9,17 @@ from .svessel import SVESSEL
 from .transforms import Crop
 try:
     from .gvessel12 import GVESSEL12
+except ImportError as e:
+    print('Warning: Error while importing lib.GVESSEL12 module. Pytorch Geometric not installed, ', str(e))
+
+try:
     from .gsvessel import GSVESSEL
-except ImportError:
-    print('Warning: Error while importing lib.GVESSEL module. Pytorch Geometric not installed')
+except ImportError as e:
+    print('Warning: Error while importing lib.GSVESSEL module. Pytorch Geometric not installed, ', str(e))
 
 try:
     from .gmnist import GMNIST
-except ImportError:
-    print('Warning: Error while importing lib.GMINST module. Pytorch Geometric not installed')
+except ImportError as e:
+    print('Warning: Error while importing lib.GMINST module. Pytorch Geometric not installed, ', str(e))
 
 __all__ = ['MNIST', 'Cifar10', 'PascalVOC', 'PreprocessQueue', 'M2NIST', 'GMNIST', 'VESSEL12', 'GVESSEL12', 'Crop', 'GSVESSEL', 'SVESSEL']

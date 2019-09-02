@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import numpy as np
 
-from .vessel_synth import SVESSEL
+from .svessel import SVESSEL
 
 
 data = SVESSEL()
