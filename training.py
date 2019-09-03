@@ -39,13 +39,25 @@ from lib.utils import savefigs, Timer
 import numpy as np
 
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 def process_command_line():
     """Parse the command line arguments.
     """
+
+
     parser = argparse.ArgumentParser(description="Machine Learning Training: :)",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-t", "--progressbar", type=bool, default=False,
+    parser.add_argument("-t", "--progressbar", type=str2bool, default=False,
                         help="progress bar continuous")
     parser.add_argument("-lr", "--lr", type=float, default=0.001,
                         help="learning rate")
@@ -63,16 +75,18 @@ def process_command_line():
                         help="dataset to be used. Options: (G)MNIST, (G)VESSEL12, (G)SVESSEL")
     parser.add_argument("-n", "--net", type=str, default='GFCN',
                             help="network to be used. ...." )
-    parser.add_argument("-p", "--pre-transform", type=bool, default=False,
+    parser.add_argument("-p", "--pre-transform", type=str2bool, default=False,
                         help="use a pretransfrom to the dataset")
-    parser.add_argument("-z", "--background", type=bool, default=True,
+    parser.add_argument("-z", "--background", type=str2bool, default=True,
                         help="use a background in the MNIST dataset.")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
                         help="criterion: BCE or DCS or BCElogistic or DCSsigmoid")
-    parser.add_argument("-u", "--upload", type=bool, default=False,
+    parser.add_argument("-u", "--upload", type=str2bool, default=False,
                         help="Flag T=upload training to the ftp server F=don't upload")
     parser.add_argument("-ct", "--checkpoint-timer", type=int, default=1800,
                         help="time threshhold to store the training in the dataset.(seconds)")
+    parser.add_argument("-X", "--skip-training", type=str2bool, default=False,
+                        help="Avoid training and only eval")
 
     return parser.parse_args()
 
@@ -203,7 +217,9 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
     # plt.show()
 
-train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
+if not args.no_training:
+    train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
 if DEEPVESSEL:
     model = trainer.model
+
 eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
