@@ -506,7 +506,8 @@ class GFCN(torch.nn.Module):
         self.conv3b = SplineConv(128, 128, dim=2, kernel_size=1)
         self.bn3 = torch.nn.BatchNorm1d(128)
 
-        self.score_fr = SplineConv(128, 32, dim=2, kernel_size=1)
+        self.score_fr1 = SplineConv(128, 64, dim=2, kernel_size=1)
+        self.score_fr2 = SplineConv(64, 32, dim=2, kernel_size=1)
         self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
 
         self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
@@ -547,7 +548,7 @@ class GFCN(torch.nn.Module):
         data = avg_pool(cluster2, data, transform=T.Cartesian(cat=False))
         pool2 = data.clone()
 
-        # 64/64,V_2/V_3
+        # 64/128,V_2/V_3
         # pre-pool1
         pos3 = data.pos
         edge_index3 = data.edge_index
@@ -567,9 +568,10 @@ class GFCN(torch.nn.Module):
         # upsample
         # data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
         #                                  batch=batch2, transform=None)
-        data.x = F.elu(self.score_fr(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.score_fr1(data.x, data.edge_index, data.edge_attr))
         data = recover_grid_barycentric(data, weights=weights3, pos=pos3, edge_index=edge_index3, cluster=cluster3,
                                         batch=batch3, transform=T.Cartesian(cat=False))
+        data.x = F.elu(self.score_fr1(data.x, data.edge_index, data.edge_attr))
 
         pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
 
