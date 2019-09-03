@@ -491,61 +491,100 @@ class GFCND(torch.nn.Module):
         return x
 
 class GFCN(torch.nn.Module):
-    ''' swallow GFCN32s with barycentric upsampling'''
+    ''' GFCN16s with barycentric upsampling'''
     def __init__(self):
         super(GFCN, self).__init__()
-        print('model GFCN-org..')
-        self.conv1 = SplineConv(1, 32, dim=2, kernel_size=5)
-        self.conv2 = SplineConv(32, 64, dim=2, kernel_size=5)
-        self.conv3 = SplineConv(64, 32, dim=2, kernel_size=5)
-        self.conv4 = SplineConv(32, 32, dim=2, kernel_size=5)
+        self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
+        self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
+        # self.bn1 = torch.nn.BatchNorm1d(32)
 
+        self.conv2a = SplineConv(32, 64, dim=2, kernel_size=3)
+        self.conv2b = SplineConv(64, 64, dim=2, kernel_size=3)
+        self.bn2 = torch.nn.BatchNorm1d(64)
+
+        self.conv3a = SplineConv(64, 128, dim=2, kernel_size=3)
+        self.conv3b = SplineConv(128, 128, dim=2, kernel_size=1)
+        self.bn3 = torch.nn.BatchNorm1d(128)
+
+        self.score_fr = SplineConv(128, 32, dim=2, kernel_size=1)
+        self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
 
         self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
 
-
     def forward(self, data):
-
-        ## LAYER 1 (1,V0)->(32,V1)
+        # (1/32,V_0/V_1)
         # pre-pool1
         pos1 = data.pos
         edge_index1 = data.edge_index
         x_pre = data.x.clone().detach()
         batch1 = data.batch if hasattr(data, 'batch') else None
         # convolution
-        data.x = F.elu(self.conv1(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
         # clustering
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster1 = graclus(data.edge_index, weight, data.x.size(0))
-        weights1 = pweights(x_pre,cluster1)
-        #pooling
+        weights1 = pweights(x_pre, cluster1)
+        # pooling
         data = avg_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
-        ## LAYER 2 (32,V1)->(64,V2)
+        # (32/64,V_1/V_2)
+
         # pre-pool2
         pos2 = data.pos
         edge_index2 = data.edge_index
-        batch2 = data.batch if hasattr(data, 'batch') else None
         x_pre = data.x.clone().detach()
+        batch2 = data.batch if hasattr(data, 'batch') else None
         # convolution
-        data.x = F.elu(self.conv2(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.conv2a(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.conv2b(data.x, data.edge_index, data.edge_attr))
+        data.x = self.bn2(data.x)
         # clustering
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster2 = graclus(data.edge_index, weight, data.x.size(0))
         weights2 = pweights(x_pre, cluster2)
         # pooling
         data = avg_pool(cluster2, data, transform=T.Cartesian(cat=False))
+        pool2 = data.clone()
 
-        # LAYER 3  (64,V2)->(32,V1)
-        data.x = F.elu(self.conv3(data.x, data.edge_index, data.edge_attr)) # (32,V2)
+        # 64/64,V_2/V_3
+        # pre-pool1
+        pos3 = data.pos
+        edge_index3 = data.edge_index
+        x_pre = data.x.clone().detach()
+        batch3 = data.batch if hasattr(data, 'batch') else None
+        # convolution
+        data.x = F.elu(self.conv3a(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.conveb(data.x, data.edge_index, data.edge_attr))
+        data.x = self.bn3(data.x)
+        # clustering
+        weight = normalized_cut_2d(data.edge_index, data.pos)
+        cluster3 = graclus(data.edge_index, weight, data.x.size(0))
+        weights3 = pweights(x_pre, cluster3)
+        # pooling
+        data = avg_pool(cluster3, data, transform=T.Cartesian(cat=False))
 
+        # upsample
+        # data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
+        #                                  batch=batch2, transform=None)
+        data.x = F.elu(self.score_fr(data.x, data.edge_index, data.edge_attr))
+        data = recover_grid_barycentric(data, weights=weights3, pos=pos3, edge_index=edge_index3, cluster=cluster3,
+                                        batch=batch3, transform=T.Cartesian(cat=False))
+
+        pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
+
+        # data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
+        #                                  batch=batch1, transform=None)
+        data.x = data.x+pool2.x
         data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
-                                         batch=batch2, transform=T.Cartesian(cat=False))
+                                        batch=batch2, transform=T.Cartesian(cat=False))
 
-        # LAYER 4  (32,V1)->(1,V0)
-        data.x = F.elu(self.conv4(data.x, data.edge_index, data.edge_attr))
         data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
                                         batch=batch1, transform=T.Cartesian(cat=False))
+
+        #
         data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
 
-        return data.x
+        x = data.x
+
+        return x
