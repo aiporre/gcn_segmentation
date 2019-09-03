@@ -217,7 +217,7 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
     # plt.show()
 
-if not args.no_training:
+if not args.skip_training:
     train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
 if DEEPVESSEL:
     model = trainer.model
