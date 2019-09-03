@@ -571,7 +571,7 @@ class GFCN(torch.nn.Module):
         data.x = F.elu(self.score_fr1(data.x, data.edge_index, data.edge_attr))
         data = recover_grid_barycentric(data, weights=weights3, pos=pos3, edge_index=edge_index3, cluster=cluster3,
                                         batch=batch3, transform=T.Cartesian(cat=False))
-        data.x = F.elu(self.score_fr1(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.score_fr2(data.x, data.edge_index, data.edge_attr))
 
         pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
 
