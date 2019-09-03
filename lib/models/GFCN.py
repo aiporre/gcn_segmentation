@@ -399,8 +399,8 @@ class Downsampling(torch.nn.Module):
         super(Downsampling, self).__init__()
         self.pool = TopKPooling(k_range, ratio=ratio)
         hidden_channels = int(out_channels/2)
-        self.conva = SplineConv(in_channels, hidden_channels, dim=dim, kernel_size=kernel_size)
-        self.convb = SplineConv(hidden_channels, out_channels, dim=dim, kernel_size=kernel_size)
+        self.conva = SplineConv(in_channels, out_channels, dim=dim, kernel_size=kernel_size)
+        self.convb = SplineConv(out_channels, out_channels, dim=dim, kernel_size=kernel_size)
         self.batch_norm = batch_norm
         if self.batch_norm:
             self.bn = torch.nn.BatchNorm1d(32)
@@ -434,7 +434,7 @@ class Upsampling(torch.nn.Module):
         self.k = k
         self.conv_layer = conv_layer
         if self.conv_layer:
-            self.conva = SplineConv(in_channels, in_channels, dim=dim, kernel_size=kernel_size)
+            self.conva = SplineConv(in_channels, out_channels, dim=dim, kernel_size=kernel_size)
             # self.convb = SplineConv(in_channels, out_channels, dim=dim, kernel_size=kernel_size)
 
     def forward(self, data, backsampling):
