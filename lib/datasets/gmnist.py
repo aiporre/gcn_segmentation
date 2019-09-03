@@ -16,8 +16,8 @@ class GMNIST(Datasets):
         self.test_rate = test_rate
         self.validation = validation
 
-        train_dataset = _GMNIST(self.data_dir, True, transform=T.Cartesian(), background=background)
-        test_dataset = _GMNIST(self.data_dir, False, transform=T.Cartesian(), background=background)
+        train_dataset = _GMNIST(self.data_dir, True, transform=T.Cartesian())
+        test_dataset = _GMNIST(self.data_dir, False, transform=T.Cartesian())
 
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
         test = GraphDataset(test_dataset, batch_size=self.batch_size, shuffle=False)
