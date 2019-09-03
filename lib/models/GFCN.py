@@ -555,7 +555,7 @@ class GFCN(torch.nn.Module):
         batch3 = data.batch if hasattr(data, 'batch') else None
         # convolution
         data.x = F.elu(self.conv3a(data.x, data.edge_index, data.edge_attr))
-        data.x = F.elu(self.conveb(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.conv3b(data.x, data.edge_index, data.edge_attr))
         data.x = self.bn3(data.x)
         # clustering
         weight = normalized_cut_2d(data.edge_index, data.pos)
