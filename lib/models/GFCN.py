@@ -459,7 +459,9 @@ class GFCND(torch.nn.Module):
         self.down1 = Downsampling(k_range=64, ratio=0.5, in_channels=1, out_channels=32, dim=2, kernel_size=5,batch_norm=False)
         self.down2 = Downsampling(k_range=256, ratio=0.5, in_channels=32, out_channels=64, dim=2, kernel_size=3)
         self.down3 = Downsampling(k_range=256, ratio=0.5, in_channels=64, out_channels=128, dim=2, kernel_size=3)
-        self.up1 = Upsampling(k=3, in_channels=128, out_channels=32, dim=2, kernel_size=3)
+        self.up1 = Upsampling(k=3, in_channels=128, out_channels=64, dim=2, kernel_size=3)
+        self.score_fs = SplineConv(64, 32, dim=2, kernel_size=3)
+
         self.up2 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=5,conv_layer=False)
         self.up3 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=5,conv_layer=False)
 
@@ -476,6 +478,8 @@ class GFCND(torch.nn.Module):
         data, backsampling_3 = self.down3(data)
         # V3,128 -> V2,32 // score FR
         data = self.up1(data, backsampling_3)
+        data.x = F.elu(self.score_pool2(data.x, data.edge_index, data.edge_attr))
+
         # V2,64 -> V2,32 //score pool2
         pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
         # addition
