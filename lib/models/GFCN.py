@@ -395,18 +395,24 @@ class down(torch.nn.Module):
 
 #### MODEL TOP-K + knn-interpolate
 class Downsampling(torch.nn.Module):
-    def __init__(self, k_range, ratio, in_channels, out_channels, dim, kernel_size):
+    def __init__(self, k_range, ratio, in_channels, out_channels, dim, kernel_size,batch_norm=True):
         super(Downsampling, self).__init__()
         self.pool = TopKPooling(k_range, ratio=ratio)
         hidden_channels = int(out_channels/2)
         self.conva = SplineConv(in_channels, hidden_channels, dim=dim, kernel_size=kernel_size)
         self.convb = SplineConv(hidden_channels, out_channels, dim=dim, kernel_size=kernel_size)
-        self.convc = SplineConv(out_channels, out_channels, dim=dim, kernel_size=kernel_size)
+        self.batch_norm = batch_norm
+        if self.batch_norm:
+            self.bn = torch.nn.BatchNorm1d(32)
+
+        # self.convc = SplineConv(out_channels, out_channels, dim=dim, kernel_size=kernel_size)
 
     def forward(self, data):
         data.x = F.elu(self.conva(data.x, data.edge_index, data.edge_attr))
         data.x = F.elu(self.convb(data.x, data.edge_index, data.edge_attr))
-        data.x = F.elu(self.convc(data.x, data.edge_index, data.edge_attr))
+        # data.x = F.elu(self.convc(data.x, data.edge_index, data.edge_attr))
+        if self.batch_norm:
+            data.x = self.bn(data.x)
         # Backsampling
         backsampling = data.clone()
         backsampling.x = data.x.clone().unsqueeze(-1) if data.x.dim() == 1 else data.x.clone()
@@ -423,15 +429,18 @@ class Downsampling(torch.nn.Module):
 
 
 class Upsampling(torch.nn.Module):
-    def __init__(self, k, in_channels, out_channels, dim, kernel_size):
+    def __init__(self, k, in_channels, out_channels, dim, kernel_size, conv_layer=True):
         super(Upsampling, self).__init__()
         self.k = k
-        self.conva = SplineConv(in_channels, in_channels, dim=dim, kernel_size=kernel_size)
-        self.convb = SplineConv(in_channels, out_channels, dim=dim, kernel_size=kernel_size)
+        self.conv_layer = conv_layer
+        if self.conv_layer:
+            self.conva = SplineConv(in_channels, in_channels, dim=dim, kernel_size=kernel_size)
+            # self.convb = SplineConv(in_channels, out_channels, dim=dim, kernel_size=kernel_size)
 
     def forward(self, data, backsampling):
-        data.x = F.elu(self.conva(data.x, data.edge_index, data.edge_attr))
-        data.x = F.elu(self.convb(data.x, data.edge_index, data.edge_attr))
+        if self.conv_layer:
+            data.x = F.elu(self.conva(data.x, data.edge_index, data.edge_attr))
+            # data.x = F.elu(self.convb(data.x, data.edge_index, data.edge_attr))
 
         data.x = knn_interpolate(data.x, data.pos, backsampling.pos, data.batch, backsampling.batch, k=self.k)
         data.pos = backsampling.pos
@@ -447,22 +456,33 @@ class GFCND(torch.nn.Module):
 
     def __init__(self):
         super(GFCND, self).__init__()
-        self.down1 = Downsampling(k_range=64, ratio=0.5, in_channels=1, out_channels=64, dim=2, kernel_size=5)
-        self.down2 = Downsampling(k_range=256, ratio=0.5, in_channels=64, out_channels=256, dim=2, kernel_size=3)
-        self.up1 = Upsampling(k=3, in_channels=256, out_channels=128, dim=2, kernel_size=3)
-        self.up2 = Upsampling(k=3, in_channels=128, out_channels=32, dim=2, kernel_size=5)
+        self.down1 = Downsampling(k_range=64, ratio=0.5, in_channels=1, out_channels=32, dim=2, kernel_size=5,batch_norm=False)
+        self.down2 = Downsampling(k_range=256, ratio=0.5, in_channels=32, out_channels=64, dim=2, kernel_size=3)
+        self.down3 = Downsampling(k_range=256, ratio=0.5, in_channels=64, out_channels=128, dim=2, kernel_size=3)
+        self.up1 = Upsampling(k=3, in_channels=128, out_channels=32, dim=2, kernel_size=3)
+        self.up2 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=5,conv_layer=False)
+        self.up3 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=5,conv_layer=False)
 
+        self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
         self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
 
     def forward(self, data):
-        # V0,1 -> V1,64
+        # V0,1 -> V1,32
         data, backsampling_1 = self.down1(data)
-        # V1,64 -> V2,256
+        # V1,32 -> V2,64
         data, backsampling_2 = self.down2(data)
-        # V2,256 -> V1,128
-        data = self.up1(data, backsampling_2)
+        pool2 = data.clone()
+        # V2,64 -> V3,128
+        data, backsampling_3 = self.down3(data)
+        # V3,128 -> V2,32 // score FR
+        data = self.up1(data, backsampling_3)
+        # V2,64 -> V2,32 //score pool2
+        pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
+        # addition
+        data.x = data.x+pool2.x
         # V1,128 -> V0,32
-        data = self.up2(data, backsampling_1)
+        data = self.up2(data, backsampling_2)
+        data = self.up3(data, backsampling_1)
         # convout
         # V0,32 -> V0,1
         data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
