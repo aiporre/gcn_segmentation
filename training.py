@@ -100,9 +100,14 @@ BATCH = args.batch
 DEEPVESSEL =False
 
 if args.pre_transform:
-    pre_transform = Crop(30,150,256,256)
+    if args.dataset.startswith('G'):
+        pre_transform = Crop(30,150,256,256)
+    else:
+        pre_transform = Crop(30, 150, 256, 256,graph_mode=False)
 else:
     pre_transform = None
+
+
 if args.dataset == 'MNIST':
     dataset = MNIST(background=args.background)
 elif args.dataset == 'GMNIST':
