@@ -403,7 +403,7 @@ class Downsampling(torch.nn.Module):
         self.convb = SplineConv(out_channels, out_channels, dim=dim, kernel_size=kernel_size)
         self.batch_norm = batch_norm
         if self.batch_norm:
-            self.bn = torch.nn.BatchNorm1d(32)
+            self.bn = torch.nn.BatchNorm1d(out_channels)
 
         # self.convc = SplineConv(out_channels, out_channels, dim=dim, kernel_size=kernel_size)
 
