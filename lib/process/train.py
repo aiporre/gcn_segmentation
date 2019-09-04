@@ -195,10 +195,11 @@ class KTrainer(Trainer):
         return history.history['loss']
 
     def train_epoch(self, lr=0.01, progress_bar=True):
-        # if not self._model_compiled:
-        self.update_lr(lr=lr)
-        self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
-            # self._model_compiled=True
+        if not self._model_compiled:
+            self.update_lr(lr=lr)
+            self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
+            self._model_compiled=True
+
         return super(KTrainer,self).train_epoch(lr=lr,progress_bar=progress_bar)
 
         # self.update_lr(lr=lr)
