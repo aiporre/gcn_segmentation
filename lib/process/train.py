@@ -190,9 +190,9 @@ class KTrainer(Trainer):
 
     def train_epoch(self, lr=0.01, progress_bar=True):
         self.update_lr(lr=lr)
-        if not self._model_compiled:
-            self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
-            self._model_compiled=True
+        # if not self._model_compiled:
+        self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
+            # self._model_compiled=True
         X = self.dataset.get_images()
         Y = self.dataset.get_labels()
         Y = Y.astype(int)

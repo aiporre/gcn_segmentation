@@ -37,6 +37,8 @@ from torch import nn
 from config import VESSEL_DIR, SVESSEL_DIR
 from lib.utils import savefigs, Timer
 import numpy as np
+from keras import backend as K
+
 
 
 def str2bool(v):
@@ -189,6 +191,9 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
         print('lesn loss all', len(loss_all), 'ken los all one elemtn', type(loss_all))
 
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
+        if DEEPVESSEL:
+            print('====>>>> cleaning session??! maybe..:(')
+            K.clear_session()
         mean_loss = np.array(loss).mean()
         loss_epoch.append(mean_loss)
         print('EPOCH ', e, 'loss epoch', mean_loss)
