@@ -185,23 +185,32 @@ class KTrainer(Trainer):
         else:
             print('Warning: there is no file :', path)
     def train_batch(self):
-        print('Warning: Not-implemented')
-        return 0
-
-    def train_epoch(self, lr=0.01, progress_bar=True):
-        self.update_lr(lr=lr)
-        # if not self._model_compiled:
-        self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
-            # self._model_compiled=True
-        X = self.dataset.get_images()
-        Y = self.dataset.get_labels()
-        Y = Y.astype(int)
-        Y = ms.to_one_hot(Y)
-        dim = 2 # TODO:Hard-Coded
-        Y = np.transpose(Y, axes=[0, dim+1]+list(range(1, dim+1)))
+        '''
+        produce one batch iteration
+        :return:
+        '''
+        X, Y = self.dataset.next_batch(batch_size=self._batch_size, shuffle=True)
         B = self.dataset._batch_size
         history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
         return history.history['loss']
+
+    def train_epoch(self, lr=0.01, progress_bar=True):
+        # if not self._model_compiled:
+        self.update_lr(lr=lr)
+        self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
+            # self._model_compiled=True
+        return super(KTrainer,self).train_epoch(lr=lr,progress_bar=progress_bar)
+
+        # self.update_lr(lr=lr)
+        # X = self.dataset.get_images()
+        # Y = self.dataset.get_labels()
+        # Y = Y.astype(int)
+        # Y = ms.to_one_hot(Y)
+        # dim = 2 # TODO:Hard-Coded
+        # Y = np.transpose(Y, axes=[0, dim+1]+list(range(1, dim+1)))
+        # B = self.dataset._batch_size
+        # history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
+        # return history.history['loss']
     def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir, upload=False):
         super(KTrainer,self).save_checkpoint(loss_all=loss_all, measurements=measurements,prefix=prefix,
                                              lr=lr, dataset_name=dataset_name, e=e,
