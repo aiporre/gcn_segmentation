@@ -196,14 +196,24 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
         print('len loss', len(loss), 'lesn loss one element', type(loss))
         new_loss = loss_all + loss
         loss_all = new_loss
-        with torch.no_grad():
-            model.eval() if not DEEPVESSEL else None
+        if DEEPVESSEL:
+            print('Evaluation Epoch {}/{}...'.format(e, EPOCHS))
             DCS.append(evaluator.DCM(model, progress_bar=progress_bar))
-            a, p, r  = evaluator.bin_scores(model, progress_bar=progress_bar)
+            a, p, r = evaluator.bin_scores(model, progress_bar=progress_bar)
             P.append(p)
             A.append(a)
             R.append(r)
-            print('DCS score:', DCS[-1], 'accuracy ', a, 'precision', p, 'recall', r )
+            print('DCS score:', DCS[-1], 'accuracy ', a, 'precision', p, 'recall', r)
+        else:
+            with torch.no_grad():
+                print('Evaluation Epoch {}/{}...'.format(e,EPOCHS))
+                model.eval()
+                DCS.append(evaluator.DCM(model, progress_bar=progress_bar))
+                a, p, r  = evaluator.bin_scores(model, progress_bar=progress_bar)
+                P.append(p)
+                A.append(a)
+                R.append(r)
+                print('DCS score:', DCS[-1], 'accuracy ', a, 'precision', p, 'recall', r )
         if timer.is_time():
             measurements = np.array([DCS, P, A, R, loss_epoch])
             trainer.save_model(MODEL_PATH)
