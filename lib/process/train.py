@@ -203,7 +203,7 @@ class KTrainer(Trainer):
         history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
         return history.history['loss']
     def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir, upload=False):
-        super(KTrainer,self).save_checkpoint(loss_all=loss_all, measurements=measurements,
+        super(KTrainer,self).save_checkpoint(loss_all=loss_all, measurements=measurements,prefix=prefix,
                                              lr=lr, dataset_name=dataset_name, e=e,
                                              EPOCHS=EPOCHS, fig_dir=fig_dir, upload=False)
         if upload:
