@@ -8,13 +8,16 @@ def upload_training(prefix,EPOCHS,lr,dataset_name, client="ftpclient",password="
             print("File '", file, "' doesn't exist")
             return
         ext = os.path.splitext(file)[1]
-        if ext in (".txt", ".htm", ".html"):
-            with open(file) as f:
-                ftp.storlines("STOR " + file, f)
-        else:
-            with open(file, "rb") as f:
-                ftp.storbinary("STOR " + file, f, 1024)
-    
+        try:
+            if ext in (".txt", ".htm", ".html"):
+                with open(file) as f:
+                    ftp.storlines("STOR " + file, f)
+            else:
+                with open(file, "rb") as f:
+                    ftp.storbinary("STOR " + file, f, 1024)
+        except Exception as e:
+            print('EXCEPTION FTP: ', e)
+
     ftp = ftplib.FTP()
     ftp.connect(HOST,PORT)
     ftp.login(client, password)
