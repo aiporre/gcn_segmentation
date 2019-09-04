@@ -165,6 +165,7 @@ class KTrainer(Trainer):
         :param kwargs:
         '''
         super(KTrainer, self).__init__(model=model, dataset=dataset, **kwargs)
+        self._model_compiled = False
 
     def update_lr(self, lr):
         if not self.lr==lr or self.optimizer is None:
@@ -189,7 +190,9 @@ class KTrainer(Trainer):
 
     def train_epoch(self, lr=0.01, progress_bar=True):
         self.update_lr(lr=lr)
-        self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
+        if not self._model_compiled:
+            self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
+            self._model_compiled=True
         X = self.dataset.get_images()
         Y = self.dataset.get_labels()
         Y = Y.astype(int)
@@ -197,7 +200,7 @@ class KTrainer(Trainer):
         dim = 2 # TODO:Hard-Coded
         Y = np.transpose(Y, axes=[0, dim+1]+list(range(1, dim+1)))
         B = self.dataset._batch_size
-        history = self.model.fit(x=X[0:10], y=Y[0:10], epochs=1, batch_size=B)
+        history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
         return history.history['loss']
     def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir, upload=False):
         super(KTrainer,self).save_checkpoint(loss_all=loss_all, measurements=measurements,
