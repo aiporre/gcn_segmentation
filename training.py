@@ -103,7 +103,7 @@ if args.pre_transform:
     if args.dataset.startswith('G'):
         pre_transform = Crop(30,150,256,256)
     else:
-        pre_transform = CropVessel12(30, 150, 256, 256,graph_mode=False)
+        pre_transform = CropVessel12(30, 150, 256, 256)
 else:
     pre_transform = None
 
