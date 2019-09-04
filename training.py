@@ -26,7 +26,7 @@ except Exception as e:
     print('Warning: No module dvn. Failed to import deep vessel models, Exception: ', str(e))
     
 from lib.models import UNet, FCN
-from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop
+from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop, CropVessel12
 
 
 from lib.process import Trainer, Evaluator, DCS , KEvaluator, KTrainer
@@ -103,7 +103,7 @@ if args.pre_transform:
     if args.dataset.startswith('G'):
         pre_transform = Crop(30,150,256,256)
     else:
-        pre_transform = Crop(30, 150, 256, 256,graph_mode=False)
+        pre_transform = CropVessel12(30, 150, 256, 256,graph_mode=False)
 else:
     pre_transform = None
 

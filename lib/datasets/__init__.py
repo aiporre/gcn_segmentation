@@ -5,8 +5,11 @@ from .queue import PreprocessQueue
 from .m2nist import M2NIST
 from .vessel12 import VESSEL12
 from .svessel import SVESSEL
+try:
+    from .transforms import Crop, CropVessel12
+except ImportError as e:
+    print('Warning: Error while importing lib.Crop, lib.CropVessel12 module. Pytorch Geometric not installed, ', str(e))
 
-from .transforms import Crop
 try:
     from .gvessel12 import GVESSEL12
 except ImportError as e:
@@ -22,4 +25,4 @@ try:
 except ImportError as e:
     print('Warning: Error while importing lib.GMINST module. Pytorch Geometric not installed, ', str(e))
 
-__all__ = ['MNIST', 'Cifar10', 'PascalVOC', 'PreprocessQueue', 'M2NIST', 'GMNIST', 'VESSEL12', 'GVESSEL12', 'Crop', 'GSVESSEL', 'SVESSEL']
+__all__ = ['MNIST', 'Cifar10', 'PascalVOC', 'PreprocessQueue', 'M2NIST', 'GMNIST', 'VESSEL12', 'GVESSEL12', 'Crop','CropVessel12', 'GSVESSEL', 'SVESSEL']
