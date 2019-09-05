@@ -205,7 +205,7 @@ class KTrainer(Trainer):
             self.model.compile(optimizer=self.optimizer, metrics=[])  # compile the network (supports keras compile parameters)
             self._model_compiled=True
 
-        return super(KTrainer,self).train_epoch(lr=lr,progress_bar=progress_bar)
+        return super(KTrainer,self).train_epoch(lr=lr,progress_bar=progress_bar,verbose=False)
 
         # self.update_lr(lr=lr)
         # X = self.dataset.get_images()
