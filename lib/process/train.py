@@ -190,6 +190,11 @@ class KTrainer(Trainer):
         :return:
         '''
         X, Y = self.dataset.next_batch(batch_size=self._batch_size, shuffle=True)
+
+        Y = Y.astype(int)
+        Y = ms.to_one_hot(Y)
+        dim = 2 # TODO:Hard-Coded
+        Y = np.transpose(Y, axes=[0, dim+1]+list(range(1, dim+1)))
         B = self.dataset._batch_size
         history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
         return history.history['loss']

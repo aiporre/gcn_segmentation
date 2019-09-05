@@ -171,7 +171,7 @@ if args.dataset[0] == 'G':
     evaluator = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid)
     trainer.load_model(model, MODEL_PATH)
 elif args.net == 'DeepVessel':
-    trainer = KTrainer(model=model, dataset=dataset, batch_size=10)
+    trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH)
     evaluator = KEvaluator(dataset)
     trainer.load_model(model,MODEL_PATH)
     model = trainer.model
