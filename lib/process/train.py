@@ -197,7 +197,7 @@ class KTrainer(Trainer):
         Y = np.transpose(Y, axes=[0, dim+1]+list(range(1, dim+1)))
         B = self.dataset._batch_size
         history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B,verbose=False)
-        return history.history['loss']
+        return history.history['loss'][0]
 
     def train_epoch(self, lr=0.01, progress_bar=True):
         if not self._model_compiled:

@@ -165,6 +165,13 @@ else:
     sigmoid = True
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+if torch.cuda.device_count() > 1:
+  print("Let's use", torch.cuda.device_count(), "GPUs!")
+  # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
+  model = nn.DataParallel(model)
+
+model.to(device)
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device, criterion=criterion)
@@ -222,8 +229,8 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
             trainer.save_checkpoint(np.array(loss_all), measurements, prefix,  lr, args.dataset, e, EPOCHS, fig_dir, args.upload)
     loss_all = np.array(loss_all)
     measurements = np.array([DCS, P, A, R, loss_epoch])
-    trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, EPOCHS, EPOCHS, fig_dir)
     trainer.save_model(MODEL_PATH)
+    trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, EPOCHS, EPOCHS, fig_dir, args.upload)
 
 
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
