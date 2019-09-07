@@ -171,8 +171,6 @@ if torch.cuda.device_count() > 1:
   # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
   model = nn.DataParallel(model)
 
-model.to(device)
-model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device, criterion=criterion)
     evaluator = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid)
@@ -187,6 +185,7 @@ else:
     evaluator = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid)
     trainer.load_model(model, MODEL_PATH)
 
+model = model.to(device) if not DEEPVESSEL else model
 
 
 
