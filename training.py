@@ -95,6 +95,10 @@ def process_command_line():
 # CONSTANST
 
 args = process_command_line()
+print('=====================')
+print('ARGUMENTS: ')
+print(args)
+print('=====================')
 EPOCHS = args.epochs
 MODEL_PATH = './{}-ds{}.pth'.format(args.net, args.dataset)
 EPOCHS = args.epochs
