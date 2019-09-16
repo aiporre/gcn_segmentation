@@ -165,7 +165,7 @@ elif args.criterion == 'DCSsigmoid':
     criterion = DCS(pre_sigmoid=True) # criterion accepts logit. network produce logit
     sigmoid = True # evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'BCEweightedlogistic':
-    criterion = nn.BCEWithLogitsLoss(pos_weight=3)  # criterion accepts logit. network produce logit
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([3]))  # criterion accepts logit. network produce logit
     sigmoid = True  # evaluation flag to comput sigmoid because model output logit
 else:
     criterion = nn.BCELoss()
