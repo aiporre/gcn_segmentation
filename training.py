@@ -151,6 +151,7 @@ elif args.net == 'DeepVessel':
     DEEPVESSEL =True
 else:
     model = GFCNA()
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 if args.criterion == 'BCE':
     criterion = nn.BCELoss()
@@ -165,13 +166,12 @@ elif args.criterion == 'DCSsigmoid':
     criterion = DCS(pre_sigmoid=True) # criterion accepts logit. network produce logit
     sigmoid = True # evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'BCEweightedlogistic':
-    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([3]))  # criterion accepts logit. network produce logit
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([3]).to(device))  # criterion accepts logit. network produce logit
     sigmoid = True  # evaluation flag to comput sigmoid because model output logit
 else:
     criterion = nn.BCELoss()
     sigmoid = True
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device, criterion=criterion)
