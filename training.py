@@ -89,7 +89,10 @@ def process_command_line():
                         help="time threshhold to store the training in the dataset.(seconds)")
     parser.add_argument("-X", "--skip-training", type=str2bool, default=False,
                         help="Avoid training and only eval")
-
+    parser.add_argument("-O", "--overlay-plot", type=str2bool, default=True,
+                        help="produce overlay plot.")
+    parser.add_argument("-N", "--sample-to-plot", type=int, default=190,
+                        help="sample to plot from the dataset")
     return parser.parse_args()
 
 # CONSTANST
@@ -234,13 +237,15 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
 
 
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
-    model.eval() if not DEEPVESSEL else None
-    print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
-    print('stats: PAR ', evaluator.bin_scores(model, progress_bar=progress_bar))
     print('plotting one prediction')
-    fig = evaluator.plot_prediction(model=model)
+    fig = evaluator.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot)
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
     # plt.show()
+    print('calculating stats...')
+    model.eval() if not DEEPVESSEL else None
+    print('DCM factor: ', evaluator.DCM(model, progress_bar=progress_bar))
+    print('stats: PAR ', evaluator.bin_scores(model, progress_bar=progress_bar))
+
 
 if not args.skip_training:
     train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)

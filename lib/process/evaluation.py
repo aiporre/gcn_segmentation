@@ -1,6 +1,9 @@
 import torch
 from torch.autograd import Function, Variable
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+
 from .progress_bar import printProgressBar
 from lib.utils import print_debug
 from torch import sigmoid
@@ -88,15 +91,20 @@ class Evaluator(object):
             i += 1
         return correct/N, TP/(TP+FP+eps), TP/(TP+FN+eps)
 
-    def plot_prediction(self,model, index=0, fig=None, figsize=(10,10)):
-        if not fig:
-            fig = plt.figure(figsize=figsize)
-        ax1 = fig.add_subplot(2, 2, 1)
-        ax2 = fig.add_subplot(2, 2, 2)
-        ax3 = fig.add_subplot(2, 2, 3)
-        ax4 = fig.add_subplot(2, 2, 4)
+    def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True):
+
         # loading the image: it can be a numpy.ndarray or a Data/Batch object
-        image, mask = self.dataset.next_batch(1, shuffle=True) # selects an aleatory value from the dataset
+        # image, mask = self.dataset.next_batch(1, shuffle=False) # selects an aleatory value from the dataset
+        sample = self.dataset[N]
+        if len(sample)==1:
+            # this graph tensor
+            image = sample
+            mask = sample.y
+            image['batch']=torch.zeros_like(sample.x)
+        else:
+            image, mask = sample[0], sample[1]
+
+
 
         input = torch.tensor(image).float() if self.to_tensor else image.clone()
         input = input.to(self.device)
@@ -115,18 +123,42 @@ class Evaluator(object):
 
         # plot input image
         #TODO: image will change its shape I need a transformer class
-
-        ax1.imshow(image.copy().squeeze(),cmap='gray')
-        ax1.set_title('original image')
-        # plot p(y=1|X=x)
-        ax2.imshow(prediction.cpu().detach().numpy().squeeze(), cmap='gray')
-        ax2.set_title('probability map')
-        # plot mask
-        ax3.imshow(mask.squeeze(),cmap='gray')
-        ax3.set_title('ground truth mask')
-        # plot prediction
-        ax4.imshow(pred_mask.cpu().detach().numpy().squeeze(),cmap='gray')
-        ax4.set_title('predicted mask >0.5 prob')
+        if not fig:
+            fig = plt.figure(figsize=figsize)
+        if overlap:
+            pred_mask = pred_mask.squeeze()
+            cmap_TP = ListedColormap([[73/255, 213/255, 125/255, 1]])
+            cmap_FP = ListedColormap([[255/255, 101/255, 80/255, 1]])
+            cmap_FN = ListedColormap([[15/255, 71/255, 196/255, 1]])
+            TP = pred_mask.cpu().numpy()*mask
+            FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
+            FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
+            alpha = 0.5
+            fig = plt.figure(figsize=(10, 10))
+            ax = fig.add_subplot(1, 1, 1)
+            ax.imshow(image.copy().squeeze(), cmap='gray')
+            masked = np.ma.masked_where(FP == 0, FP)
+            ax.imshow(masked, cmap=cmap_FP, alpha=alpha)
+            masked = np.ma.masked_where(FN == 0, FN)
+            ax.imshow(masked, cmap=cmap_FN, alpha=alpha)
+            masked = np.ma.masked_where(TP == 0, TP)
+            ax.imshow(masked, cmap=cmap_TP, alpha=alpha)
+        else:
+            ax1 = fig.add_subplot(2, 2, 1)
+            ax2 = fig.add_subplot(2, 2, 2)
+            ax3 = fig.add_subplot(2, 2, 3)
+            ax4 = fig.add_subplot(2, 2, 4)
+            ax1.imshow(image.copy().squeeze(),cmap='gray')
+            ax1.set_title('original image')
+            # plot p(y=1|X=x)
+            ax2.imshow(prediction.cpu().detach().numpy().squeeze(), cmap='gray')
+            ax2.set_title('probability map')
+            # plot mask
+            ax3.imshow(mask.squeeze(),cmap='gray')
+            ax3.set_title('ground truth mask')
+            # plot prediction
+            ax4.imshow(pred_mask.cpu().detach().numpy().squeeze(),cmap='gray')
+            ax4.set_title('predicted mask >0.5 prob')
         return fig
 
 class KEvaluator(Evaluator):
@@ -219,7 +251,7 @@ class KEvaluator(Evaluator):
 
         return np.array(DCM_accum).mean()
 
-    def plot_prediction(self,model, index=0, fig=None, figsize=(10,10)):
+    def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=False):
         if not fig:
             fig = plt.figure(figsize=figsize)
         ax1 = fig.add_subplot(2, 2, 1)
