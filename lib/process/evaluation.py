@@ -96,7 +96,7 @@ class Evaluator(object):
         # loading the image: it can be a numpy.ndarray or a Data/Batch object
         # image, mask = self.dataset.next_batch(1, shuffle=False) # selects an aleatory value from the dataset
         sample = self.dataset[N]
-        if len(sample)==1:
+        if not isinstance(sample,tuple):
             # this graph tensor
             image = sample
             mask = sample.y
