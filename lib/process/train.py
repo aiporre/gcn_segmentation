@@ -89,6 +89,7 @@ class Trainer(object):
         return loss
 
     def save_model(self, path):
+        self.model.eval()
         torch.save(self.model.state_dict(), path)
 
     def load_model(self, model, path):
