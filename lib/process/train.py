@@ -59,7 +59,7 @@ class Trainer(object):
         prediction = self.model(features)
 
         prediction_flat = prediction.view(-1)
-        target_flat = target.view(-1)
+        target_flat = target.view(-1).float()
         loss = self.criterion(prediction_flat,target_flat)
         self.optimizer.zero_grad()
         loss.backward()

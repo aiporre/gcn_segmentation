@@ -151,7 +151,7 @@ elif args.net == 'DeepVessel':
     DEEPVESSEL =True
 else:
     model = GFCNA()
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 if args.criterion == 'BCE':
     criterion = nn.BCELoss()
@@ -166,7 +166,7 @@ elif args.criterion == 'DCSsigmoid':
     criterion = DCS(pre_sigmoid=True) # criterion accepts logit. network produce logit
     sigmoid = True # evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'BCEweightedlogistic':
-    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([3]).to(device))  # criterion accepts logit. network produce logit
+    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([2.5]).to(device))  # criterion accepts logit. network produce logit
     sigmoid = True  # evaluation flag to comput sigmoid because model output logit
 else:
     criterion = nn.BCELoss()
@@ -235,7 +235,8 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
 
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     model.eval() if not DEEPVESSEL else None
-    # print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
+    print('DCM factor: ' , evaluator.DCM(model, progress_bar=progress_bar))
+    print('stats: PAR ', evaluator.bin_scores(model, progress_bar=progress_bar))
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model)
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
