@@ -104,9 +104,6 @@ class Evaluator(object):
         else:
             image, mask = sample[0], sample[1]
             image = image.reshape([1]+list(image.shape))
-            #mask = mask.reshape([1]+list(mask.shape))
-
-
 
         input = torch.tensor(image).float() if self.to_tensor else image.clone()
         input = input.to(self.device)
@@ -135,6 +132,8 @@ class Evaluator(object):
             TP = pred_mask.cpu().numpy()*mask
             FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
             FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
+            N = prediction.numel()
+
             alpha = 0.5
             fig = plt.figure(figsize=(10, 10))
             ax = fig.add_subplot(1, 1, 1)
@@ -145,6 +144,16 @@ class Evaluator(object):
             ax.imshow(masked, cmap=cmap_FN, alpha=alpha)
             masked = np.ma.masked_where(TP == 0, TP)
             ax.imshow(masked, cmap=cmap_TP, alpha=alpha)
+
+            A = TP.sum()
+            B = FP.sum()
+            C = FN.sum()
+            C = N-A-B-C
+            a = (A+C)/N
+            p = A/(A+B)
+            r = A/(A+C)
+            dcm = 2*p*r/(p+r)
+            print('Accuracy: ', a ,' Precision: ', p, ', Recall: ', r, 'Dice: ', dcm)
         else:
             ax1 = fig.add_subplot(2, 2, 1)
             ax2 = fig.add_subplot(2, 2, 2)
