@@ -110,7 +110,7 @@ class Dataset(object):
         self._labels = labels
         self._index_in_epoch = 0
         self._shuffle = shuffle
-        self._batch_size = 1
+        self._batch_size = batch_size
 
     def enforce_batch(self, batch_size):
         self._batch_size = batch_size

@@ -26,6 +26,8 @@ class Evaluator(object):
         if progress_bar:
             printProgressBar(0, L, prefix='DCM:', suffix='Complete', length=50)
         i = 0
+        self.dataset.enforce_batch(self._batch_size)
+
         for image, label in self.dataset.batches():
             features = torch.tensor(image).float() if self.to_tensor else image
             label = torch.tensor(label).float() if self.to_tensor else label
@@ -60,6 +62,7 @@ class Evaluator(object):
         if progress_bar:
             printProgressBar(0, L, prefix='Binary Scores:', suffix='Complete', length=50)
         i = 0
+        self.dataset.enforce_batch(self._batch_size)
         for image, label in self.dataset.batches():
             # feature and label conversion
             features = torch.tensor(image).float() if self.to_tensor else image
