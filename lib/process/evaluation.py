@@ -103,6 +103,8 @@ class Evaluator(object):
             image['batch']=torch.zeros_like(sample.x)
         else:
             image, mask = sample[0], sample[1]
+            image = image.reshape([1]+list(image.shape))
+            #mask = mask.reshape([1]+list(mask.shape))
 
 
 
