@@ -237,13 +237,15 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
 
 
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
+    model.eval() if not DEEPVESSEL else None
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot)
-    evaluator.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot)
+    result = evaluator.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot)
+    z, y, x = result.shape[0], result.shape[1], result.shape[2]
+    result.tofile('{}_e{}_lr{}_ds{}_vol_{}x{}x{}.raw'.format(prefix, EPOCHS, lr, args.dataset, x, y, z))
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
     # plt.show()
     print('calculating stats...')
-    model.eval() if not DEEPVESSEL else None
     print('DCM factor: ', evaluator.DCM(model, progress_bar=progress_bar))
     print('stats: PAR ', evaluator.bin_scores(model, progress_bar=progress_bar))
 

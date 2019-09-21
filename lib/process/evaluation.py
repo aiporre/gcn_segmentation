@@ -209,8 +209,7 @@ class Evaluator(object):
             mix = TP+2*FP+3*FN
             images.append(mix.squeeze())
         result = np.stack(images).astype('float32')
-        x,y,z = result.shape[0], result.shape[1],result.shape[2]
-        result.tofile("result_{}x{}x{}.raw".format(x,y,z))
+        return result
         # # plot input image
         # # TODO: image will change its shape I need a transformer class
         # if not fig:
