@@ -175,6 +175,94 @@ class Evaluator(object):
             ax4.set_title('predicted mask >0.5 prob')
         return fig
 
+    def plot_volumen(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True):
+
+
+        images = []
+        for ii in range(index,N):
+            sample = self.dataset[ii]
+            if not isinstance(sample, tuple):
+                # this graph tensor
+                image = sample
+                mask = sample.y
+                image['batch'] = torch.zeros_like(sample.x)
+            else:
+                image, mask = sample[0], sample[1]
+                image = image.reshape([1]+list(image.shape))
+
+            input = torch.tensor(image).float() if self.to_tensor else image.clone()
+            input = input.to(self.device)
+            prediction = model(input)
+            # pred_mask = (sigmoid(prediction) > 0.5).float()
+            pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
+
+            if not isinstance(image, np.ndarray):
+                dimension = image.x.size(0)  # it will assume a square image, though we need a transformer for that
+                dimension = np.sqrt(dimension).astype(int)
+                mask = mask.cpu().detach().numpy().reshape((dimension, dimension))
+                image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
+                prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
+                pred_mask = pred_mask.reshape((dimension, dimension))
+            TP = pred_mask.cpu().numpy()*mask
+            FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
+            FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
+            mix = TP+2*FP+3*FN
+            images.append(mix.squeeze())
+        result = np.stack(images).astype('float32')
+        x,y,z = result.shape[0], result.shape[1],result.shape[2]
+        result.tofile("result_{}x{}x{}.raw".format(x,y,z))
+        # # plot input image
+        # # TODO: image will change its shape I need a transformer class
+        # if not fig:
+        #     fig = plt.figure(figsize=figsize)
+        # if overlap:
+        #     pred_mask = pred_mask.squeeze()
+        #     cmap_TP = ListedColormap([[73/255, 213/255, 125/255, 1]])
+        #     cmap_FP = ListedColormap([[255/255, 101/255, 80/255, 1]])
+        #     cmap_FN = ListedColormap([[15/255, 71/255, 196/255, 1]])
+        #     TP = pred_mask.cpu().numpy()*mask
+        #     FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
+        #     FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
+        #     N = prediction.numel()
+        #
+        #     alpha = 0.5
+        #     fig = plt.figure(figsize=(10, 10))
+        #     ax = fig.add_subplot(1, 1, 1)
+        #     ax.imshow(image.copy().squeeze(), cmap='gray')
+        #     masked = np.ma.masked_where(FP == 0, FP)
+        #     ax.imshow(masked, cmap=cmap_FP, alpha=alpha)
+        #     masked = np.ma.masked_where(FN == 0, FN)
+        #     ax.imshow(masked, cmap=cmap_FN, alpha=alpha)
+        #     masked = np.ma.masked_where(TP == 0, TP)
+        #     ax.imshow(masked, cmap=cmap_TP, alpha=alpha)
+        #
+        #     A = TP.sum()
+        #     B = FP.sum()
+        #     C = FN.sum()
+        #     C = N-A-B-C
+        #     a = (A+C)/N
+        #     p = A/(A+B)
+        #     r = A/(A+C)
+        #     dcm = 2*p*r/(p+r)
+        #     print('Accuracy: ', a, ' Precision: ', p, ', Recall: ', r, 'Dice: ', dcm)
+        # else:
+        #     ax1 = fig.add_subplot(2, 2, 1)
+        #     ax2 = fig.add_subplot(2, 2, 2)
+        #     ax3 = fig.add_subplot(2, 2, 3)
+        #     ax4 = fig.add_subplot(2, 2, 4)
+        #     ax1.imshow(image.copy().squeeze(), cmap='gray')
+        #     ax1.set_title('original image')
+        #     # plot p(y=1|X=x)
+        #     ax2.imshow(prediction.cpu().detach().numpy().squeeze(), cmap='gray')
+        #     ax2.set_title('probability map')
+        #     # plot mask
+        #     ax3.imshow(mask.squeeze(), cmap='gray')
+        #     ax3.set_title('ground truth mask')
+        #     # plot prediction
+        #     ax4.imshow(pred_mask.cpu().detach().numpy().squeeze(), cmap='gray')
+        #     ax4.set_title('predicted mask >0.5 prob')
+        # return fig
+
 class KEvaluator(Evaluator):
     def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False):
         '''

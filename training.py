@@ -239,6 +239,7 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     print('plotting one prediction')
     fig = evaluator.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot)
+    evaluator.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot)
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
     # plt.show()
     print('calculating stats...')
