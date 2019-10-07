@@ -1,1 +1,2 @@
-# gcn_segmentation
+# Graph-based Fully Convolutional Network (GFCN)
+
