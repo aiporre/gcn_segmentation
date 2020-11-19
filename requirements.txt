@@ -1,6 +1,6 @@
 numpy
 scipy
-tensorflow==1.15.0
+tensorflow==2.3.1
 scikit-image
 scikit-learn
 numpy_groupies
