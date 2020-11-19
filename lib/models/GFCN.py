@@ -1,7 +1,8 @@
 import torch
 import torch_geometric.transforms as T
 import torch.nn.functional as F
-from torch_geometric.utils import normalized_cut, scatter_
+from torch_geometric.utils import normalized_cut
+from torch_scatter import scatter as scatter_
 from torch_geometric.data import Data, Batch
 from torch_geometric.nn import graclus, max_pool, avg_pool, fps, radius, knn_interpolate, TopKPooling
 
