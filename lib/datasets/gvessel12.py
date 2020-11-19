@@ -12,7 +12,6 @@ from .dataset import Datasets, Dataset, GraphDataset
 import torch
 from torch_geometric.data import (Dataset, Data)
 import torch_geometric.transforms as T
-from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 from lib.graph import grid_tensor
 from .download import maybe_download_and_extract
