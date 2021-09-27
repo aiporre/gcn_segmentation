@@ -53,4 +53,21 @@ python training.py -s GVESSEL12 -n GFCNC -b 2 -c DCSsigmoid -t True -vd data/ves
 **Pre-Transformation** The pretransform available is cropping of one lung lobe at between 
 pre_transform = Crop(30,150,256,256), which means from lower-front-left corner (30,150,0) crop a parallelopiped along z-axis with base 256x256
 
- 
+## How to set your dataset?
+
+The structure needed is to have a root folder that contains the raw and the processed, in the case of the Graph datasets. in the case of the euclidea, the root folder should just contain the files that correspond to that dataset.
+The best option is to create a soft link inside the directory `data` in this repository. For example inside a directory, like for the euclidean case:
+```bash
+./
+../
+vessel12@ -> /Volumes/sd16j005/Ariel/files_mdh
+```
+And for the Geometrical you might want to add one more level so:
+
+```bash
+data
+|-gvessel12
+  |-./
+  |-../
+  |- raw@ -> /Volumes/sd16j005/Ariel/files_mdh
+```
