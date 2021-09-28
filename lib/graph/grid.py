@@ -71,6 +71,6 @@ def grid_tensor(shape, connectivity=4, dtype=np.float32):
 
     pos = torch.tensor([(i,j) for i,j in  product(range(shape[0]),range(shape[1]))], dtype=torch.float)
 
-    data = Data(x=x, edge_index=edge_index, pos=pos, y=1)
+    data = Data(x=x, edge_index=edge_index, pos=pos, y=torch.Tensor(1))
 
     return data

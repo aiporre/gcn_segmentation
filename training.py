@@ -1,4 +1,8 @@
 import argparse
+try:
+    from lib.datasets.gendostroke import GENDOSTROKE
+except Exception as e:
+    print('Warning: No module torch geometric. Failed to import GENDOSTROKE, Exception: ', str(e))
 
 try:
     from lib.datasets import GMNIST
@@ -34,11 +38,13 @@ import matplotlib.pyplot as plt
 import torch
 from torch import nn
 
-from config import VESSEL_DIR, SVESSEL_DIR
+from config import VESSEL_DIR, SVESSEL_DIR, ENDOSTROKE_DIR
 from lib.utils import savefigs, Timer
 import numpy as np
-from keras import backend as K
-
+try:
+    from keras import backend as K
+except:
+    print('Cannot load keras. not installed, because it a legacy Vessel GFCN')
 
 
 def str2bool(v):
@@ -71,10 +77,12 @@ def process_command_line():
                         help="syntetic vessel dataset dir")
     parser.add_argument("-f", "--figdir", type=str, default='./fig',
                         help="path to save figs")
+    parser.add_argument("-ed", "--endodir", type=str, default=ENDOSTROKE_DIR,
+                        help="syntetic vessel dataset dir")
     parser.add_argument("-b", "--batch", type=int, default=2,
                         help="batch size of trainer and evaluator")
     parser.add_argument("-s", "--dataset", type=str, default='MNIST',
-                        help="dataset to be used. Options: (G)MNIST, (G)VESSEL12, (G)SVESSEL")
+                        help="dataset to be used. Options: (G)MNIST, (G)VESSEL12, (G)SVESSEL, GENDOSTROKE")
     parser.add_argument("-n", "--net", type=str, default='GFCN',
                             help="network to be used. ...." )
     parser.add_argument("-p", "--pre-transform", type=str2bool, default=False,
@@ -129,7 +137,8 @@ elif args.dataset == 'SVESSEL':
     dataset = SVESSEL(data_dir=args.svesseldir)
 elif args.dataset == 'GSVESSEL':
     dataset = GSVESSEL(data_dir=args.svesseldir)
-
+elif args.dataset == 'GENDOSTROKE':
+    dataset = GENDOSTROKE(data_dir=args.endodir)
 else:
     dataset = MNIST()
 

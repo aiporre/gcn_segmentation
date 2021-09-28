@@ -15,17 +15,73 @@ import torch_geometric.transforms as T
 import numpy as np
 from lib.graph import grid_tensor
 from .download import maybe_download_and_extract
+from lib.utils.csv import csv_to_dict
 from imageio import imread
 import nibabel as nib
-TOTAL_SLICES = 1030
-def load_nifti(filename):
+from pathlib import Path
+TOTAL_SLICES = 4333
+TOTAL_TRAIN_SLICES = 3432
+TOTAL_TEST_SLICES = 901
+NORMALIZED_SHAPE = {'Z': 158, 'Y': 189, 'X': 157}
+
+def calculate_total():
+    '''
+    Runs one time to calculate total slice, then it is harcoded in the global variable
+    '''
+    total_slices = 0
+    total_train = 0
+    raw_dir = os.path.join(ENDOSTROKE_DIR,'raw')
+    file_classes = csv_to_dict(os.path.join(raw_dir, 'splits.txt'), ',')
+
+    for p in os.listdir(raw_dir):
+        patient_path = os.path.join(raw_dir, p)
+        patient_files = get_files_patient_path(patient_path)
+        if not os.path.isdir(patient_path):
+            continue
+        if not patient_files["BRAIN"]:
+            print(patient_path, ' has no files.')
+        brain_mask = load_nifti(patient_files["BRAIN"][0], neurological_convension=True)
+        brain_mask = brain_mask.astype(np.float)
+        usesful_scans = brain_mask.sum(axis=(1, 2)) > 1000
+        total_slices += np.sum(usesful_scans)
+        if 'train' == file_classes[p]:
+            total_train += np.sum(usesful_scans)
+    return total_slices, total_train, total_slices - total_train
+
+def load_nifti(filename, show_description=False, neurological_convension=False):
     '''
     Reads nifti file
     '''
     img = nib.load(filename)
+    if show_description:
+        print(' nifti file header: \n' + str(img.header))
     data = img.get_fdata()
+    # if neurological convension then we transformt the data into Z,Y,X otherwise the X,Y, Z is keept
+    if neurological_convension:
+        data = np.transpose(data, (2,1,0))
     return data
 
+
+def get_files_patient_path(patient_path):
+    files = [f for f in Path(patient_path).rglob("*.nii") if f.name.startswith("Normalized")]
+    patient_files = {}
+    patient_files["CTN"] = list(filter(lambda f: "CT-N" in os.path.basename(f), files))
+    patient_files["CTA"] = list(filter(lambda f: "CT-A" in os.path.basename(f), files))
+    patient_files["CTP-MASK"] = list(filter(lambda f: "CT-P_mask" in os.path.basename(f), files))
+    patient_files["CTP-TMAX"] = list(filter(lambda f: "CT-P_Tmax" in os.path.basename(f), files))
+    patient_files["CTP-CBF"] = list(filter(lambda f: "CT-P_CBF" in os.path.basename(f), files))
+    patient_files["CTP-CBV"] = list(filter(lambda f: "CT-P_CBV" in os.path.basename(f), files))
+    patient_files["CTP-RAW"] = list(filter(lambda f: "CT-P_raw" in os.path.basename(f), files))
+    patient_files["LESION"] = list(filter(lambda f: "Lesion_" in os.path.basename(f), files))
+    # now look for the generated masks
+
+    files = [f for f in Path(patient_path).rglob("*.nii.gz") if f.name.startswith("Normalized")]
+    patient_files["BRAIN"] = list(
+        filter(lambda f: "CT-N" in os.path.basename(f) and "nii_mask" in os.path.basename(f), files))
+    # whe mode that one lession select the last one:
+    # if len(patient_files["LESION"]) >1:
+    #       dates = map(patient_files["LESION"])
+    return patient_files
 
 
 def load_itk(filename):
@@ -71,16 +127,10 @@ class GENDOSTROKE(Datasets):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.test_rate = test_rate
-        if annotated_slices:
-            train_dataset = _GENDOSTROKEA(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate,
-                                       pre_transform=pre_transform)
-            test_dataset = _GENDOSTROKEA(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate,
-                                       pre_transform=pre_transform)
-        else:
-            train_dataset = _GENDOSTROKE(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate,
-                                       pre_transform=pre_transform)
-            test_dataset = _GENDOSTROKE(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate,
-                                      pre_transform=pre_transform)
+        train_dataset = _GENDOSTROKE(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate,
+                                   pre_transform=pre_transform)
+        test_dataset = _GENDOSTROKE(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate,
+                                  pre_transform=pre_transform)
 
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
         test = GraphDataset(test_dataset, batch_size=self.batch_size, shuffle=False)
@@ -101,23 +151,35 @@ class _GENDOSTROKE(Dataset):
                  transform=None,
                  pre_transform=None,
                  pre_filter=None):
-        self.test_rate = test_rate
+        print('Warning: In the ENDOSTROKE dataset, the test/train rate is predefined by the split file.')
+        self.test_rate = 1
+        self.L = TOTAL_TRAIN_SLICES
         self.train = train
         super(_GENDOSTROKE, self).__init__(root, transform, pre_transform,
                                          pre_filter)
 
     @property
     def raw_file_names(self):
-        return []
+        files = []
+        file_classes = csv_to_dict(os.path.join(self.raw_dir, 'splits.txt'),',')
+        if self.train:
+            for f, c in file_classes.items():
+                if c == 'train':
+                    files.append(f)
+        else:
+            for f, c in file_classes.items():
+                if c == 'val':
+                    files.append(f)
+        return files
 
     @property
     def processed_file_names(self):
         split = self.test_rate
-        L = int(split*TOTAL_SLICES)
+        L = self.L #int(split*TOTAL_SLICES)
         if self.train:
-            return ['gvessel_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L)]
+            return ['gendo_{:04d}.pt'.format(i) for i in range(L)]
         else:
-            return ['gvessel_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L,TOTAL_SLICES)]
+            return ['gendo_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L,TOTAL_SLICES)]
 
     def download(self):
         pass
@@ -127,16 +189,17 @@ class _GENDOSTROKE(Dataset):
 
     def process(self):
         split = self.test_rate
-        L = int(split*TOTAL_SLICES)
-        max_slices = TOTAL_SLICES-L if self.train else L
+        L = self.L # int(split*TOTAL_SLICES)
+        max_slices = L if self.train else TOTAL_SLICES-L
         offset = 0 if self.train else TOTAL_SLICES-L
         cnt_slices = 0
-        scan_i=20
+        scan_i=0
         while cnt_slices<max_slices:
-            scan_i+=1
             print('processed ', cnt_slices, ' out of ', max_slices)
-            brain_mask = load_nifti(os.path.join(self.raw_dir, 'train', 'brain_masks', 'BM_{:02d}.nii'.format(scan_i)))
-            ct_scan = np.load(os.path.join(self.raw_dir, 'train', 'scans', 'CT_A_{:02d}.nii'.format(scan_i)))
+            patient_files = get_files_patient_path(self.raw_paths[scan_i])
+            scan_i+=1
+            brain_mask = load_nifti(patient_files["BRAIN"][0], neurological_convension=True)
+            ct_scan = load_nifti(patient_files["CTA"][0], neurological_convension=True)
 
             brain_mask = brain_mask.astype(np.float)
             ct_scan = ct_scan.astype(np.float)
@@ -146,7 +209,12 @@ class _GENDOSTROKE(Dataset):
             # nz_slides = (ct_scan_masked.max(axis=(1,2))-ct_scan_masked.min(axis=(1,2))) != 0
 
             # ct_scan_masked = ct_scan_masked[nz_slides]
-            stroke_mask = np.load(os.path.join(self.raw_dir, 'train', 'mask', 'SM_{:02d}.npy'.format(scan_i)))
+            lession_files = patient_files['LESION']
+            stroke_masks = [load_nifti(ff, neurological_convension=True) for ff in lession_files]
+            stroke_mask = np.ones_like(stroke_masks[0])
+            for sm in stroke_masks:
+               stroke_mask =  sm*stroke_mask
+
             stroke_mask = stroke_mask*brain_mask
 
             usesful_scans = brain_mask.sum(axis=(1,2))>1000
@@ -165,17 +233,16 @@ class _GENDOSTROKE(Dataset):
                     data = (image, mask)
                     data = self.pre_transform(data)
                 else:
-                    grid = grid_tensor((512, 512), connectivity=4)
-                    grid.x = torch.tensor(image.reshape(512 * 512)).float()
-                    grid.y = torch.tensor([mask.reshape(512 * 512)]).float()
+                    grid = grid_tensor((NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X']), connectivity=4)
+                    num_elements = NORMALIZED_SHAPE['Y'] * NORMALIZED_SHAPE['X']
+                    grid.x = torch.tensor(image.reshape(num_elements)).float()
+                    grid.y = torch.tensor([mask.reshape(num_elements)]).float()
                     data = grid
 
                 if self.pre_filter is not None and not self.pre_filter(data):
                     continue
 
-
-
-                torch.save(data, os.path.join(self.processed_dir, 'gvessel_{:04d}.pt'.format(i+offset+cnt_slices)))
+                torch.save(data, os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(i+offset+cnt_slices)))
 
             # update counter
             cnt_slices+=processed_num
@@ -184,96 +251,14 @@ class _GENDOSTROKE(Dataset):
 
     def get(self, idx):
         # compute offset
-        split = self.test_rate
-        L = int(split*TOTAL_SLICES)
+        L = self.L #int(split*TOTAL_SLICES)
         offset = 0 if self.train else TOTAL_SLICES-L
         # get the file
         idx += offset
-        data = torch.load(os.path.join(self.processed_dir, 'gvessel_{:04d}.pt'.format(idx)))
+        data = torch.load(os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(idx)))
         return data
 
 
-
-
-class _GENDOSTROKEA(Dataset):
-    ''' Dataset GENDOSTROKEA
-        Vessel12 selected and cleaned annotated slices
-    '''
-
-    def __init__(self,
-                 root,
-                 train=True,
-                 test_rate = 0.2,
-                 transform=None,
-                 pre_transform=None,
-                 pre_filter=None):
-        self.test_rate = test_rate
-        self.train = train
-        super(_GENDOSTROKEA, self).__init__(root, transform, pre_transform,
-                                         pre_filter)
-
-    @property
-    def raw_file_names(self):
-        return []
-
-    @property
-    def processed_file_names(self):
-        split = self.test_rate
-        L = int(split*9)
-        if self.train:
-            return ['vessel_a_{}.pt'.format(i) for i in range(9-L)]
-        else:
-            return ['vessel_a_{}.pt'.format(i) for i in range(L,9)]
-
-    def download(self):
-        maybe_download_and_extract('https://transfer.sh/3xwmz/cured_vessel12.zip', self.raw_dir)
-
-    def __len__(self):
-        return len(self.processed_file_names)
-
-    def process(self):
-        self.download()
-        # compute split
-        split = self.test_rate
-        L = int(split*9)
-        # define range of scans to process
-        scans_range = range(9-L) if self.train else range(L,9)
-        # process scans
-        for scan_i in scans_range:
-            print('processed ', scan_i, ' out of ', len(scans_range))
-            im = np.squeeze(imread(os.path.join(self.raw_dir, "lung{}.png".format(scan_i)))).astype(np.float)
-            lb = np.squeeze(imread(os.path.join(self.raw_dir, "mask{}.png".format(scan_i)))).astype(np.float)
-            mean = im.mean()
-            std = im.std()
-            im = (im-mean)/std
-            lb = lb/lb.max()
-
-            # Read data from `raw_path`.
-            if self.pre_transform is not None:
-                data = (im, lb)
-                data = self.pre_transform(data)
-            else:
-                grid = grid_tensor((512, 512), connectivity=4)
-                grid.x = torch.tensor(im.reshape(512*512)).float()
-                grid.y = torch.tensor([lb.reshape(512*512)]).float()
-                data = grid
-
-            if self.pre_filter is not None and not self.pre_filter(data):
-                continue
-
-            torch.save(data, os.path.join(self.processed_dir, 'vessel_a_{}.pt'.format(scan_i)))
-
-
-
-    def get(self, idx):
-        # compute offset
-        split = self.test_rate
-        L = int(split*9)
-        offset = 0 if self.train else L
-        # get the file
-        idx += offset
-        data = torch.load(os.path.join(self.processed_dir, 'vessel_a_{}.pt'.format(idx)))
-        return data
 
 
 
