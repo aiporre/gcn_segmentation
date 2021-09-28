@@ -4,6 +4,7 @@ from numpy.testing import assert_equal
 
 from .grid import grid_adj, grid_points, grid_mass, grid_tensor
 
+from torch_geometric.transforms import Cartesian
 
 class GridTest(TestCase):
     def test_grid_points(self):
@@ -31,5 +32,14 @@ class GridTest(TestCase):
         assert_equal(adj.toarray(), expected)
 
     def test_grid_tensor(self):
-        tensor = grid_tensor((3, 2), connectivity=4)
-        print(tensor)
+        tensor = grid_tensor((189,157), connectivity=4)
+        print('grid tensor: ', tensor)
+        cartesian_transform  = Cartesian()
+        cartesian_tensor = cartesian_transform(tensor)
+        print('Cartesian tensor: ', cartesian_tensor)
+
+        tensor = grid_tensor((189, 157), connectivity=8)
+        print('grid tensor: ', tensor)
+        cartesian_transform = Cartesian()
+        cartesian_tensor = cartesian_transform(tensor)
+        print('Cartesian tensor: ', cartesian_tensor)

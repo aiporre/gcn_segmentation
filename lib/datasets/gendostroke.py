@@ -14,6 +14,7 @@ from torch_geometric.data import (Dataset, Data)
 import torch_geometric.transforms as T
 import numpy as np
 from lib.graph import grid_tensor
+from lib.process.progress_bar import printProgressBar
 from .download import maybe_download_and_extract
 from lib.utils.csv import csv_to_dict
 from imageio import imread
@@ -42,6 +43,7 @@ def calculate_total():
             print(patient_path, ' has no files.')
         brain_mask = load_nifti(patient_files["BRAIN"][0], neurological_convension=True)
         brain_mask = brain_mask.astype(np.float)
+        print('brain mask shape: ', brain_mask.shape)
         usesful_scans = brain_mask.sum(axis=(1, 2)) > 1000
         total_slices += np.sum(usesful_scans)
         if 'train' == file_classes[p]:
@@ -179,7 +181,7 @@ class _GENDOSTROKE(Dataset):
         if self.train:
             return ['gendo_{:04d}.pt'.format(i) for i in range(L)]
         else:
-            return ['gendo_{:04d}.pt'.format(i) for i in range(TOTAL_SLICES-L,TOTAL_SLICES)]
+            return ['gendo_{:04d}.pt'.format(i) for i in range(L,TOTAL_SLICES)]
 
     def download(self):
         pass
@@ -191,9 +193,11 @@ class _GENDOSTROKE(Dataset):
         split = self.test_rate
         L = self.L # int(split*TOTAL_SLICES)
         max_slices = L if self.train else TOTAL_SLICES-L
-        offset = 0 if self.train else TOTAL_SLICES-L
+        offset = 0 if self.train else L
         cnt_slices = 0
         scan_i=0
+        progressBarPrefix = f'Generating samples for dataset {self.__class__} train={self.train}'
+        printProgressBar(0, max_slices, prefix=progressBarPrefix)
         while cnt_slices<max_slices:
             print('processed ', cnt_slices, ' out of ', max_slices)
             patient_files = get_files_patient_path(self.raw_paths[scan_i])
@@ -225,7 +229,8 @@ class _GENDOSTROKE(Dataset):
             processed_num = len(stroke_mask) if cnt_slices+len(stroke_mask)<max_slices else max_slices-cnt_slices
             print('processing...: ' , processed_num)
             for i in range(processed_num):
-                # print('---> file:', i+offset+cnt_slices)
+                #print('---> file:', i+offset+cnt_slices)
+                printProgressBar(i+cnt_slices, max_slices, prefix=progressBarPrefix, suffix=f'sample={i+offset+cnt_slices}')
                 # Read data from `raw_path`.
                 image = ct_scan_masked[i, :, :]
                 mask = stroke_mask[i, :, :]
@@ -252,7 +257,7 @@ class _GENDOSTROKE(Dataset):
     def get(self, idx):
         # compute offset
         L = self.L #int(split*TOTAL_SLICES)
-        offset = 0 if self.train else TOTAL_SLICES-L
+        offset = 0 if self.train else L
         # get the file
         idx += offset
         data = torch.load(os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(idx)))
