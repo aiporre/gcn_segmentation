@@ -25,6 +25,14 @@ TOTAL_TRAIN_SLICES = 3432
 TOTAL_TEST_SLICES = 901
 NORMALIZED_SHAPE = {'Z': 158, 'Y': 189, 'X': 157}
 
+def endostroke_reshape(x):
+    if isinstance(x, torch.Tensor):
+        x = torch.reshape(x, (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X']))
+        return x
+    else:
+        x = np.reshape(x, (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X']))
+        return x
+
 def calculate_total():
     '''
     Runs one time to calculate total slice, then it is harcoded in the global variable

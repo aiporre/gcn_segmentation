@@ -1,6 +1,6 @@
 import argparse
 try:
-    from lib.datasets.gendostroke import GENDOSTROKE
+    from lib.datasets.gendostroke import GENDOSTROKE, endostroke_reshape
 except Exception as e:
     print('Warning: No module torch geometric. Failed to import GENDOSTROKE, Exception: ', str(e))
 
@@ -129,16 +129,22 @@ if args.dataset == 'MNIST':
     dataset = MNIST(background=args.background)
 elif args.dataset == 'GMNIST':
     dataset = GMNIST(background=args.background)
+    reshape_transform = None
 elif args.dataset == 'VESSEL12':
     dataset = VESSEL12(data_dir=args.vesseldir, pre_transform=pre_transform)
+    reshape_transform = None
 elif args.dataset == 'GVESSEL12':
     dataset = GVESSEL12(data_dir=args.vesseldir, pre_transform=pre_transform)
+    reshape_transform = None
 elif args.dataset == 'SVESSEL':
     dataset = SVESSEL(data_dir=args.svesseldir)
+    reshape_transform = None
 elif args.dataset == 'GSVESSEL':
     dataset = GSVESSEL(data_dir=args.svesseldir)
+    reshape_transform = None
 elif args.dataset == 'GENDOSTROKE':
     dataset = GENDOSTROKE(data_dir=args.endodir)
+    reshape_transform = endostroke_reshape
 else:
     dataset = MNIST()
 
@@ -248,8 +254,10 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     model.eval() if not DEEPVESSEL else None
     print('plotting one prediction')
-    fig = evaluator.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot)
-    result = evaluator.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot)
+    fig = evaluator.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
+                                    reshape_transform=reshape_transform)
+    result = evaluator.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
+                                    reshape_transform=reshape_transform)
     z, y, x = result.shape[0], result.shape[1], result.shape[2]
     result.tofile('{}_e{}_lr{}_ds{}_vol_{}x{}x{}.raw'.format(prefix, EPOCHS, lr, args.dataset, x, y, z))
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)

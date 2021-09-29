@@ -94,7 +94,7 @@ class Evaluator(object):
             i += 1
         return correct/N, TP/(TP+FP+eps), TP/(TP+FN+eps)
 
-    def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True):
+    def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None):
 
         # loading the image: it can be a numpy.ndarray or a Data/Batch object
         # image, mask = self.dataset.next_batch(1, shuffle=False) # selects an aleatory value from the dataset
@@ -116,12 +116,17 @@ class Evaluator(object):
 
         if not isinstance(image,np.ndarray):
             dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that
-            dimension = np.sqrt(dimension).astype(int)
-            mask = mask.cpu().detach().numpy().reshape((dimension,dimension))
-            image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
-            prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
-            pred_mask = pred_mask.reshape((dimension,dimension))
-
+            if reshape_transform is None:
+                dimension = np.sqrt(dimension).astype(int)
+                mask = mask.cpu().detach().numpy().reshape((dimension,dimension))
+                image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
+                prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
+                pred_mask = pred_mask.reshape((dimension,dimension))
+            else:
+                mask = reshape_transform(mask.cpu().detach().numpy())
+                image = reshape_transform(image.x.cpu().detach().numpy())
+                prediction = reshape_transform(torch.sigmoid(prediction))
+                pred_mask = reshape_transform(pred_mask)
 
         # plot input image
         #TODO: image will change its shape I need a transformer class
@@ -175,7 +180,7 @@ class Evaluator(object):
             ax4.set_title('predicted mask >0.5 prob')
         return fig
 
-    def plot_volumen(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True):
+    def plot_volumen(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None):
 
 
         images = []
@@ -198,11 +203,22 @@ class Evaluator(object):
 
             if not isinstance(image, np.ndarray):
                 dimension = image.x.size(0)  # it will assume a square image, though we need a transformer for that
-                dimension = np.sqrt(dimension).astype(int)
-                mask = mask.cpu().detach().numpy().reshape((dimension, dimension))
-                image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
-                prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
-                pred_mask = pred_mask.reshape((dimension, dimension))
+                # dimension = np.sqrt(dimension).astype(int)
+                # mask = mask.cpu().detach().numpy().reshape((dimension, dimension))
+                # image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
+                # prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
+                # pred_mask = pred_mask.reshape((dimension, dimension))
+                if reshape_transform is None:
+                    dimension = np.sqrt(dimension).astype(int)
+                    mask = mask.cpu().detach().numpy().reshape((dimension,dimension))
+                    image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
+                    prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
+                    pred_mask = pred_mask.reshape((dimension,dimension))
+                else:
+                    mask = reshape_transform(mask.cpu().detach().numpy())
+                    image = reshape_transform(image.x.cpu().detach().numpy())
+                    prediction = reshape_transform(torch.sigmoid(prediction))
+                    pred_mask = reshape_transform(pred_mask)
             TP = pred_mask.cpu().numpy()*mask
             FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
             FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
