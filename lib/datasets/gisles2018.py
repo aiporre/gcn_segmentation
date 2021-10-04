@@ -26,6 +26,9 @@ TOTAL_TEST_SLICES = 901
 NORMALIZED_SHAPE = {'Z': 158, 'Y': 189, 'X': 157}
 
 def isles2018_reshape(x):
+    '''
+    Transform used by plotting functions
+    '''
     if isinstance(x, torch.Tensor):
         x = torch.reshape(x, (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X']))
         return x
@@ -72,22 +75,22 @@ def load_nifti(filename, show_description=False, neurological_convension=False):
     return data
 
 
-def get_files_patient_path(patient_path):
-    files = [f for f in Path(patient_path).rglob("*.nii") if f.name.startswith("Normalized")]
+def get_files_patient_path(patient_path, target='training'):
+    files = list(Path(patient_path).rglob("*.nii"))
+    print('DEBUG: files in the patient all of them: ',
+            list([os.path.basename(f) for f in files]))
     patient_files = {}
-    patient_files["CTN"] = list(filter(lambda f: "CT-N" in os.path.basename(f), files))
-    patient_files["CTA"] = list(filter(lambda f: "CT-A" in os.path.basename(f), files))
-    patient_files["CTP-MASK"] = list(filter(lambda f: "CT-P_mask" in os.path.basename(f), files))
-    patient_files["CTP-TMAX"] = list(filter(lambda f: "CT-P_Tmax" in os.path.basename(f), files))
-    patient_files["CTP-CBF"] = list(filter(lambda f: "CT-P_CBF" in os.path.basename(f), files))
-    patient_files["CTP-CBV"] = list(filter(lambda f: "CT-P_CBV" in os.path.basename(f), files))
-    patient_files["CTP-RAW"] = list(filter(lambda f: "CT-P_raw" in os.path.basename(f), files))
+    patient_files["CTN"] = list(filter(lambda f: "CT." in os.path.basename(f), files))
+    patient_files["CTP-TMAX"] = list(filter(lambda f: "CT_Tmax." in os.path.basename(f), files))
+    patient_files["CTP-CBF"] = list(filter(lambda f: "CT_CBF." in os.path.basename(f), files))
+    patient_files["CTP-CBV"] = list(filter(lambda f: "CT_CBV." in os.path.basename(f), files))
+    patient_files["CTP-MTT"] = list(filter(lambda f: "CT_MTT." in os.path.basename(f), files))
     patient_files["LESION"] = list(filter(lambda f: "Lesion_" in os.path.basename(f), files))
     # now look for the generated masks
-
-    files = [f for f in Path(patient_path).rglob("*.nii.gz") if f.name.startswith("Normalized")]
-    patient_files["BRAIN"] = list(
-        filter(lambda f: "CT-N" in os.path.basename(f) and "nii_mask" in os.path.basename(f), files))
+    print('====>>  patient_files', patient_files)
+    #files = [f for f in Path(patient_path).rglob("*.nii.gz") if f.name.startswith("Normalized")]
+    #patient_files["BRAIN"] = list(
+    #    filter(lambda f: "CT-N" in os.path.basename(f) and "nii_mask" in os.path.basename(f), files))
     # whe mode that one lession select the last one:
     # if len(patient_files["LESION"]) >1:
     #       dates = map(patient_files["LESION"])
