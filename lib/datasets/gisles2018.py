@@ -77,8 +77,6 @@ def load_nifti(filename, show_description=False, neurological_convension=False):
 
 def get_files_patient_path(patient_path, target='training'):
     files = list(Path(patient_path).rglob("*.nii"))
-    print('DEBUG: files in the patient all of them: ',
-            list([os.path.basename(f) for f in files]))
     patient_files = {}
     patient_files["CTN"] = list(filter(lambda f: "CT." in os.path.basename(f), files))
     patient_files["CTP-TMAX"] = list(filter(lambda f: "CT_Tmax." in os.path.basename(f), files))
@@ -86,47 +84,8 @@ def get_files_patient_path(patient_path, target='training'):
     patient_files["CTP-CBV"] = list(filter(lambda f: "CT_CBV." in os.path.basename(f), files))
     patient_files["CTP-MTT"] = list(filter(lambda f: "CT_MTT." in os.path.basename(f), files))
     patient_files["LESION"] = list(filter(lambda f: "Lesion_" in os.path.basename(f), files))
-    # now look for the generated masks
-    print('====>>  patient_files', patient_files)
-    #files = [f for f in Path(patient_path).rglob("*.nii.gz") if f.name.startswith("Normalized")]
-    #patient_files["BRAIN"] = list(
-    #    filter(lambda f: "CT-N" in os.path.basename(f) and "nii_mask" in os.path.basename(f), files))
-    # whe mode that one lession select the last one:
-    # if len(patient_files["LESION"]) >1:
-    #       dates = map(patient_files["LESION"])
     return patient_files
 
-
-def load_itk(filename):
-    ''' Reads scan with coordinates frame Z,Y,X with origin at '''
-    # Reads the image using SimpleITK
-    itkimage = sitk.ReadImage(filename)
-
-    # Convert the image to a  numpy array first and then shuffle the dimensions to get axis in the order z,y,x
-    ct_scan = sitk.GetArrayFromImage(itkimage)
-
-    # Read the origin of the ct_scan, will be used to convert the coordinates from world to voxel and vice versa.
-    origin = np.array(list(reversed(itkimage.GetOrigin())))
-
-    # Read the spacing along each dimension
-    spacing = np.array(list(reversed(itkimage.GetSpacing())))
-
-    return ct_scan, origin, spacing
-
-def load_vessel_mask_pre(shape, path):
-    vessel_mask = np.load(os.path.join(path))
-    return vessel_mask
-
-def load_vessel_mask_csv(shape, path):
-    ''' Reads annotation csv and produces the vessel mask with coordinates Z,Y,X'''
-    df = pd.read_csv(path, sep=',', header=None, names=['x','y','z','annotation'])
-    x, y, z, annotations = df.x.values , df.y.values, df.z.values, df.annotation
-    vessel_mask = np.zeros(shape,dtype=np.float)
-    vessel_mask[z,y,x] = 2*annotations-1
-    # print('z',z,'\ny',y,'\nx',x)
-    # unique list of z annotated slices
-    z_slices = np.unique(z)
-    return vessel_mask, z_slices
 
 def erode_mask(mask):
     return ndimage.binary_erosion(mask, structure=np.ones((1, 7, 7)))
@@ -136,18 +95,21 @@ def erode_mask(mask):
 
 
 class GISLES2018(Datasets):
-    def __init__(self, data_dir=ISLES2018_DIR, batch_size=32, test_rate=0.2, annotated_slices=False, pre_transform=None):
+    def __init__(self, data_dir=ISLES2018_DIR, batch_size=32, test_rate=0.2, annotated_slices=False, pre_transform=None, fold=1):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.test_rate = test_rate
-        train_dataset = _GISLES2018(self.data_dir, train=True, transform=T.Cartesian(), test_rate=test_rate,
-                                   pre_transform=pre_transform)
-        test_dataset = _GISLES2018(self.data_dir, train=False, transform=T.Cartesian(), test_rate=test_rate,
-                                  pre_transform=pre_transform)
+        train_dataset = _GISLES2018(self.data_dir, dataset_type='train', transform=T.Cartesian(),
+                                   pre_transform=pre_transform, fold=fold)
+        val_dataset = _GISLES2018(self.data_dir, dataset_type='val', transform=T.Cartesian(),
+                                   pre_transform=pre_transform, fold=fold)
+
+        test_dataset = _GISLES2018(self.data_dir, dataset_type='test', transform=T.Cartesian(),
+                                  pre_transform=pre_transform, fold=fold)
 
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
+        val = GraphDataset(val_dataset, batch_size=self.batch_size, shuffle=False)
         test = GraphDataset(test_dataset, batch_size=self.batch_size, shuffle=False)
-
         super(GISLES2018, self).__init__(train=train, test=test, val=test)
 
     @property
@@ -159,30 +121,27 @@ class _GISLES2018(Dataset):
 
     def __init__(self,
                  root,
-                 train=True,
-                 test_rate = 0.2,
                  transform=None,
+                 dataset_type='train',
                  pre_transform=None,
-                 pre_filter=None):
+                 pre_filter=None,
+                 fold=1):
         print('Warning: In the ISLES2018 dataset, the test/train rate is predefined by file distribution.')
         self.test_rate = 1
-        self.L = TOTAL_TRAIN_SLICES
-        self.train = train
+        self.fold = fold
+        self.dataset_type = dataset_type
         super(_GISLES2018, self).__init__(root, transform, pre_transform,
                                          pre_filter)
+        self.indices = _ISLESFoldIndices(cache_file = os.path.join(self.raw_dir, 'processed',f'fold_mapping.txt'))
 
     @property
     def raw_file_names(self):
         files = []
         file_classes = csv_to_dict(os.path.join(self.raw_dir, 'splits.txt'),',')
-        if self.train:
-            for f, c in file_classes.items():
-                if c == 'train':
-                    files.append(f)
-        else:
-            for f, c in file_classes.items():
-                if c == 'val':
-                    files.append(f)
+        for f, c in file_classes.items():
+            if c == self.dataset_type:
+                files.append(f)
+        print(f'dataset type lenth = {len(files)} for fold {self.fold}')
         return files
 
     @property
@@ -276,5 +235,31 @@ class _GISLES2018(Dataset):
 
 
 
+class _ISLESFoldIndices:
+    def __init__(self, cache_file):
+        self.cache_file = cache_file
+        if os.path.exists(self.cache_file):
+            print('file exist loading indices')
+            self.indices = self._load_indices
+            self.initialize = True
+        else:
+            self.indices = []
+            self.initialize = False
 
+    def _load_indices(self):
+        '''
+        Load the fold indices if the cache exists
+        '''
+        pass
 
+    def set_index(self, processed_files, case_id):
+        '''
+        saves the processed files by case id
+        '''
+        pass
+
+    def store_cache(self):
+        '''
+        stores chache if not initialized
+        '''
+        pass
