@@ -1,4 +1,7 @@
 import argparse
+
+from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape
+
 try:
     from lib.datasets.gendostroke import GENDOSTROKE, endostroke_reshape
 except Exception as e:
@@ -145,6 +148,9 @@ elif args.dataset == 'GSVESSEL':
 elif args.dataset == 'GENDOSTROKE':
     dataset = GENDOSTROKE(data_dir=args.endodir)
     reshape_transform = endostroke_reshape
+elif args.dataset == 'GISLES2018':
+    dataset = GISLES2018(data_dir=args.endodir)
+    reshape_transform = isles2018_reshape
 else:
     dataset = MNIST()
 

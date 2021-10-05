@@ -22,10 +22,9 @@ from lib.utils.csv import csv_to_dict
 from imageio import imread
 import nibabel as nib
 from pathlib import Path
-TOTAL_SLICES = 4333
-TOTAL_TRAIN_SLICES = 3432
-TOTAL_TEST_SLICES = 901
-NORMALIZED_SHAPE = {'Z': 158, 'Y': 189, 'X': 157}
+
+NORMALIZED_SHAPE = {'Z': None, 'Y': 256, 'X': 256}
+
 
 def isles2018_reshape(x):
     '''
@@ -37,31 +36,6 @@ def isles2018_reshape(x):
     else:
         x = np.reshape(x, (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X']))
         return x
-
-def calculate_total():
-    '''
-    Runs one time to calculate total slice, then it is harcoded in the global variable
-    '''
-    total_slices = 0
-    total_train = 0
-    raw_dir = os.path.join(ISLES2018_DIR,'raw')
-    file_classes = csv_to_dict(os.path.join(raw_dir, 'splits.txt'), ',')
-
-    for p in os.listdir(raw_dir):
-        patient_path = os.path.join(raw_dir, p)
-        patient_files = get_files_patient_path(patient_path)
-        if not os.path.isdir(patient_path):
-            continue
-        if not patient_files["BRAIN"]:
-            print(patient_path, ' has no files.')
-        brain_mask = load_nifti(patient_files["BRAIN"][0], neurological_convension=True)
-        brain_mask = brain_mask.astype(np.float)
-        print('brain mask shape: ', brain_mask.shape)
-        usesful_scans = brain_mask.sum(axis=(1, 2)) > 1000
-        total_slices += np.sum(usesful_scans)
-        if 'train' == file_classes[p]:
-            total_train += np.sum(usesful_scans)
-    return total_slices, total_train, total_slices - total_train
 
 def load_nifti(filename, show_description=False, neurological_convension=False):
     '''
@@ -91,9 +65,6 @@ def get_files_patient_path(patient_path, target='training'):
 
 def erode_mask(mask):
     return ndimage.binary_erosion(mask, structure=np.ones((1, 7, 7)))
-
-
-
 
 
 class GISLES2018(Datasets):
