@@ -1,3 +1,5 @@
+import csv
+
 import numpy as np
 from scipy import ndimage
 
@@ -110,7 +112,7 @@ class GISLES2018(Datasets):
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
         val = GraphDataset(val_dataset, batch_size=self.batch_size, shuffle=False)
         test = GraphDataset(test_dataset, batch_size=self.batch_size, shuffle=False)
-        super(GISLES2018, self).__init__(train=train, test=test, val=test)
+        super(GISLES2018, self).__init__(train=train, test=test, val=val)
 
     @property
     def classes(self):
@@ -125,19 +127,25 @@ class _GISLES2018(Dataset):
                  dataset_type='train',
                  pre_transform=None,
                  pre_filter=None,
-                 fold=1):
+                 fold=1,
+                 split_dir="TRAINING"):
         print('Warning: In the ISLES2018 dataset, the test/train rate is predefined by file distribution.')
         self.test_rate = 1
         self.fold = fold
         self.dataset_type = dataset_type
         super(_GISLES2018, self).__init__(root, transform, pre_transform,
                                          pre_filter)
-        self.indices = _ISLESFoldIndices(cache_file = os.path.join(self.raw_dir, 'processed',f'fold_mapping.txt'))
+        self.split_dir = split_dir
+        self.raw_dir = os.path.join(self.raw_dir, self.split_dir)
+        self.processed_dir = os.path.join(self.processed_dir, self.split_dir)
+        # procesed mapping is csv file that tell which proccesd files match with which case_XY e.g. gilses_1000 --> case_10
+        self.indices = _ISLESFoldIndices(cache_file = os.path.join(self.raw_dir, self.split_dir, 'processed_mapping.txt'),
+                                         cases_ids = self.raw_file_names)
 
     @property
     def raw_file_names(self):
         files = []
-        file_classes = csv_to_dict(os.path.join(self.raw_dir, 'splits.txt'),',')
+        file_classes = csv_to_dict(os.path.join(self.raw_dir, 'splits.txt'),',', has_header=True, item_col=self.fold)
         for f, c in file_classes.items():
             if c == self.dataset_type:
                 files.append(f)
@@ -146,12 +154,12 @@ class _GISLES2018(Dataset):
 
     @property
     def processed_file_names(self):
-        split = self.test_rate
-        L = self.L #int(split*TOTAL_SLICES)
-        if self.train:
-            return ['gendo_{:04d}.pt'.format(i) for i in range(L)]
-        else:
-            return ['gendo_{:04d}.pt'.format(i) for i in range(L,TOTAL_SLICES)]
+        processed_files = []
+        for case_id in self.raw_file_names:
+            processed_indices = self.indices.get_by_case(case_id)
+            _processed_files = ['gendo_{:04d}.pt'.format(i) for i in processed_indices]
+            processed_files.extend(_processed_files)
+        return processed_files
 
     def download(self):
         pass
@@ -160,50 +168,24 @@ class _GISLES2018(Dataset):
         return len(self.processed_file_names)
 
     def process(self):
-        split = self.test_rate
-        L = self.L # int(split*TOTAL_SLICES)
-        max_slices = L if self.train else TOTAL_SLICES-L
-        offset = 0 if self.train else L
         cnt_slices = 0
-        scan_i=0
-        progressBarPrefix = f'Generating samples for dataset {self.__class__} train={self.train}'
-        printProgressBar(0, max_slices, prefix=progressBarPrefix)
-        while cnt_slices<max_slices:
-            print('processed ', cnt_slices, ' out of ', max_slices)
-            patient_files = get_files_patient_path(self.raw_paths[scan_i])
-            scan_i+=1
-            brain_mask = load_nifti(patient_files["BRAIN"][0], neurological_convension=True)
-            ct_scan = load_nifti(patient_files["CTA"][0], neurological_convension=True)
-
-            brain_mask = brain_mask.astype(np.float)
+        progressBarPrefix = f'Generating samples for dataset G-ILSES2018 dataset type {self.dataset_type}'
+        printProgressBar(0, len(self.indices), prefix=progressBarPrefix)
+        for raw_path, case_id in zip(self.raw_paths, self.raw_file_names):
+            patient_files = get_files_patient_path(raw_path)
+            ct_scan = load_nifti(patient_files["CTP-CBV"][0], neurological_convension=True)
             ct_scan = ct_scan.astype(np.float)
-
-            ct_scan = (ct_scan-ct_scan.min())/(ct_scan.max()-ct_scan.min())
-            ct_scan_masked = brain_mask*ct_scan
-            # nz_slides = (ct_scan_masked.max(axis=(1,2))-ct_scan_masked.min(axis=(1,2))) != 0
-
-            # ct_scan_masked = ct_scan_masked[nz_slides]
-            lession_files = patient_files['LESION']
-            stroke_masks = [load_nifti(ff, neurological_convension=True) for ff in lession_files]
-            stroke_mask = np.ones_like(stroke_masks[0])
-            for sm in stroke_masks:
-               stroke_mask =  sm*stroke_mask
-
-            stroke_mask = stroke_mask*brain_mask
-
-            usesful_scans = brain_mask.sum(axis=(1,2))>1000
-
-            ct_scan_masked = ct_scan_masked[usesful_scans]
-            stroke_mask = stroke_mask[usesful_scans]
-            # process images and store them
-            processed_num = len(stroke_mask) if cnt_slices+len(stroke_mask)<max_slices else max_slices-cnt_slices
+            ct_scan_norm = (ct_scan-ct_scan.min())/(ct_scan.max()-ct_scan.min())
+            lesion_files = patient_files['LESION']
+            lesion_mask = load_nifti(lesion_files[0], neurological_convension=True)
+            # generates the graph inputs
+            processed_num = len(lesion_mask)
             print('processing...: ' , processed_num)
-            for i in range(processed_num):
-                #print('---> file:', i+offset+cnt_slices)
-                printProgressBar(i+cnt_slices, max_slices, prefix=progressBarPrefix, suffix=f'sample={i+offset+cnt_slices}')
+            for i, case_index in enumerate(self.indices.get_by_case_id(case_id)):
+                printProgressBar(cnt_slices + i, len(self.indices), prefix=progressBarPrefix, suffix=f'sample={case_index}')
                 # Read data from `raw_path`.
-                image = ct_scan_masked[i, :, :]
-                mask = stroke_mask[i, :, :]
+                image = ct_scan_norm[i, :, :]
+                mask = lesion_mask[i, :, :]
                 if self.pre_transform is not None:
                     data = (image, mask)
                     data = self.pre_transform(data)
@@ -216,8 +198,7 @@ class _GISLES2018(Dataset):
 
                 if self.pre_filter is not None and not self.pre_filter(data):
                     continue
-
-                torch.save(data, os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(i+offset+cnt_slices)))
+                torch.save(data, os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(case_index)))
 
             # update counter
             cnt_slices+=processed_num
@@ -226,40 +207,52 @@ class _GISLES2018(Dataset):
 
     def get(self, idx):
         # compute offset
-        L = self.L #int(split*TOTAL_SLICES)
-        offset = 0 if self.train else L
-        # get the file
-        idx += offset
-        data = torch.load(os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(idx)))
+        data = torch.load(os.path.join(self.processed_dir, self.processed_file_names[idx]))
         return data
 
 
 
 class _ISLESFoldIndices:
-    def __init__(self, cache_file):
+    def __init__(self, cache_file, cases_ids=None):
         self.cache_file = cache_file
+        self.root = os.path.dirname(self.cache_file)
         if os.path.exists(self.cache_file):
             print('file exist loading indices')
-            self.indices = self._load_indices
-            self.initialize = True
+            self.indices = self._load_indices()
         else:
-            self.indices = []
-            self.initialize = False
+            self.indices = self._initialize()
+        self.cases_ids = cases_ids
+
+    def _initialize(self):
+        '''
+        creates the indices for each case
+        '''
+        offset = 0
+        with open(self.cache_file, 'w', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile, delimiter=',')
+            for case_id in self.cases_ids:
+                patient_files = get_files_patient_path(os.path.join(self.root, case_id))
+                data = load_nifti(patient_files['LESION'], neurological_convension=True)
+                num_elements= len(data)
+                for i in range(num_elements):
+                    csvwriter.writerow([case_id, i+offset])
+                offset += num_elements
+        self.indices = csv_to_dict(self.cache_file, ',')
 
     def _load_indices(self):
         '''
         Load the fold indices if the cache exists
         '''
-        pass
+        self.indices = csv_to_dict(self.cache_file, ',')
 
-    def set_index(self, processed_files, case_id):
+    def get_by_case_id(self, case_id):
         '''
-        saves the processed files by case id
+        returns the cases ifor  agiven case id
         '''
-        pass
+        return self.indices[case_id]
 
-    def store_cache(self):
-        '''
-        stores chache if not initialized
-        '''
-        pass
+    def __len__(self):
+        length = 0
+        for case_indices in self.indices.values():
+            length = len(case_indices)
+        return length
