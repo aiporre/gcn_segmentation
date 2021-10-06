@@ -167,7 +167,7 @@ class _GISLES2018(Dataset):
     def process(self):
         cnt_slices = 0
         progressBarPrefix = f'Generating samples for dataset G-ILSES2018 dataset type {self.dataset_type}'
-        printProgressBar(0, len(self.indices), prefix=progressBarPrefix)
+        printProgressBar(0, len(self.indices), prefix=progressBarPrefix, length=50)
         # FIXME: raw path is incorrect path since in this case you cha ane trxta path called training.
         for case_id in self.raw_file_names:
             raw_path = os.path.join(self.root, 'raw', self.split_dir, case_id)
@@ -182,7 +182,7 @@ class _GISLES2018(Dataset):
             processed_num = len(lesion_mask)
             print('processing...: ' , processed_num)
             for i, case_index in enumerate(self.indices.get_by_case_id(case_id)):
-                printProgressBar(cnt_slices + i, len(self.indices), prefix=progressBarPrefix, suffix=f'sample={case_index}')
+                printProgressBar(cnt_slices + i, len(self.indices), prefix=progressBarPrefix, suffix=f'sample={case_index}', length=50)
                 # Read data from `raw_path`.
                 image = ct_scan_norm[i, :, :]
                 mask = lesion_mask[i, :, :]
