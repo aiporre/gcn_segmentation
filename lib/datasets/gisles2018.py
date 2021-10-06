@@ -12,7 +12,8 @@ import pandas as pd
 import os
 from .dataset import Datasets, Dataset, GraphDataset
 import torch
-from torch_geometric.data import (Dataset, Data, makedirs)
+from torch_geometric.data import (Dataset, Data )
+from torch_geometric.data.makedirs import makedirs
 import torch_geometric.transforms as T
 import numpy as np
 from lib.graph import grid_tensor
