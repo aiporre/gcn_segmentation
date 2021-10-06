@@ -59,7 +59,7 @@ def get_files_patient_path(patient_path, target='training'):
     patient_files["CTP-CBF"] = list(filter(lambda f: "CT_CBF." in os.path.basename(f), files))
     patient_files["CTP-CBV"] = list(filter(lambda f: "CT_CBV." in os.path.basename(f), files))
     patient_files["CTP-MTT"] = list(filter(lambda f: "CT_MTT." in os.path.basename(f), files))
-    patient_files["LESION"] = list(filter(lambda f: "Lesion_" in os.path.basename(f), files))
+    patient_files["LESION"] = list(filter(lambda f: "OT." in os.path.basename(f), files))
     return patient_files
 
 
@@ -104,30 +104,24 @@ class _GISLES2018(Dataset):
         self.test_rate = 1
         self.fold = fold
         self.dataset_type = dataset_type
+        self.split_dir = split_dir
+        # procesed mapping is csv file that tell which proccesd files match with which case_XY e.g. gilses_1000 --> case_10
+        self.indices = _ISLESFoldIndices(cache_file=os.path.join(root, 'raw', self.split_dir, 'processed_mapping.txt'),
+                                         fold=fold, dataset_type=dataset_type)
         super(_GISLES2018, self).__init__(root, transform, pre_transform,
                                          pre_filter)
-        self.split_dir = split_dir
-        self.raw_dir = os.path.join(self.raw_dir, self.split_dir)
-        self.processed_dir = os.path.join(self.processed_dir, self.split_dir)
-        # procesed mapping is csv file that tell which proccesd files match with which case_XY e.g. gilses_1000 --> case_10
-        self.indices = _ISLESFoldIndices(cache_file = os.path.join(self.raw_dir, self.split_dir, 'processed_mapping.txt'),
-                                         cases_ids = self.raw_file_names)
 
     @property
     def raw_file_names(self):
-        files = []
-        file_classes = csv_to_dict(os.path.join(self.raw_dir, 'splits.txt'),',', has_header=True, item_col=self.fold)
-        for f, c in file_classes.items():
-            if c == self.dataset_type:
-                files.append(f)
-        print(f'dataset type lenth = {len(files)} for fold {self.fold}')
+        files = self.indices.get_cases()
+        print(f'dataset type {self.dataset_type} , lenth = {len(files)} for fold {self.fold}')
         return files
 
     @property
     def processed_file_names(self):
         processed_files = []
         for case_id in self.raw_file_names:
-            processed_indices = self.indices.get_by_case(case_id)
+            processed_indices = self.indices.get_by_case_id(case_id)
             _processed_files = ['gendo_{:04d}.pt'.format(i) for i in processed_indices]
             processed_files.extend(_processed_files)
         return processed_files
@@ -144,6 +138,7 @@ class _GISLES2018(Dataset):
         printProgressBar(0, len(self.indices), prefix=progressBarPrefix)
         for raw_path, case_id in zip(self.raw_paths, self.raw_file_names):
             patient_files = get_files_patient_path(raw_path)
+            print('====> raw path: ', raw_path)
             ct_scan = load_nifti(patient_files["CTP-CBV"][0], neurological_convension=True)
             ct_scan = ct_scan.astype(np.float)
             ct_scan_norm = (ct_scan-ct_scan.min())/(ct_scan.max()-ct_scan.min())
@@ -184,15 +179,18 @@ class _GISLES2018(Dataset):
 
 
 class _ISLESFoldIndices:
-    def __init__(self, cache_file, cases_ids=None):
+    def __init__(self, cache_file, fold, dataset_type):
         self.cache_file = cache_file
         self.root = os.path.dirname(self.cache_file)
+        self.cases_ids = None
+        self.fold = fold
+        self.dataset_type = dataset_type
+        self._initialize_cases_id()
         if os.path.exists(self.cache_file):
             print('file exist loading indices')
-            self.indices = self._load_indices()
+            self._load_indices()
         else:
-            self.indices = self._initialize()
-        self.cases_ids = cases_ids
+            self._initialize()
 
     def _initialize(self):
         '''
@@ -203,18 +201,26 @@ class _ISLESFoldIndices:
             csvwriter = csv.writer(csvfile, delimiter=',')
             for case_id in self.cases_ids:
                 patient_files = get_files_patient_path(os.path.join(self.root, case_id))
-                data = load_nifti(patient_files['LESION'], neurological_convension=True)
+                data = load_nifti(patient_files['LESION'][0], neurological_convension=True)
+                print('patient files in the ininalizt of proc map:,', patient_files)
+                print('---paht;', os.path.join(self.root, case_id))
                 num_elements= len(data)
                 for i in range(num_elements):
                     csvwriter.writerow([case_id, i+offset])
                 offset += num_elements
-        self.indices = csv_to_dict(self.cache_file, ',')
+        __indices = csv_to_dict(self.cache_file, ',')
+        self.indices = {}
+        for k, v in __indices.items():
+            self.indices[k]=[int(a) for a in __indices[k]]
 
     def _load_indices(self):
         '''
         Load the fold indices if the cache exists
         '''
-        self.indices = csv_to_dict(self.cache_file, ',')
+        __indices = csv_to_dict(self.cache_file, ',')
+        self.indices = {}
+        for k, v in __indices.items():
+            self.indices[k]=[int(a) for a in __indices[k]]
 
     def get_by_case_id(self, case_id):
         '''
@@ -227,3 +233,15 @@ class _ISLESFoldIndices:
         for case_indices in self.indices.values():
             length = len(case_indices)
         return length
+
+    def get_cases(self):
+        return self.cases_ids
+
+    def _initialize_cases_id(self):
+        cases = []
+        split_path = os.path.join(os.path.dirname(self.cache_file), 'split.txt')
+        file_classes = csv_to_dict(split_path, ',', has_header=True, item_col=self.fold)
+        for f, c in file_classes.items():
+            if c == self.dataset_type:
+                cases.append(f)
+        self.cases_ids = cases

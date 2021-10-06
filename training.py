@@ -41,7 +41,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import nn
 
-from config import VESSEL_DIR, SVESSEL_DIR, ENDOSTROKE_DIR
+from config import VESSEL_DIR, SVESSEL_DIR, ENDOSTROKE_DIR, ISLES2018_DIR
 from lib.utils import savefigs, Timer
 import numpy as np
 try:
@@ -81,7 +81,9 @@ def process_command_line():
     parser.add_argument("-f", "--figdir", type=str, default='./fig',
                         help="path to save figs")
     parser.add_argument("-ed", "--endodir", type=str, default=ENDOSTROKE_DIR,
-                        help="syntetic vessel dataset dir")
+                        help="endovascular dataset dir")
+    parser.add_argument("-id", "--islesdir", type=str, default=ISLES2018_DIR,
+                        help="ISLES 2018  dataset dir")
     parser.add_argument("-b", "--batch", type=int, default=2,
                         help="batch size of trainer and evaluator")
     parser.add_argument("-s", "--dataset", type=str, default='MNIST',
@@ -89,7 +91,7 @@ def process_command_line():
     parser.add_argument("-n", "--net", type=str, default='GFCN',
                             help="network to be used. ...." )
     parser.add_argument("-p", "--pre-transform", type=str2bool, default=False,
-                        help="use a pretransfrom to the dataset")
+                        help="use a pre-transfrom to the dataset")
     parser.add_argument("-z", "--background", type=str2bool, default=True,
                         help="use a background in the MNIST dataset.")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
@@ -149,7 +151,7 @@ elif args.dataset == 'GENDOSTROKE':
     dataset = GENDOSTROKE(data_dir=args.endodir)
     reshape_transform = endostroke_reshape
 elif args.dataset == 'GISLES2018':
-    dataset = GISLES2018(data_dir=args.endodir)
+    dataset = GISLES2018(data_dir=args.islesdir)
     reshape_transform = isles2018_reshape
 else:
     dataset = MNIST()
