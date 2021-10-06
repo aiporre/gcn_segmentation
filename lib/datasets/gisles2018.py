@@ -134,7 +134,6 @@ class _GISLES2018(Dataset):
     @property
     def raw_file_names(self):
         files = self.indices.get_cases()
-        print(f'dataset type {self.dataset_type} , lenth = {len(files)} for fold {self.fold}')
         return files
 
     @property
@@ -173,7 +172,6 @@ class _GISLES2018(Dataset):
         for case_id in self.raw_file_names:
             raw_path = os.path.join(self.root, 'raw', self.split_dir, case_id)
             patient_files = get_files_patient_path(raw_path)
-            print('====> raw path: ', raw_path)
             ct_scan = load_nifti(patient_files["CTP-CBV"][0], neurological_convension=True)
             ct_scan = ct_scan.astype(np.float)
             ct_scan_norm = (ct_scan-ct_scan.min())/(ct_scan.max()-ct_scan.min())
@@ -224,7 +222,7 @@ class _ISLESFoldIndices:
         self.dataset_type = dataset_type
         self._initialize_cases_id()
         if self._is_initialized():
-            print('file exist loading indices')
+            print('file exist loading indices from ' + self.cache_file)
             # self._load_indices()
         else:
             self._initialize()
@@ -243,17 +241,12 @@ class _ISLESFoldIndices:
             for case_id in self.cases_ids:
                 patient_files = get_files_patient_path(os.path.join(self.root, case_id))
                 data = load_nifti(patient_files['LESION'][0], neurological_convension=True)
-                print('patient files in the ininalizt of proc map:,', patient_files)
-                print('---paht;', os.path.join(self.root, case_id))
                 num_elements= len(data)
                 for i in range(num_elements):
                     csvwriter.writerow([case_id, i+offset])
                 offset += num_elements
         self._load_indices()
-        #__indices = csv_to_dict(self.cache_file, ',')
-        #self.indices = {}
-        # for k, v in __indices.items():
-        #     self.indices[k]=[int(a) for a in __indices[k]]
+
     def _is_initialized(self):
         if not os.path.exists(self.cache_file):
             # the file doesn exist at all
