@@ -12,7 +12,7 @@ import pandas as pd
 import os
 from .dataset import Datasets, Dataset, GraphDataset
 import torch
-from torch_geometric.data import (Dataset, Data)
+from torch_geometric.data import (Dataset, Data, makedirs)
 import torch_geometric.transforms as T
 import numpy as np
 from lib.graph import grid_tensor
@@ -106,12 +106,17 @@ class _GISLES2018(Dataset):
         self.fold = fold
         self.dataset_type = dataset_type
         self.split_dir = split_dir
+        # creates the processed dir
+
+        raw_dir = os.path.join(self.root, 'raw', self.split_dir)
+        processed_dir = os.path.join(self.root, 'processed', self.split_dir)
+        makedirs(processed_dir)
         # procesed mapping is csv file that tell which proccesd files match with which case_XY e.g. gilses_1000 --> case_10
         self.indices = _ISLESFoldIndices(cache_file=os.path.join(root, 'raw', self.split_dir, 'processed_mapping.txt'),
                                          fold=fold, dataset_type=dataset_type)
         super(_GISLES2018, self).__init__(root, transform, pre_transform, pre_filter)
-        self.raw_dir = os.path.join(self.root, 'raw', self.split_dir)
-        self.processed_dir = os.path.join(self.root, 'processed', self.split_dir)
+        self.raw_dir = raw_dir
+        self.processed_dir = processed_dir
 
     # @property
     # def raw_dir(self):
@@ -139,6 +144,19 @@ class _GISLES2018(Dataset):
             _processed_files = ['gendo_{:04d}.pt'.format(i) for i in processed_indices]
             processed_files.extend(_processed_files)
         return processed_files
+
+    @property
+    def raw_paths(self):
+        r"""The filepaths to find in order to skip the download."""
+        files = self.raw_file_names
+        return [os.path.join(self.root, 'raw', self.split_dir, f) for f in files]
+
+    @property
+    def processed_paths(self):
+        r"""The filepaths to find in the :obj:`self.processed_dir`
+        folder in order to skip the processing."""
+        files = self.processed_file_names
+        return [os.path.join(self.root, 'processed', self.split_dir, f) for f in files]
 
     def download(self):
         pass
