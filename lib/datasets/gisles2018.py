@@ -265,7 +265,7 @@ class _ISLESFoldIndices:
     def __len__(self):
         length = 0
         for case_indices in self.indices.values():
-            length = len(case_indices)
+            length += len(case_indices)
         return length
 
     def get_cases(self):
