@@ -180,8 +180,10 @@ class _GISLES2018(Dataset):
 
                 if self.pre_filter is not None and not self.pre_filter(data):
                     continue
-                torch.save(data, os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(case_index)))
 
+                #torch.save(data, os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(case_index)))
+                torch.save(data, os.path.join(self.root, 'processed',
+                    self.split_dir, 'gendo_{:04d}.pt'.format(case_index)))
             # update counter
             cnt_slices+=processed_num
 
