@@ -234,9 +234,9 @@ class _ISLESFoldIndices:
         creates the indices for each case
         '''
         def get_offset():
-            indices =  csv_to_dict(self.cache_file,',')
-            return max(indices.values())
-        offset = get_offset() if os.path.exists(self.cache_file) else 0
+            indices =  csv_to_dict(self.cache_file,',', item_col=0, key_col=1)
+            return max([int(k) for k in indices.keys()])
+        offset = get_offset() + 1 if os.path.exists(self.cache_file) else 0
         mode = 'a' if os.path.exists(self.cache_file) else 'w'
         with open(self.cache_file, mode, newline='') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=',')
@@ -275,8 +275,9 @@ class _ISLESFoldIndices:
         index_case_dict = csv_to_dict(self.cache_file, ',', key_col=1, item_col=0)
         self.indices = {}
         for case_id in self.get_cases():
-            self.indices[case_id]=[int(i) for i, c in index_case_dict.items() if c == case_id]
-
+            indices_case_id=[int(i) for i, c in index_case_dict.items() if c == case_id]
+            if indices_case_id:
+                self.indices[case_id] = indices_case_id
     def get_by_case_id(self, case_id):
         '''
         returns the cases ifor  agiven case id
