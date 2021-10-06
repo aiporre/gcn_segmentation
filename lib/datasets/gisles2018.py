@@ -101,6 +101,7 @@ class _GISLES2018(Dataset):
                  fold=1,
                  split_dir="TRAINING"):
         print('Warning: In the ISLES2018 dataset, the test/train rate is predefined by file distribution.')
+        self.root = root
         self.test_rate = 1
         self.fold = fold
         self.dataset_type = dataset_type
@@ -108,8 +109,21 @@ class _GISLES2018(Dataset):
         # procesed mapping is csv file that tell which proccesd files match with which case_XY e.g. gilses_1000 --> case_10
         self.indices = _ISLESFoldIndices(cache_file=os.path.join(root, 'raw', self.split_dir, 'processed_mapping.txt'),
                                          fold=fold, dataset_type=dataset_type)
-        super(_GISLES2018, self).__init__(root, transform, pre_transform,
-                                         pre_filter)
+        super(_GISLES2018, self).__init__(root, transform, pre_transform, pre_filter)
+        self.raw_dir = os.path.join(self.root, 'raw', self.split_dir)
+        self.processed_dir = os.path.join(self.root, 'processed', self.split_dir)
+
+    # @property
+    # def raw_dir(self):
+    #     print(' reassign raw path')
+    #     raw_path = os.path.join(self.root, 'raw', self.split_dir)
+    #     return raw_path
+    #
+    # @property
+    # def processed_dir(self):
+    #     print(' reassign processed path')
+    #     processed_path = os.path.join(self.root, 'processed', self.split_dir)
+    #     return processed_path
 
     @property
     def raw_file_names(self):
@@ -136,7 +150,9 @@ class _GISLES2018(Dataset):
         cnt_slices = 0
         progressBarPrefix = f'Generating samples for dataset G-ILSES2018 dataset type {self.dataset_type}'
         printProgressBar(0, len(self.indices), prefix=progressBarPrefix)
-        for raw_path, case_id in zip(self.raw_paths, self.raw_file_names):
+        # FIXME: raw path is incorrect path since in this case you cha ane trxta path called training.
+        for case_id in self.raw_file_names:
+            raw_path = os.path.join(self.root, 'raw', self.split_dir, case_id)
             patient_files = get_files_patient_path(raw_path)
             print('====> raw path: ', raw_path)
             ct_scan = load_nifti(patient_files["CTP-CBV"][0], neurological_convension=True)
@@ -186,9 +202,9 @@ class _ISLESFoldIndices:
         self.fold = fold
         self.dataset_type = dataset_type
         self._initialize_cases_id()
-        if os.path.exists(self.cache_file):
+        if self._is_initialized():
             print('file exist loading indices')
-            self._load_indices()
+            # self._load_indices()
         else:
             self._initialize()
 
@@ -196,8 +212,12 @@ class _ISLESFoldIndices:
         '''
         creates the indices for each case
         '''
-        offset = 0
-        with open(self.cache_file, 'w', newline='') as csvfile:
+        def get_offset():
+            indices =  csv_to_dict(self.cache_file,',')
+            return max(indices.values())
+        offset = get_offset() if os.path.exists(self.cache_file) else 0
+        mode = 'a' if os.path.exists(self.cache_file) else 'w'
+        with open(self.cache_file, mode, newline='') as csvfile:
             csvwriter = csv.writer(csvfile, delimiter=',')
             for case_id in self.cases_ids:
                 patient_files = get_files_patient_path(os.path.join(self.root, case_id))
@@ -208,19 +228,33 @@ class _ISLESFoldIndices:
                 for i in range(num_elements):
                     csvwriter.writerow([case_id, i+offset])
                 offset += num_elements
-        __indices = csv_to_dict(self.cache_file, ',')
-        self.indices = {}
-        for k, v in __indices.items():
-            self.indices[k]=[int(a) for a in __indices[k]]
+        self._load_indices()
+        #__indices = csv_to_dict(self.cache_file, ',')
+        #self.indices = {}
+        # for k, v in __indices.items():
+        #     self.indices[k]=[int(a) for a in __indices[k]]
+    def _is_initialized(self):
+        if not os.path.exists(self.cache_file):
+            # the file doesn exist at all
+            return False
+        else:
+            # checks if the file has cases id
+            cases_id = self.get_cases()
+            self._load_indices()
+            for c in cases_id:
+                if c not in self.indices.keys():
+                    return False
+            # after check all the cases_id returns True
+            return True
 
     def _load_indices(self):
         '''
         Load the fold indices if the cache exists
         '''
-        __indices = csv_to_dict(self.cache_file, ',')
+        index_case_dict = csv_to_dict(self.cache_file, ',', key_col=1, item_col=0)
         self.indices = {}
-        for k, v in __indices.items():
-            self.indices[k]=[int(a) for a in __indices[k]]
+        for case_id in self.get_cases():
+            self.indices[case_id]=[int(i) for i, c in index_case_dict.items() if c == case_id]
 
     def get_by_case_id(self, case_id):
         '''
