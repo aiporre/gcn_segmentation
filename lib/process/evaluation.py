@@ -1,11 +1,15 @@
 import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from torch_geometric.data import Data
 
 from .losses import DiceCoeff
 from .progress_bar import printProgressBar
 from torch import sigmoid
 import numpy as np
+
+from ..graph.batch import to_torch_batch
+
 
 class Evaluator(object):
     def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False):
@@ -32,6 +36,8 @@ class Evaluator(object):
             features = features.to(self.device)
             label = label.to(self.device)
             prediction = model(features)
+            if isinstance(prediction, Data):
+                prediction = to_torch_batch(prediction)
             pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
             # reorganize prediction according to the batch.
             if not pred_mask.size(0) == label.size(0):
@@ -69,6 +75,8 @@ class Evaluator(object):
             features = features.to(self.device)
             label = label.long().to(self.device)
             prediction = model(features)
+            if isinstance(prediction, Data):
+                prediction = to_torch_batch(prediction)
             pred = (sigmoid(prediction) > 0.5).long() if self.sigmoid else (prediction > 0.5).long()
             if not pred.size(0) == label.size(0):
                 b = label.size(0)

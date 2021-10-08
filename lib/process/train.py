@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from torch_geometric.data import Data
 
 from lib.utils import savefigs, get_npy_files, upload_training
+from ..graph.batch import to_torch_batch
+
 try:
     from dvn import FCN
 except Exception as e:
@@ -21,11 +23,6 @@ except Exception as e:
 
 
 from .progress_bar import printProgressBar
-
-
-def to_torch_batch(batch):
-    batch = torch.stack([batch.x[batch.batch == n] for n in range(batch.num_graphs)],axis=0)
-    return batch
 
 
 class Trainer(object):
