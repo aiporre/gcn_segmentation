@@ -167,10 +167,10 @@ class GFCNB(torch.nn.Module):
         # TODO handle contract on trainer and  evaluator
         data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
 
-        x = data.x
+        # x = data.x
 
         # return F.sigmoid(x)
-        return x
+        return data
 
 class GFCNA(torch.nn.Module):
     ''' GFCN equivalent to the FCN16s'''
@@ -254,9 +254,9 @@ class GFCNA(torch.nn.Module):
         #
         data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
 
-        x = data.x
+        # x = data.x
 
-        return x
+        return data
 
 class GFCNC(torch.nn.Module):
     ''' model G-FCN 8s equivalent'''
@@ -493,7 +493,7 @@ class GFCND(torch.nn.Module):
         data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
         x = data.x
         # return F.sigmoid(x)
-        return x
+        return data
 
 class GFCN(torch.nn.Module):
     ''' GFCN16s with barycentric upsampling'''
@@ -592,6 +592,6 @@ class GFCN(torch.nn.Module):
         #
         data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
 
-        x = data.x
+        # x = data.x
 
-        return x
+        return data

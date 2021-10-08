@@ -5,6 +5,7 @@ from torch import optim
 import torch.nn as nn
 import os
 import matplotlib.pyplot as plt
+from torch_geometric.data import Dataset
 
 from lib.utils import savefigs, get_npy_files, upload_training
 try:
@@ -20,6 +21,12 @@ except Exception as e:
 
 
 from .progress_bar import printProgressBar
+
+
+def to_torch_batch(batch):
+    data_list = batch.data_to_list()
+    batch = torch.stack([data.x for data in data_list], axis=0)
+    return batch
 
 
 class Trainer(object):
@@ -58,9 +65,9 @@ class Trainer(object):
 
         prediction = self.model(features)
 
-        prediction_flat = prediction.view(-1)
-        target_flat = target.view(-1).float()
-        loss = self.criterion(prediction_flat,target_flat)
+        if isinstance(prediction, Dataset):
+            prediction = to_torch_batch(prediction)
+        loss = self.criterion(prediction, target)
         self.optimizer.zero_grad()
         loss.backward()
         # for param in self.model.parameters():
