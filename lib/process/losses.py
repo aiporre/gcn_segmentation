@@ -1,5 +1,8 @@
 import torch
 from torch import sigmoid
+from torch.autograd import Function
+
+from lib.utils import print_debug
 
 
 class DCS(object):
@@ -25,3 +28,37 @@ class DCS(object):
         B_sum = torch.sum(tflat*tflat, axis=1)
 
         return torch.mean(1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth)))
+
+
+class DiceCoeff(Function):
+    """Dice coeff for individual examples"""
+
+    def forward(self, inputs, targets):
+        self.save_for_backward(inputs, targets)
+        eps = 0.0001
+        try:
+            self.inter = torch.dot(inputs.view(-1), targets.view(-1))
+        except RuntimeError as e:
+            message = 'inputs'+str(inputs.size())+'targets'+str(targets.size())
+            print_debug(message)
+            print_debug('Error calculation in intersection', exception=e)
+            raise e
+
+        self.union = torch.sum(inputs)+torch.sum(targets)+eps
+
+        t = (2*self.inter.float()+eps)/self.union.float()
+        return t
+
+    # This function has only a single output, so it gets only one gradient
+    def backward(self, grad_output):
+
+        input, target = self.saved_tensors
+        grad_input = grad_target = None
+
+        if self.needs_input_grad[0]:
+            grad_input = grad_output*2*(target*self.union-self.inter) \
+                         /(self.union*self.union)
+        if self.needs_input_grad[1]:
+            grad_target = None
+
+        return grad_input, grad_target

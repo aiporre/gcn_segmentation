@@ -1,11 +1,9 @@
 import torch
-from torch.autograd import Function, Variable
 import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from matplotlib.colors import ListedColormap
 
+from .losses import DiceCoeff
 from .progress_bar import printProgressBar
-from lib.utils import print_debug
 from torch import sigmoid
 import numpy as np
 
@@ -412,40 +410,6 @@ class KEvaluator(Evaluator):
         return fig
 
 
-
-class DiceCoeff(Function):
-    """Dice coeff for individual examples"""
-
-    def forward(self, inputs, targets):
-        self.save_for_backward(inputs, targets)
-        eps = 0.0001
-        try:
-            self.inter = torch.dot(inputs.view(-1), targets.view(-1))
-        except RuntimeError as e:
-            message = 'inputs'+str(inputs.size())+'targets'+str(targets.size())
-            print_debug(message)
-            print_debug('Error calculation in intersection', exception=e)
-            raise e
-
-        self.union = torch.sum(inputs)+torch.sum(targets)+eps
-
-        t = (2*self.inter.float()+eps)/self.union.float()
-        return t
-
-    # This function has only a single output, so it gets only one gradient
-    def backward(self, grad_output):
-
-        input, target = self.saved_tensors
-        grad_input = grad_target = None
-
-        if self.needs_input_grad[0]:
-            grad_input = grad_output*2*(target*self.union-self.inter) \
-                         /(self.union*self.union)
-        if self.needs_input_grad[1]:
-            grad_target = None
-
-        return grad_input, grad_target
-
 def dice_coeff(inputs, target):
     """Dice coeff for batches"""
     if inputs.is_cuda:
@@ -454,7 +418,7 @@ def dice_coeff(inputs, target):
         s = torch.tensor(1).float().zero_()
 
     for i, c in enumerate(zip(inputs, target)):
-        s = s+DiceCoeff().forward(c[0], c[1])
+        s = s + DiceCoeff().forward(c[0], c[1])
 
     return s/(i+1)
 
