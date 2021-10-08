@@ -5,7 +5,7 @@ from torch import optim
 import torch.nn as nn
 import os
 import matplotlib.pyplot as plt
-from torch_geometric.data import Dataset
+from torch_geometric.data import Data
 
 from lib.utils import savefigs, get_npy_files, upload_training
 try:
@@ -64,7 +64,7 @@ class Trainer(object):
 
         prediction = self.model(features)
 
-        if isinstance(prediction, Dataset):
+        if isinstance(prediction, Data):
             prediction = to_torch_batch(prediction)
         loss = self.criterion(prediction, target)
         self.optimizer.zero_grad()
