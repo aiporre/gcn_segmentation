@@ -24,8 +24,7 @@ from .progress_bar import printProgressBar
 
 
 def to_torch_batch(batch):
-    data_list = batch.data_to_list()
-    batch = torch.stack([data.x for data in data_list], axis=0)
+    batch = torch.stack([batch.x[batch.batch == n] for n in range(batch.num_graphs)],axis=0)
     return batch
 
 

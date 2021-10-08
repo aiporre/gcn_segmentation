@@ -366,7 +366,7 @@ class GFCNC(torch.nn.Module):
         data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
 
 
-        return data.x
+        return data
 
 #### MODEL
 class down(torch.nn.Module):
