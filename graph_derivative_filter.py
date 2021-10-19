@@ -56,14 +56,6 @@ def convolve2D(img, kernel, padding=0, strides=1, cropping=True):
                         output[x, y] = (kernel * imagePadded[x: x + kernel_width, y: y + kernel_height]).sum()
                 except:
                     break
-    # if cropping:
-    #     print("output: " + str(output.shape))
-    #     if padding_x != 0 and padding_y != 0:
-    #         output = output[int(padding_x):int(-1 * padding_x), int(padding_y):int(-1 * padding_y)]
-    #     elif padding_x != 0:
-    #         output = output[int(padding_x):int(-1 * padding_x), :]
-    #     elif padding_y != 0:
-    #         output = output[:, int(padding_y):int(-1 * padding_y)]
     return output
 
 def gradient_directional(img, delta=1, size=3, direction='x'):
