@@ -4,10 +4,20 @@ from torch.autograd import Function
 
 from lib.utils import print_debug
 
+# TODO: make the implementation of the losses functions: BCE, wBCE, softDice, DICE-L1, Focal-Loss and generalized-Dice
 
 class DCS(object):
+    """
+    DCS loss function smooth where the values are calculated in batches as:
+        $$
+        \mathcal{L} = \frac{(M*P + 1)}{M^2 + P^2 + 1}
+        $$
+    where $M$ and $P$ are the mask and prediction values. The 1 is for numerical stability.
+    """
+
     def __init__(self, pre_sigmoid=False):
         self.pre_sigmoid = pre_sigmoid
+
     def __call__(self, inputs, targets):
 
         """
