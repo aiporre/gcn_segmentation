@@ -118,7 +118,7 @@ class Evaluator(object):
         input = input.to(self.device)
         prediction = model(input)
         # pred_mask = (sigmoid(prediction) > 0.5).float()
-        if isinstance(prediction, [ Data, Batch]):
+        if isinstance(prediction, (Data, Batch)):
             prediction =  prediction.x
         pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
 
