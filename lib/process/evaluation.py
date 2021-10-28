@@ -1,7 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
-from torch_geometric.data import Data
+from torch_geometric.data import Data, Batch
 
 from .losses import DiceCoeff
 from .progress_bar import printProgressBar
@@ -118,15 +118,17 @@ class Evaluator(object):
         input = input.to(self.device)
         prediction = model(input)
         # pred_mask = (sigmoid(prediction) > 0.5).float()
+        if isinstance(prediction, [ Data, Batch]):
+            prediction =  prediction.x
         pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
 
         if not isinstance(image,np.ndarray):
-            dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that
+            dimension = image.x.size(0)# it will assume a square image, if the transform is None.
             if reshape_transform is None:
                 dimension = np.sqrt(dimension).astype(int)
                 mask = mask.cpu().detach().numpy().reshape((dimension,dimension))
                 image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
-                prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
+                prediction = prediction.reshape((dimension, dimension))
                 pred_mask = pred_mask.reshape((dimension,dimension))
             else:
                 mask = reshape_transform(mask.cpu().detach().numpy())
@@ -135,7 +137,6 @@ class Evaluator(object):
                 pred_mask = reshape_transform(pred_mask)
 
         # plot input image
-        #TODO: image will change its shape I need a transformer class
         if not fig:
             fig = plt.figure(figsize=figsize)
         if overlap:
@@ -159,14 +160,15 @@ class Evaluator(object):
             masked = np.ma.masked_where(TP == 0, TP)
             ax.imshow(masked, cmap=cmap_TP, alpha=alpha)
 
+            epsilon = 1e-10
             A = TP.sum()
             B = FP.sum()
             C = FN.sum()
             C = N-A-B-C
             a = (A+C)/N
-            p = A/(A+B)
-            r = A/(A+C)
-            dcm = 2*p*r/(p+r)
+            p = (A + epsilon)/(A+B+epsilon)
+            r = (A+epsilon)/(A+C+epsilon)
+            dcm = 2*(p*r+epsilon)/(p+r+epsilon)
             print('Accuracy: ', a ,' Precision: ', p, ', Recall: ', r, 'Dice: ', dcm)
         else:
             ax1 = fig.add_subplot(2, 2, 1)
