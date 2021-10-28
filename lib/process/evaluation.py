@@ -207,20 +207,17 @@ class Evaluator(object):
             input = input.to(self.device)
             prediction = model(input)
             # pred_mask = (sigmoid(prediction) > 0.5).float()
+            if isinstance(prediction, (Data, Batch)):
+                prediction = prediction.x
             pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
 
             if not isinstance(image, np.ndarray):
-                dimension = image.x.size(0)  # it will assume a square image, though we need a transformer for that
-                # dimension = np.sqrt(dimension).astype(int)
-                # mask = mask.cpu().detach().numpy().reshape((dimension, dimension))
-                # image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
-                # prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
-                # pred_mask = pred_mask.reshape((dimension, dimension))
+                dimension = image.x.size(0)  # it will assume a square image,if the transform is None.t :
                 if reshape_transform is None:
                     dimension = np.sqrt(dimension).astype(int)
                     mask = mask.cpu().detach().numpy().reshape((dimension,dimension))
                     image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
-                    prediction = torch.sigmoid(prediction.reshape((dimension, dimension)))
+                    prediction = prediction.reshape((dimension, dimension))
                     pred_mask = pred_mask.reshape((dimension,dimension))
                 else:
                     mask = reshape_transform(mask.cpu().detach().numpy())
