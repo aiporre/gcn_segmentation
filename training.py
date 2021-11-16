@@ -206,16 +206,19 @@ else:
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device, criterion=criterion)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True)
+    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
     trainer.load_model(model, MODEL_PATH)
 elif args.net == 'DeepVessel':
     trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH)
-    evaluator_val = KEvaluator(dataset)
+    evaluator_val = KEvaluator(dataset, eval=True)
+    evaluator_test= KEvaluator(dataset)
     trainer.load_model(model,MODEL_PATH)
     model = trainer.model
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True)
+    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
     trainer.load_model(model, MODEL_PATH)
 
 
@@ -273,17 +276,18 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     model.eval() if not DEEPVESSEL else None
     print('plotting one prediction')
-    fig = evaluator_val.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
+    fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
                                         reshape_transform=reshape_transform)
-    result = evaluator_val.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
+    result = evaluator_test.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
                                         reshape_transform=reshape_transform)
+    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{args.id}"
     z, y, x = result.shape[0], result.shape[1], result.shape[2]
-    result.tofile('{}_e{}_lr{}_ds{}_vol_{}x{}x{}.raw'.format(prefix, EPOCHS, lr, args.dataset, x, y, z))
-    savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
+    result.tofile('{}_vol_{}x{}x{}.raw'.format(prefix_checkpoint, x, y, z))
+    savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
     # plt.show()
     print('calculating stats...')
-    print('DCM factor: ', evaluator_val.DCM(model, progress_bar=progress_bar))
-    print('stats: PAR ', evaluator_val.bin_scores(model, progress_bar=progress_bar))
+    print('DCM factor: ', evaluator_test.DCM(model, progress_bar=progress_bar))
+    print('stats: PAR ', evaluator_test.bin_scores(model, progress_bar=progress_bar))
 
 
 if not args.skip_training:

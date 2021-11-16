@@ -12,8 +12,11 @@ from ..graph.batch import to_torch_batch
 
 
 class Evaluator(object):
-    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, monitor_metric="DCM"):
-        self.dataset = dataset.test
+    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, monitor_metric="DCM", eval=False):
+        if eval:
+            self.dataset = dataset.val
+        else:
+            self.dataset = dataset.test
         self._batch_size = batch_size
         self.dataset.enforce_batch(self._batch_size)
         self.to_tensor = to_tensor
@@ -34,7 +37,7 @@ class Evaluator(object):
             self.best_metric = self.current_metric
 
     def is_best_metric(self):
-        return self.current_metric >= self.best_metric
+        return self.best_metric is not None and self.current_metric >= self.best_metric
 
     def DCM(self, model, progress_bar=True):
         DCM_accum = []
@@ -301,7 +304,7 @@ class Evaluator(object):
         # return fig
 
 class KEvaluator(Evaluator):
-    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False):
+    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, eval=False):
         '''
         Keras addaptation evaluate model
         :param dataset:
@@ -310,7 +313,7 @@ class KEvaluator(Evaluator):
         :param device:
         :param sigmoid:
         '''
-        super(KEvaluator, self).__init__(dataset, batch_size=batch_size, to_tensor=to_tensor, device=device, sigmoid=sigmoid)
+        super(KEvaluator, self).__init__(dataset, batch_size=batch_size, to_tensor=to_tensor, device=device, sigmoid=sigmoid, eval=eval)
     def bin_scores(self, model, progress_bar=False):
         correct = 0
         TP = 0
