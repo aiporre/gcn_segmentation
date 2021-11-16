@@ -1,4 +1,5 @@
 import argparse
+import os.path
 
 from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape
 
@@ -88,12 +89,16 @@ def process_command_line():
                         help="batch size of trainer and evaluator")
     parser.add_argument("-s", "--dataset", type=str, default='MNIST',
                         help="dataset to be used. Options: (G)MNIST, (G)VESSEL12, (G)SVESSEL, GENDOSTROKE")
+    parser.add_argument("--id", type=str, default='XYZ',
+                        help="id for the training name")
     parser.add_argument("-n", "--net", type=str, default='GFCN',
                             help="network to be used. ...." )
     parser.add_argument("-p", "--pre-transform", type=str2bool, default=False,
                         help="use a pre-transfrom to the dataset")
     parser.add_argument("-z", "--background", type=str2bool, default=True,
                         help="use a background in the MNIST dataset.")
+    parser.add_argument("-mm", "--monitor-metric", type=str, default='DCM',
+                        help="Monitor metric for saving models ")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
                         help="criterion: BCE or DCS or BCElogistic or DCSsigmoid")
     parser.add_argument("-u", "--upload", type=str2bool, default=False,
@@ -116,7 +121,7 @@ print('ARGUMENTS: ')
 print(args)
 print('=====================')
 EPOCHS = args.epochs
-MODEL_PATH = './{}-ds{}.pth'.format(args.net, args.dataset)
+MODEL_PATH = './{}-ds{}-id{}.pth'.format(args.net, args.dataset, args.id)
 EPOCHS = args.epochs
 BATCH = args.batch
 DEEPVESSEL =False
@@ -201,23 +206,27 @@ else:
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device, criterion=criterion)
-    evaluator = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
     trainer.load_model(model, MODEL_PATH)
 elif args.net == 'DeepVessel':
     trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH)
-    evaluator = KEvaluator(dataset)
+    evaluator_val = KEvaluator(dataset)
     trainer.load_model(model,MODEL_PATH)
     model = trainer.model
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion)
-    evaluator = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
     trainer.load_model(model, MODEL_PATH)
 
 
 
 
-def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
-    loss_all, DCS, P, A, R, loss_epoch = trainer.load_checkpoint(prefix=prefix)
+def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ'):
+    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{id}"
+    prefix_model = os.path.splitext(os.path.basename(MODEL_PATH))[0]
+    loss_all, DCS, P, A, R, loss_epoch, best_metric = trainer.load_checkpoint(prefix=prefix_checkpoint)
+    evaluator_val.best_metric = best_metric
+
     timer = Timer(args.checkpoint_timer)
     for e in trainer.get_range(EPOCHS):
         model.train() if not DEEPVESSEL else None
@@ -233,8 +242,8 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
         loss_all = new_loss
         if DEEPVESSEL:
             print('Evaluation Epoch {}/{}...'.format(e, EPOCHS))
-            DCS.append(evaluator.DCM(model, progress_bar=progress_bar))
-            a, p, r = evaluator.bin_scores(model, progress_bar=progress_bar)
+            DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
+            a, p, r = evaluator_val.bin_scores(model, progress_bar=progress_bar)
             P.append(p)
             A.append(a)
             R.append(r)
@@ -243,41 +252,43 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
             with torch.no_grad():
                 print('Evaluation Epoch {}/{}...'.format(e,EPOCHS))
                 model.eval()
-                DCS.append(evaluator.DCM(model, progress_bar=progress_bar))
-                a, p, r  = evaluator.bin_scores(model, progress_bar=progress_bar)
+                DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
+                a, p, r  = evaluator_val.bin_scores(model, progress_bar=progress_bar)
                 P.append(p)
                 A.append(a)
                 R.append(r)
                 print('DCS score:', DCS[-1], 'accuracy ', a, 'precision', p, 'recall', r )
         if timer.is_time():
             measurements = np.array([DCS, P, A, R, loss_epoch])
-            trainer.save_model(MODEL_PATH)
-            trainer.save_checkpoint(np.array(loss_all), measurements, prefix,  lr, args.dataset, e, EPOCHS, fig_dir, args.upload)
+            if evaluator_val.is_best_metric():
+                trainer.save_model(MODEL_PATH)
+            best_metric = evaluator_val.best_metric
+            trainer.save_checkpoint(np.array(loss_all), measurements, prefix_checkpoint, prefix_model,  lr, e, EPOCHS, fig_dir, args.upload, best_metric)
     loss_all = np.array(loss_all)
     measurements = np.array([DCS, P, A, R, loss_epoch])
     trainer.save_model(MODEL_PATH)
-    trainer.save_checkpoint(loss_all, measurements, prefix,  lr, args.dataset, EPOCHS, EPOCHS, fig_dir, args.upload)
+    trainer.save_checkpoint(loss_all, measurements, prefix_checkpoint, prefix_model,  lr, EPOCHS, EPOCHS, fig_dir, args.upload, best_metric)
 
 
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
     model.eval() if not DEEPVESSEL else None
     print('plotting one prediction')
-    fig = evaluator.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
-                                    reshape_transform=reshape_transform)
-    result = evaluator.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
-                                    reshape_transform=reshape_transform)
+    fig = evaluator_val.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
+                                        reshape_transform=reshape_transform)
+    result = evaluator_val.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
+                                        reshape_transform=reshape_transform)
     z, y, x = result.shape[0], result.shape[1], result.shape[2]
     result.tofile('{}_e{}_lr{}_ds{}_vol_{}x{}x{}.raw'.format(prefix, EPOCHS, lr, args.dataset, x, y, z))
     savefigs(fig_name='{}_e{}_lr{}_ds{}_performance'.format(prefix,EPOCHS, lr, args.dataset),fig_dir=fig_dir, fig=fig)
     # plt.show()
     print('calculating stats...')
-    print('DCM factor: ', evaluator.DCM(model, progress_bar=progress_bar))
-    print('stats: PAR ', evaluator.bin_scores(model, progress_bar=progress_bar))
+    print('DCM factor: ', evaluator_val.DCM(model, progress_bar=progress_bar))
+    print('stats: PAR ', evaluator_val.bin_scores(model, progress_bar=progress_bar))
 
 
 if not args.skip_training:
-    train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
+    train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, id=args.id)
 if DEEPVESSEL:
     model = trainer.model
 
-eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net)
+eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, id=args.id)

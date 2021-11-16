@@ -2,7 +2,7 @@ import os
 import ftplib
 import os
 
-def upload_training(prefix,EPOCHS,lr,dataset_name, client="ftpclient",password="dextro",fig_dir='./fig',PORT = 2121, HOST = "213.206.185.111",h5format=False):
+def upload_training(prefix_model, prefix,EPOCHS,lr, client="ftpclient",password="dextro",fig_dir='./fig',PORT = 2121, HOST = "213.206.185.111",h5format=False):
     def upload(ftp, file):
         if not os.path.exists(file):
             print("File '", file, "' doesn't exist")
@@ -24,19 +24,19 @@ def upload_training(prefix,EPOCHS,lr,dataset_name, client="ftpclient",password="
     os.chdir(fig_dir)
     print('uploading images')
 
-    upload(ftp, "{}_e{}_lr{}_ds{}_loss_history.png".format(prefix,EPOCHS,lr,dataset_name))
-    upload(ftp, "{}_e{}_lr{}_ds{}_performance.png".format(prefix,EPOCHS,lr,dataset_name))
+    upload(ftp, "{}_loss_history.png".format(prefix))
+    upload(ftp, "{}_performance.png".format(prefix))
     os.chdir('../')
     print('uploading model')
     if h5format:
-        upload(ftp, "{}-ds{}.dat".format(prefix, dataset_name))
+        upload(ftp,'./{}.pth'.format(prefix_model))
     else:
-        upload(ftp, "{}-ds{}.pth".format(prefix,dataset_name))
+        upload(ftp, "{}.pth".format(prefix_model))
     print('uploading checkpoint')
-    upload(ftp, "{}_e{}_lr{}_ds{}_checkpoint.npy".format(prefix,EPOCHS,lr,dataset_name))
+    upload(ftp, "{}_checkpoint.npy".format(prefix))
     print('uploading metrics')
-    upload(ftp, "{}_e{}_lr{}_ds{}_lossall.npy".format(prefix,EPOCHS,lr,dataset_name))
-    upload(ftp, "{}_e{}_lr{}_ds{}_measurements.npy".format(prefix,EPOCHS,lr,dataset_name))
+    upload(ftp, "{}_lossall.npy".format(prefix))
+    upload(ftp, "{}_measurements.npy".format(prefix))
     ftp.close()
     print('ftp client closed. Done uploading data.')
     

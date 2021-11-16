@@ -12,14 +12,29 @@ from ..graph.batch import to_torch_batch
 
 
 class Evaluator(object):
-    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False):
+    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, monitor_metric="DCM"):
         self.dataset = dataset.test
         self._batch_size = batch_size
         self.dataset.enforce_batch(self._batch_size)
         self.to_tensor = to_tensor
         self.device = device if device is not None else torch.device('cpu')
         self.sigmoid = sigmoid
+        self.best_metric = None
+        self.current_metric = None
+        self.monitor_metric = monitor_metric
 
+    def update_metric(self, metric):
+        self.current_metric = metric
+        # it will occur only the first time when not metric was ever updated
+        # NOTE: this can also be used to change the monitor metrics ... only works for the prev metric
+        if self.best_metric is None:
+            self.best_metric = self.current_metric
+        # updates best metric if current_metric is better
+        if self.current_metric > self.best_metric:
+            self.best_metric = self.current_metric
+
+    def is_best_metric(self):
+        return self.current_metric >= self.best_metric
 
     def DCM(self, model, progress_bar=True):
         DCM_accum = []
@@ -52,8 +67,10 @@ class Evaluator(object):
             i += 1
 
         # self.dataset.enforce_batch(1)
-
-        return np.array(DCM_accum).mean()
+        DCM = np.array(DCM_accum).mean()
+        if self.monitor_metric == "DCM":
+            self.update_metric(DCM)
+        return DCM
 
     def bin_scores(self, model, progress_bar=False):
         correct = 0

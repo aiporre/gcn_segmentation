@@ -4,6 +4,7 @@ import torch
 from torch import optim
 import torch.nn as nn
 import os
+import re
 import matplotlib.pyplot as plt
 from torch_geometric.data import Data
 
@@ -106,10 +107,25 @@ class Trainer(object):
     def get_range(self,EPOCHS):
         return range(self._epoch,EPOCHS)
 
-    def load_checkpoint(self, prefix = 'NET'):
+    def load_checkpoint(self, prefix):
         files = get_npy_files()
         checkpoint_file = list(filter(lambda x: x.endswith('checkpoint.npy') and x.startswith(prefix), files))
-
+        # finds the closest largest checkpoint file
+        if len(checkpoint_file) > 1:
+            e_list_strs = [re.search(r'_e(.*?)_lr', s).group(1) for s in checkpoint_file]
+            # attempt to parse to int
+            e_list_ints = []
+            for ee  in e_list_strs:
+                if ee.isdigit():
+                    e_list_ints.append(int(ee))
+                else:
+                    raise ValueError(
+                        'Something went wrong while extracting epoch list in your checkpoints {} with prefix {}'.format(
+                            checkpoint_file, prefix))
+            def argmax(iterable):
+                return max(enumerate(iterable), key=lambda x: x[1])[0]
+            checkpoint_file = [checkpoint_file[argmax(e_list_ints)]]
+        # presets the epochs
         if not len(checkpoint_file)==0:
             d1 = np.load(checkpoint_file[0], allow_pickle=True)
             self._epoch = d1.item().get('e')
@@ -127,13 +143,13 @@ class Trainer(object):
                 return loss_all, [], [], [], [], []
             return loss_all.tolist(), measurements[0].tolist(), measurements[1].tolist(), measurements[2].tolist() ,measurements[3].tolist(), measurements[4].tolist()
 
-    def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir, upload=False):
+    def save_checkpoint(self, loss_all, measurements, prefix,prefix_model, lr, e, EPOCHS, fig_dir, upload=False, best_metric=None):
 
-        check_point = {'lr':lr,'e':e,'E':EPOCHS}
+        check_point = {'lr':lr,'e':e,'E':EPOCHS,'best_metric':best_metric}
         print('Saved checkpoint ', e,  '/', EPOCHS)
-        np.save("{}_e{}_lr{}_ds{}_checkpoint.npy".format(prefix,EPOCHS,lr,dataset_name), check_point)
-        np.save('{}_e{}_lr{}_ds{}_lossall'.format(prefix, EPOCHS, lr, dataset_name), loss_all)
-        np.save('{}_e{}_lr{}_ds{}_measurements'.format(prefix, EPOCHS, lr, dataset_name), measurements)
+        np.save("{}_checkpoint.npy".format(prefix), check_point)
+        np.save('{}_lossall'.format(prefix), loss_all)
+        np.save('{}_measurements'.format(prefix), measurements)
         if not len(loss_all)==0:
             fig = plt.figure(figsize=(15, 10))
             plt.subplot(3, 1, 1)
@@ -154,11 +170,10 @@ class Trainer(object):
             plt.xlabel('epochs')
             plt.ylabel('metrics')
             plt.title('Evaluation metrics')
-            savefigs(fig_name='{}_e{}_lr{}_ds{}_loss_history'.format(prefix, EPOCHS, lr, dataset_name), fig_dir=fig_dir,
-                     fig=fig)
+            savefigs(fig_name='{}_loss_history'.format(prefix), fig_dir=fig_dir, fig=fig)
         if upload:
             print('Uploading training')
-            upload_training(prefix=prefix,EPOCHS=EPOCHS,lr=lr,dataset_name=dataset_name)
+            upload_training(prefix=prefix,EPOCHS=EPOCHS,lr=lr)
 
 class KTrainer(Trainer):
     def __init__(self,model,dataset,**kwargs):
@@ -221,13 +236,13 @@ class KTrainer(Trainer):
         # B = self.dataset._batch_size
         # history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
         # return history.history['loss']
-    def save_checkpoint(self, loss_all, measurements, prefix, lr, dataset_name, e, EPOCHS, fig_dir, upload=False):
+    def save_checkpoint(self, loss_all, measurements, prefix, prefix_model, lr, e, EPOCHS, fig_dir, upload=False, best_metric=None):
         super(KTrainer,self).save_checkpoint(loss_all=loss_all, measurements=measurements,prefix=prefix,
-                                             lr=lr, dataset_name=dataset_name, e=e,
-                                             EPOCHS=EPOCHS, fig_dir=fig_dir, upload=False)
+                                             lr=lr,  e=e,
+                                             EPOCHS=EPOCHS, fig_dir=fig_dir, upload=False, best_metric=best_metric)
         if upload:
             print('Uploading training')
-            upload_training(prefix=prefix,EPOCHS=EPOCHS,lr=lr,dataset_name=dataset_name,h5format=True)
+            upload_training(prefix_model=prefix_model, prefix=prefix, EPOCHS=EPOCHS,lr=lr,dataset_name=dataset_name,h5format=True)
     # def compile(self):
     #     self.update_lr(self.lr)
     #     self.model.compile(optimizer=self.optimizer,
