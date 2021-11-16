@@ -109,7 +109,7 @@ class Evaluator(object):
             # this graph tensor
             image = sample
             mask = sample.y
-            image['batch']=torch.zeros_like(sample.x)
+            image['batch']=torch.zeros_like(sample.x).long()
         else:
             image, mask = sample[0], sample[1]
             image = image.reshape([1]+list(image.shape))
