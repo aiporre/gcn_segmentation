@@ -206,18 +206,18 @@ else:
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH,to_tensor=False, device=device, criterion=criterion)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True, criterion=trainer.criterion)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
     trainer.load_model(model, MODEL_PATH)
 elif args.net == 'DeepVessel':
     trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH)
-    evaluator_val = KEvaluator(dataset, eval=True)
+    evaluator_val = KEvaluator(dataset, eval=True, criterion=trainer.criterion)
     evaluator_test= KEvaluator(dataset)
     trainer.load_model(model,MODEL_PATH)
     model = trainer.model
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True, criterion=trainer.criterion)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
     trainer.load_model(model, MODEL_PATH)
 
@@ -229,7 +229,7 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
     prefix_model = os.path.splitext(os.path.basename(MODEL_PATH))[0]
     loss_all, DCS, P, A, R, loss_epoch, best_metric = trainer.load_checkpoint(prefix=prefix_checkpoint)
     evaluator_val.best_metric = best_metric
-
+    VL = []
     timer = Timer(args.checkpoint_timer)
     for e in trainer.get_range(EPOCHS):
         model.train() if not DEEPVESSEL else None
@@ -247,20 +247,24 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
             print('Evaluation Epoch {}/{}...'.format(e, EPOCHS))
             DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
             a, p, r = evaluator_val.bin_scores(model, progress_bar=progress_bar)
+            val_loss = evaluator_val.calculate_loss(model, progress_bar=progress_bar)
             P.append(p)
             A.append(a)
             R.append(r)
-            print('DCS score:', DCS[-1], 'accuracy ', a, 'precision', p, 'recall', r)
+            VL.append(val_loss)
+            print('DCS score:', DCS[-1], 'accuracy ', a, 'precision ', p, 'recall ', r, 'val_loss ', val_loss)
         else:
             with torch.no_grad():
                 print('Evaluation Epoch {}/{}...'.format(e,EPOCHS))
                 model.eval()
                 DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
                 a, p, r  = evaluator_val.bin_scores(model, progress_bar=progress_bar)
+                val_loss = evaluator_val.calculate_loss(model, progress_bar=progress_bar)
                 P.append(p)
                 A.append(a)
                 R.append(r)
-                print('DCS score:', DCS[-1], 'accuracy ', a, 'precision', p, 'recall', r )
+                VL.append(val_loss)
+                print('DCS score:', DCS[-1], 'accuracy ', a, 'precision ', p, 'recall ', r, 'val_loss ', val_loss)
         if timer.is_time():
             measurements = np.array([DCS, P, A, R, loss_epoch])
             if evaluator_val.is_best_metric():

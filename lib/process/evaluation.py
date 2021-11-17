@@ -12,7 +12,8 @@ from ..graph.batch import to_torch_batch
 
 
 class Evaluator(object):
-    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, monitor_metric="DCM", eval=False):
+    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, monitor_metric="DCM", eval=False, criterion=None):
+
         if eval:
             self.dataset = dataset.val
         else:
@@ -25,6 +26,7 @@ class Evaluator(object):
         self.best_metric = None
         self.current_metric = None
         self.monitor_metric = monitor_metric
+        self.criterion = criterion
 
     def update_metric(self, metric):
         self.current_metric = metric
@@ -74,6 +76,33 @@ class Evaluator(object):
         if self.monitor_metric == "DCM":
             self.update_metric(DCM)
         return DCM
+
+    def calculate_loss(self, model, progress_bar=False):
+        if self.criterion is None:
+            raise ValueError('Criterion must be specified in the instance of the object Evaluator')
+        loss = []
+        L = self.dataset.num_batches
+        if progress_bar:
+            printProgressBar(0, L, prefix='Eval-Loss:', suffix='Complete', length=50)
+        i = 0
+
+        self.dataset.enforce_batch(self._batch_size)
+        for image, label in self.dataset.batches():
+            features = torch.tensor(image).float() if self.to_tensor else image
+            label = torch.tensor(label).float() if self.to_tensor else label
+            features = features.to(self.device)
+            label = label.to(self.device)
+            prediction = model(features)
+            if isinstance(prediction, Data):
+                prediction = to_torch_batch(prediction)
+            loss.append(self.criterion(prediction, label).item())
+            if progress_bar:
+                printProgressBar(i, L, prefix='Eval-Loss:', suffix='Complete', length=50)
+            else:
+                print('Eval-Loss: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+            i += 1
+        loss_value = np.array(loss).mean()
+        return loss_value
 
     def bin_scores(self, model, progress_bar=False):
         correct = 0
@@ -304,7 +333,7 @@ class Evaluator(object):
         # return fig
 
 class KEvaluator(Evaluator):
-    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, eval=False):
+    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, eval=False, criterion=None):
         '''
         Keras addaptation evaluate model
         :param dataset:
@@ -313,7 +342,7 @@ class KEvaluator(Evaluator):
         :param device:
         :param sigmoid:
         '''
-        super(KEvaluator, self).__init__(dataset, batch_size=batch_size, to_tensor=to_tensor, device=device, sigmoid=sigmoid, eval=eval)
+        super(KEvaluator, self).__init__(dataset, batch_size=batch_size, to_tensor=to_tensor, device=device, sigmoid=sigmoid, eval=eval, criterion=criterion)
     def bin_scores(self, model, progress_bar=False):
         correct = 0
         TP = 0
