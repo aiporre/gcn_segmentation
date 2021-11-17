@@ -1,6 +1,6 @@
 from unittest import TestCase
 import torch
-from .losses import DCS, DiceLoss
+from .losses import DCS, DiceLoss, FocalLoss
 from .evaluation import dice_coeff
 import matplotlib.pyplot as plt
 
@@ -42,6 +42,24 @@ def modified_loss(_pred, _target, pre_sigmoid=True, smooth=1.):
     B_sum = torch.sum(tflat * tflat, axis=1)
     loss_mod = torch.mean(1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth)))
     return loss_mod
+
+
+class TestFocalLoss(TestCase):
+
+    def setUp(self) -> None:
+        self.a = torch.tensor([[[0.1, 0.1], [0.9, 0.9]], [[0.1, 0.1], [0.9, 0.9]]])
+        self.b = torch.tensor([[[1.0, 0.0], [1.0, 1.0]], [[1.0, 0.0], [1.0, 1.0]]])
+
+    def test_forward(self):
+        print(self.a.shape)
+        dice_loss = FocalLoss(pre_sigmoid=True)
+        a_logit = torch.tensor([[[-200.0,-200.0], [1000,1000]],[[-200.0, -200.0], [1000, 1000]]])
+        loss = dice_loss(a_logit, self.b)
+        print('loss = ', loss)
+        # without sigmoid
+        dice_loss = DiceLoss(pre_sigmoid=False, epsilon=1)
+        loss = dice_loss(self.a, self.b)
+        print('loss = ', loss)
 
 class TestDiceLoss(TestCase):
 

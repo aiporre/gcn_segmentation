@@ -1,5 +1,6 @@
 import torch
 from torch import sigmoid
+from torch.nn.functional import binary_cross_entropy
 from torch.autograd import Function
 from torch_geometric.data import Data
 
@@ -67,6 +68,22 @@ class DCS(object):
         B_sum = torch.sum(tflat*tflat, axis=1)
 
         return torch.mean(1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth)))
+
+class FocalLoss:
+    def __init__(self, pre_sigmoid=False,  alpha=0.25, gamma=2.0):
+        self.alpha = alpha
+        self.gamma = gamma
+        self.pre_sigmoid = pre_sigmoid
+
+    def __call__(self, inputs, targets):
+        # inputs.dims() = (B, H,W,1)---> (B, H*W)
+        # have to use contiguous since they may from a torch.view op
+        iflat = inputs.flatten(start_dim=1) if not self.pre_sigmoid else sigmoid(inputs.flatten(start_dim=1))
+        tflat = targets.flatten(start_dim=1)
+        bce = binary_cross_entropy(iflat, tflat, reduction="none")
+        probs =  torch.exp(-bce)
+        focal_loss = self.alpha * (1 - probs) ** self.gamma * bce
+        return focal_loss.mean()
 
 
 class DiceLoss:
