@@ -1,6 +1,6 @@
 from unittest import TestCase
 import torch
-from .losses import DCS
+from .losses import DCS, DiceLoss
 from .evaluation import dice_coeff
 import matplotlib.pyplot as plt
 
@@ -43,6 +43,70 @@ def modified_loss(_pred, _target, pre_sigmoid=True, smooth=1.):
     loss_mod = torch.mean(1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth)))
     return loss_mod
 
+class TestDiceLoss(TestCase):
+
+    def setUp(self) -> None:
+        self.a = torch.tensor([[[0.1,0.1], [0.9,0.9]],[[0.1, 0.1], [0.9, 0.9]]])
+        self.b = torch.tensor([[[1.0,0.0], [1.0,1.0]],[[1.0, 0.0], [1.0, 1.0]]])
+
+    def test_forward(self):
+        print(self.a.shape)
+        dice_loss = DiceLoss(pre_sigmoid=True, epsilon=1)
+        a_logit = torch.tensor([[[-200.0,-200.0], [1000,1000]],[[-200.0, -200.0], [1000, 1000]]])
+        loss = dice_loss(a_logit, self.b)
+        print('loss = ', loss)
+        # without sigmoid
+        dice_loss = DiceLoss(pre_sigmoid=False, epsilon=1)
+        loss = dice_loss(self.a, self.b)
+        print('loss = ', loss)
+
+    def test_backward_DCS(self):
+        weights = torch.tensor([[1.0, 1.0], [1.0, 1.0]], requires_grad=True)
+        pre_sigmoid = False
+        loss = DiceLoss(pre_sigmoid=pre_sigmoid)
+        learning_rate = 1.0
+        losses_mixed = []
+        losses_mod = []
+
+        print('training for 100 iterations')
+        for i in range(1000):
+            pred = torch.stack([self.a[0] * weights, self.a[1] * weights], axis=0)
+            L = loss(pred, self.b)
+            print("loss values: ", L)
+            external_grads = torch.tensor(1)
+            L.backward(external_grads)
+            # print('gradientes=> ', weights.grad)
+            with torch.no_grad():
+                weights -= learning_rate * weights.grad
+                weights.grad.zero_()
+                losses_mixed.append(L.cpu().detach().numpy())
+        # modification:
+        print('original: pred', torch.sigmoid(pred), " \n  target=", self.b)
+        weights = torch.tensor([[1.0, 1.0], [1.0, 1.0]], requires_grad=True)
+        loss_mod = DCS(pre_sigmoid=pre_sigmoid)
+
+        print('training for 100 iterations modified version')
+        for i in range(1000):
+            pred = torch.stack([self.a[0] * weights, self.a[1] * weights], axis=0)
+            L = loss_mod(pred, self.b)
+            print("loss values: ", L)
+            external_grads = torch.tensor(1)
+            L.backward(external_grads)
+            # print('gradientes=> ', weights.grad)
+            with torch.no_grad():
+                weights -= learning_rate * weights.grad
+                weights.grad.zero_()
+                losses_mod.append(L.cpu().detach().numpy())
+        print('modified: pred', torch.sigmoid(pred), " \n  target=", self.b)
+
+        print('plotting:  ')
+        plt.plot(losses_mod, label="Dice loss smooth")
+        plt.plot(losses_mixed, label="Dice loss V2")
+        plt.xlabel('iterations')
+        plt.ylabel('dice loss')
+        plt.legend()
+        plt.show()
+
 
 class TestDCS(TestCase):
     def setUp(self) -> None:
@@ -58,7 +122,7 @@ class TestDCS(TestCase):
         loss = DCS()
         loss_mod = loss(self.a, self.b)
         print('modified loss: ', loss_mod)
-        self.assertEqual(loss_mixed, loss_mod)
+        self.assertNotEqual(loss_mixed, loss_mod)
 
     def test_backward_DCS(self):
         weights = torch.tensor([[1.0,1.0], [1.0,1.0]], requires_grad=True)
@@ -106,7 +170,7 @@ class TestDCS(TestCase):
         plt.ylabel('dice loss')
         plt.show()
 
-        self.assertGreater(losses_mod[-1], losses_mixed[-1])
+        self.assertGreater(losses_mixed[-1], losses_mod[-1])
 
 
 

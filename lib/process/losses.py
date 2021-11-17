@@ -3,7 +3,7 @@ from torch import sigmoid
 from torch.autograd import Function
 from torch_geometric.data import Data
 
-from lib.process import printProgressBar
+from .progress_bar import printProgressBar
 from lib.utils import print_debug
 
 def estimatePositiveWeight(dataset, progress_bar=True):
@@ -68,6 +68,24 @@ class DCS(object):
 
         return torch.mean(1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth)))
 
+
+class DiceLoss:
+    def __init__(self, pre_sigmoid=False, epsilon=1E-10):
+        self.epsilon = epsilon
+        self.pre_sigmoid = pre_sigmoid
+
+    def __call__(self, inputs, targets):
+        # inputs.dims() = (B, H,W,1)---> (B, H*W)
+        # have to use contiguous since they may from a torch.view op
+        iflat = inputs.flatten(start_dim=1) if not self.pre_sigmoid else sigmoid(inputs.flatten(start_dim=1))
+        tflat = targets.flatten(start_dim=1)
+
+        A_sum = torch.sum(iflat * tflat, axis=1) + self.epsilon
+        B_sum = torch.sum(iflat + tflat, axis=1) + self.epsilon
+        C_sum = torch.sum((1 - iflat) * (1 - tflat), axis=1) + self.epsilon
+        D_sum = torch.sum(2 - iflat - tflat, axis=1) + self.epsilon
+
+        return torch.mean(1 - (A_sum / B_sum) - (C_sum / D_sum))
 
 class DiceCoeff(Function):
     """Dice coeff for individual examples"""
