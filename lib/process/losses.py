@@ -69,6 +69,32 @@ class DCS(object):
 
         return torch.mean(1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth)))
 
+
+class GeneralizedDiceLoss:
+    def __init__(self, pre_sigmoid=False, smooth=1E-5, epsilon=1E-10):
+        self.pre_sigmoid = pre_sigmoid
+        self.smooth = smooth
+        self.epsilon = epsilon
+
+    def __call__(self, inputs, targets):
+        # inputs.dims() = (B, H,W,1)---> (B, H*W)
+        # have to use contiguous since they may from a torch.view op
+        prob = inputs.flatten(start_dim=1) if not self.pre_sigmoid else sigmoid(inputs.flatten(start_dim=1))
+        f = targets.flatten(start_dim=1)
+        b = 1 - f
+        w_f = 1 / (self.epsilon + torch.sum(f, axis=1) ** 2)
+        w_b = 1 / (self.epsilon + torch.sum(b, axis=1) ** 2)
+        prob_f = prob * f
+        prob_b = (1 - prob) * b
+
+        A_sum = w_f * torch.sum(prob_f, axis=1)
+        B_sum = w_b * torch.sum(prob_b, axis=1)
+
+        C_sum = w_f * torch.sum(prob_f + f, axis=1)
+        D_sum = w_b * torch.sum(prob_b + b, axis=1)
+
+        return torch.mean(1 - 2 * ((A_sum + B_sum + self.smooth) / (C_sum + D_sum + self.smooth)))
+
 class FocalLoss:
     def __init__(self, pre_sigmoid=False,  alpha=0.25, gamma=2.0):
         self.alpha = alpha
