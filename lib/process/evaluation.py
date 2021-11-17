@@ -77,13 +77,14 @@ class Evaluator(object):
             self.update_metric(DCM)
         return DCM
 
-    def calculate_loss(self, model, progress_bar=False):
+    def calculate_metric(self, model, progress_bar=False, metrics=('val_loss')):
         if self.criterion is None:
             raise ValueError('Criterion must be specified in the instance of the object Evaluator')
-        loss = []
+        metrics_values = {m:[] for m in metrics}
         L = self.dataset.num_batches
+        prefix = f"Calculating metrics {metrics}: "
         if progress_bar:
-            printProgressBar(0, L, prefix='Eval-Loss:', suffix='Complete', length=50)
+            printProgressBar(0, L, prefix=prefix, suffix='Complete', length=50)
         i = 0
 
         self.dataset.enforce_batch(self._batch_size)
@@ -95,14 +96,18 @@ class Evaluator(object):
             prediction = model(features)
             if isinstance(prediction, Data):
                 prediction = to_torch_batch(prediction)
-            loss.append(self.criterion(prediction, label).item())
+            for m in metrics:
+                if m == 'val_loss':
+                    g = metrics_values['val_loss']
+                    g.append(self.criterion(prediction, label).item())
+                    metrics_values['val_loss'] = g
             if progress_bar:
-                printProgressBar(i, L, prefix='Eval-Loss:', suffix='Complete', length=50)
+                printProgressBar(i, L, prefix=prefix, suffix='Complete', length=50)
             else:
                 print('Eval-Loss: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
             i += 1
-        loss_value = np.array(loss).mean()
-        return loss_value
+        metrics_avgs = {m: np.array(g).mean() for m, g in metrics_values.items()}
+        return metrics_avgs
 
     def bin_scores(self, model, progress_bar=False):
         correct = 0
