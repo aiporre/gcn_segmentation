@@ -34,7 +34,6 @@ def estimatePositiveWeight(dataset, progress_bar=True):
     print('Estimated positive weight is :', positive_weight)
     return positive_weight
 
-# TODO: make the implementation of the losses functions: Dice, DICE-L1, Focal-Loss and generalized-Dice
 
 class DCS(object):
     """
