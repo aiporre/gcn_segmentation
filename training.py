@@ -2,6 +2,7 @@ import argparse
 import os.path
 
 from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape
+from lib.process.losses import estimatePositiveWeight
 
 try:
     from lib.datasets.gendostroke import GENDOSTROKE, endostroke_reshape
@@ -101,6 +102,8 @@ def process_command_line():
                         help="Monitor metric for saving models ")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
                         help="criterion: BCE or DCS or BCElogistic or DCSsigmoid")
+    parser.add_argument("-w", "--weight", type=float, default=None,
+                        help="Positive weight value for unbalanced datasets. If not given then it is estimated.")
     parser.add_argument("-u", "--upload", type=str2bool, default=False,
                         help="Flag T=upload training to the ftp server F=don't upload")
     parser.add_argument("-ct", "--checkpoint-timer", type=int, default=1800,
@@ -186,8 +189,8 @@ else:
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 if args.criterion == 'BCE':
-    criterion = nn.BCELoss()
-    sigmoid=False
+    criterion = nn.BCELoss() # criterion accepts probabilities, we assume that the network outputs prob
+    sigmoid=False # therefore, we don't calculate sigmoid during evaluation, we set eval flag to zero.
 elif args.criterion == 'BCElogistic':
     criterion = nn.BCEWithLogitsLoss()# criterion accepts logit. network produce logit
     sigmoid = True# evaluation flag to comput sigmoid because model output logit
@@ -198,11 +201,16 @@ elif args.criterion == 'DCSsigmoid':
     criterion = DCS(pre_sigmoid=True) # criterion accepts logit. network produce logit
     sigmoid = True # evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'BCEweightedlogistic':
-    criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([2.5]).to(device))  # criterion accepts logit. network produce logit
+    if args.pos_weight is None:
+        pos_weight = estimatePositiveWeight(dataset.train, progress_bar=args.progress_bar)
+    else:
+        pos_weight = args.pos_weight
+    pos_weight = torch.tensor([pos_weight])
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(device))  # criterion accepts logit. network produce logit
     sigmoid = True  # evaluation flag to comput sigmoid because model output logit
 else:
     criterion = nn.BCELoss()
-    sigmoid = True
+    sigmoid = False
 
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':

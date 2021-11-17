@@ -1,10 +1,39 @@
 import torch
 from torch import sigmoid
 from torch.autograd import Function
+from torch_geometric.data import Data
 
+from lib.process import printProgressBar
 from lib.utils import print_debug
 
-# TODO: make the implementation of the losses functions: BCE, wBCE, softDice, DICE-L1, Focal-Loss and generalized-Dice
+def estimatePositiveWeight(dataset, progress_bar=True):
+    positive_count = 0
+    negative_count = 0
+    L = dataset.num_batches
+    prefix_bar = 'Estimating positive weight: '
+    if progress_bar:
+        printProgressBar(0, L, prefix=prefix_bar, suffix='Complete', length=50)
+    i = 0
+    for d in dataset:
+        if isinstance(d, Data):
+            labels = d.y
+        else:
+            labels = d[1]
+        positive_count += (labels == 1.0).sum().cpu().item()
+        negative_count += (labels == 0.0).sum().cpu().item()
+        if progress_bar:
+            printProgressBar(i, L, prefix=prefix_bar, suffix='Complete', length=50)
+        else:
+            print(prefix_bar, i + 1, ' out of ', L, '(percentage {}%)'.format(100.0 * (i + 1) / L))
+        i += 1
+    if positive_count == 0 or negative_count == 0:
+        positive_weight = 1
+    else:
+        positive_weight = positive_count/negative_count if negative_count !=0 else 1
+    print('Estimated positive weight is :', positive_weight)
+    return positive_weight
+
+# TODO: make the implementation of the losses functions: Dice, DICE-L1, Focal-Loss and generalized-Dice
 
 class DCS(object):
     """
