@@ -40,7 +40,13 @@ class Trainer(object):
         self.lr = 0.01
         self.optimizer = None
         self._epoch = 0
-
+        self._loss_per_iter = []
+        # initialization of measurements collections
+        self._measurements = {"train_loss": [],
+                              "val_loss": [],
+                              "DCS": []}
+        for m in kwargs.get('measurements', []):
+            self._measurements[m] = []
 
     def update_lr(self, lr):
         if not self.lr==lr or self.optimizer is None:
@@ -92,6 +98,19 @@ class Trainer(object):
             loss.append(loss_batch)
         return loss
 
+    def update_loss_log(self, loss_values: list):
+        assert isinstance(loss_values, list), "loss_values input must be a list or a tuple"
+        self._loss_per_iter.extend(loss_values)
+
+    def update_measurement(self, mea_dict):
+        assert all([k in self._measurements.keys() for k in mea_dict.keys()]), \
+            "All measurements must be updated at  same time. Given: {}, Expected: {},".format(mea_dict.keys(),
+                                                                                              self._measurements.keys())
+        for t, m in mea_dict.items():
+            g = self._measurements[t]
+            g.append(m)
+            self._measurements = g
+
     def save_model(self, path):
         self.model.eval()
         torch.save(self.model.state_dict(), path)
@@ -102,7 +121,6 @@ class Trainer(object):
             self.model.load_state_dict(torch.load(path))
         else:
             print('Warning: there is no file :', path)
-
 
     def get_range(self,EPOCHS):
         return range(self._epoch,EPOCHS)
@@ -125,51 +143,64 @@ class Trainer(object):
             def argmax(iterable):
                 return max(enumerate(iterable), key=lambda x: x[1])[0]
             checkpoint_file = [checkpoint_file[argmax(e_list_ints)]]
+            prefix = checkpoint_file[0].split("_checkpoint.")[0]
         # presets the epochs
-        if not len(checkpoint_file)==0:
+        if len(checkpoint_file)>0:
             d1 = np.load(checkpoint_file[0], allow_pickle=True)
             self._epoch = d1.item().get('e')
-            print('loaded checkpoint: ', self._epoch)
+            best_metric = d1.item().get('best_metric')
+            print('loaded checkpoint: ', self._epoch, 'best metric: ', best_metric)
+        else:
+            best_metric = None
 
         lossall_file = list(filter(lambda x: x.endswith('lossall.npy') and x.startswith(prefix), files))
         measurements_file = list(filter(lambda x: x.endswith('measurements.npy') and x.startswith(prefix), files))
+        assert len(lossall_file) in [0,1], 'something failed while searching for the lossall file. ' \
+                                           'Found: %s' % str(lossall_file)
+        assert len(measurements_file) in [0,1], 'something failed while searching for the measurements file. ' \
+                                                'Found: %s' % str(measurements_file)
         if len(lossall_file)==0 or len(measurements_file)==0:
-            return [], [], [], [], [], []
+            print("loss files and measurements were not found")
         else:
             print('Loading checkpoint')
             loss_all = np.load(lossall_file[0])
-            measurements = np.load(measurements_file[0])
-            if len(measurements) ==0 :
-                return loss_all, [], [], [], [], []
-            return loss_all.tolist(), measurements[0].tolist(), measurements[1].tolist(), measurements[2].tolist() ,measurements[3].tolist(), measurements[4].tolist()
-
-    def save_checkpoint(self, loss_all, measurements, prefix,prefix_model, lr, e, EPOCHS, fig_dir, upload=False, best_metric=None):
-
+            self._loss_per_iter = loss_all.tolist()
+            measurements = np.load(measurements_file[0], allow_pickle=True)
+            measurements = measurements.item() # convert to dictionary
+            for k,v in measurements.items():
+                self._measurements[k] = v
+        return best_metric
+    def save_checkpoint(self, prefix, prefix_model, lr, e, EPOCHS, fig_dir, upload=False, best_metric=None):
         check_point = {'lr':lr,'e':e,'E':EPOCHS,'best_metric':best_metric}
         print('Saved checkpoint ', e,  '/', EPOCHS)
         np.save("{}_checkpoint.npy".format(prefix), check_point)
-        np.save('{}_lossall'.format(prefix), loss_all)
-        np.save('{}_measurements'.format(prefix), measurements)
-        if not len(loss_all)==0:
+        np.save('{}_lossall'.format(prefix), self._loss_per_iter)
+        np.save('{}_measurements'.format(prefix), self._measurements)
+        if not len(self._loss_per_iter)==0:
             fig = plt.figure(figsize=(15, 10))
+
             plt.subplot(3, 1, 1)
-            plt.plot(loss_all)
+            plt.plot(self._loss_per_iter)
             plt.xlabel('iterations')
             plt.ylabel('loss')
             plt.title('Loss history per iteration')
+
             plt.subplot(3, 1, 2)
-            plt.plot(measurements[4])
+            plt.plot(self._measurements["train_loss"], label="train loss")
+            plt.plot(self._measurements["val_loss"], label="val loss")
             plt.xlabel('epochs')
             plt.ylabel('loss')
             plt.title('Loss history avg per epoch')
+            plt.legend()
+
             plt.subplot(3, 1, 3)
-            plt.plot(measurements[0])
-            plt.plot(measurements[1])
-            plt.plot(measurements[2])
-            plt.plot(measurements[3])
+            for target, mea in self._measurements.items():
+                if target not in ["train_loss", "val_loss"]:
+                    plt.plot(self._measurements[target], label=target)
             plt.xlabel('epochs')
             plt.ylabel('metrics')
             plt.title('Evaluation metrics')
+            plt.legend()
             savefigs(fig_name='{}_loss_history'.format(prefix), fig_dir=fig_dir, fig=fig)
         if upload:
             print('Uploading training')
