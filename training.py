@@ -1,7 +1,10 @@
 import argparse
 import os.path
 
+from scipy.ndimage import measurements
+
 from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape
+from lib.process.evaluation import MetricsLogs
 from lib.process.losses import estimatePositiveWeight
 
 try:
@@ -128,7 +131,7 @@ MODEL_PATH = './{}-ds{}-id{}.pth'.format(args.net, args.dataset, args.id)
 EPOCHS = args.epochs
 BATCH = args.batch
 DEEPVESSEL =False
-MEASUREMENTS = ['accuracy', 'precision', 'recall']
+MEASUREMENTS = ["train_loss", "val_loss", "DCS", 'accuracy', 'precision', 'recall']
 
 if args.pre_transform:
     if args.dataset.startswith('G'):
@@ -215,18 +218,18 @@ else:
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, criterion=criterion, measurements=MEASUREMENTS)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True, criterion=trainer.criterion)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True, criterion=trainer.criterion, measurements=MEASUREMENTS)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
     trainer.load_model(model, MODEL_PATH)
 elif args.net == 'DeepVessel':
     trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH, measurements=MEASUREMENTS)
-    evaluator_val = KEvaluator(dataset, eval=True, criterion=trainer.criterion)
+    evaluator_val = KEvaluator(dataset, eval=True, criterion=trainer.criterion, measurements=MEASUREMENTS)
     evaluator_test= KEvaluator(dataset)
     trainer.load_model(model,MODEL_PATH)
     model = trainer.model
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion, measurements=MEASUREMENTS)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True, criterion=trainer.criterion)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True, criterion=trainer.criterion, measurements=MEASUREMENTS)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
     trainer.load_model(model, MODEL_PATH)
 
@@ -236,15 +239,15 @@ else:
 def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ'):
     prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{id}_"
     prefix_model = os.path.splitext(os.path.basename(MODEL_PATH))[0]
-    best_metric = trainer.load_checkpoint(prefix=prefix_checkpoint)
-    evaluator_val.best_metric = best_metric
+    eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
+    trainer.load_checkpoint(prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
     timer = Timer(args.checkpoint_timer)
     for e in trainer.get_range(EPOCHS):
         model.train() if not DEEPVESSEL else None
 
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
         mean_loss = np.array(loss).mean()
-        trainer.update_loss_log(loss)
+        eval_metric_logging.update_loss_log(loss)
         print('EPOCH ', e, 'loss epoch', mean_loss)
         if DEEPVESSEL:
             print('Evaluation Epoch {}/{}...'.format(e, EPOCHS))
@@ -258,28 +261,33 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
                 print('Evaluation Epoch {}/{}...'.format(e,EPOCHS))
                 model.eval()
                 # DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
-                dcs = evaluator_val.DCM(model, progress_bar=progress_bar)
-                a, p, r  = evaluator_val.bin_scores(model, progress_bar=progress_bar)
-                val_loss = evaluator_val.calculate_metric(model, progress_bar=progress_bar)
-                # P.append(p)
-                # A.append(a)
-                # R.append(r)
-                # VL.append(val_loss)
-                print('DCS score:', dcs, 'accuracy ', a, 'precision ', p, 'recall ', r, 'val_loss ', val_loss)
+                DCM = evaluator_val.DCM(model, progress_bar=progress_bar)
+                # include all the metrics calcuated using True Positive, False Negative and so on..
+                binary_metrics_names = tuple(eval_metric_logging.get_binary_metrics().keys())
+                binary_metrics = evaluator_val.bin_scores(model, progress_bar=progress_bar,
+                                                                    metrics=binary_metrics_names)
+                # include all non binary metrics. for example val_loss,
+                non_binary_metrics_names = tuple(eval_metric_logging.get_non_binary_metrics().keys())
+                non_binary_metrics = evaluator_val.calculate_metric(model, progress_bar=progress_bar,
+                                                                    metrics=non_binary_metrics_names)
+                metrics = dict(non_binary_metrics, **binary_metrics)
+                metrics["DCM"]=DCM
+                metrics["train_loss"]=mean_loss
+                eval_metric_str = ""
+                for m_name, m_value in metrics.items():
+                    eval_metric_str += f" {m_name}={m_value} "
+                print("Evaluation Metrics: ", eval_metric_str)
         # update metrics and loss logs in the trainer
-        trainer.update_measurement({'train_loss': mean_loss,
-                                    'val_loss': val_loss,
-                                    'DCS':dcs, 'accuracy': a,
-                                    'precision': p, 'recall': r})
+        eval_metric_logging.update_measurement(metrics)
         if timer.is_time():
-            if evaluator_val.is_best_metric():
+            if eval_metric_logging.is_best_metric():
                 trainer.save_model(MODEL_PATH)
-            best_metric = evaluator_val.best_metric
-            trainer.save_checkpoint(prefix_checkpoint, prefix_model,  lr, e, EPOCHS, fig_dir, args.upload, best_metric)
+            trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, fig_dir,
+                                    eval_metric_logging, args.upload)
     # loss_all = np.array(loss_all)
     trainer.save_model(MODEL_PATH)
-    best_metric = evaluator_val.best_metric
-    trainer.save_checkpoint(prefix_checkpoint, prefix_model,  lr, EPOCHS, EPOCHS, fig_dir, args.upload, best_metric)
+    trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, fig_dir,
+                            eval_metric_logging, args.upload)
 
 
 def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
