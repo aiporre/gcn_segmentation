@@ -10,25 +10,69 @@ import numpy as np
 
 from ..graph.batch import to_torch_batch
 
-
-class Evaluator(object):
-    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, monitor_metric="DCM", eval=False, criterion=None):
-
-        if eval:
-            self.dataset = dataset.val
+class MetricsLogs(object):
+    def __init__(self, measurements, monitor_metric="DCM"):
+        assert isinstance(measurements, list), "measurements must be a list"
+        # metrics calculations configuration
+        if measurements is None:
+            self._measurements = ["train_loss",
+                                  "val_loss",
+                                  "DCS",]
         else:
-            self.dataset = dataset.test
-        self._batch_size = batch_size
-        self.dataset.enforce_batch(self._batch_size)
-        self.to_tensor = to_tensor
-        self.device = device if device is not None else torch.device('cpu')
-        self.sigmoid = sigmoid
+            # additional metrics are introduced in measurements list.
+            self._measurements = measurements
+            self._measurements = list(set(self._measurements+["train_loss", "val_loss", "DCM"]))
+        # used to track metric of last evaluation.
         self.best_metric = None
         self.current_metric = None
         self.monitor_metric = monitor_metric
-        self.criterion = criterion
+        # List will be fill with loss per batch, every epoch produces a list that will extended here (logged)
+        self._loss_per_iter = []
+        # initialization of measurements collections. Measurements updated externally. The default metrics are:
+        # "train_loss": [],
+        # "val_loss": [],
+        # "DCS": []}
+        # additional metrics are introduced in measurements list.
+        self._metric_logs = {}
+        for m in self._measurements:
+            self._metric_logs[m] = []
 
-    def update_metric(self, metric):
+    def reset_measurements(self, measurements: dict):
+        # updates the list of measurements but resets the current metric logs
+        # measurements is dictionary of lists of measurements
+        assert isinstance(measurements, dict), "Measurements must be a dictionary of lists of measurements"
+        default_metrics = ["train_loss", "val_loss", "DCM"]
+        assert all([d in measurements.keys() for d in
+                    default_metrics]), "Failed to reset metrics, Measurements must contain default metrics"
+        self._measurements = list(measurements.keys())
+        self.best_metric = None
+        self.current_metric = None
+        self._metric_logs = measurements
+
+    def get_binary_metrics(self, metrics):
+        # Gets only binary metrics. Metrics is a dictionary
+        pass
+
+    def update_loss_log(self, loss_values: list):
+        # loss_values are the outputs from the training epoch. A list of loss values per batch in the epoch.
+        assert isinstance(loss_values, list), "loss_values input must be a list or a tuple"
+        # updates the list loss per iteration, equivalent to the loss per step
+        self._loss_per_iter.extend(loss_values)
+
+    def update_measurement(self, mea_dict):
+        # accepts a metric dictionary to update values.
+        assert all([k in self._measurements.keys() for k in mea_dict.keys()]), \
+            "All measurements must be updated at  same time. Given: {}, Expected: {},".format(mea_dict.keys(),
+                                                                                              self._measurements.keys())
+        for t, m in mea_dict.items():
+            g = self._measurements[t]
+            g.append(m)
+            self._measurements = g
+            if t == self.best_metric:
+                self._update_best_metric(m)
+
+    def _update_best_metric(self, metric):
+        # Updates the best metric
         self.current_metric = metric
         # it will occur only the first time when not metric was ever updated
         # NOTE: this can also be used to change the monitor metrics ... only works for the prev metric
@@ -40,6 +84,21 @@ class Evaluator(object):
 
     def is_best_metric(self):
         return self.best_metric is not None and self.current_metric >= self.best_metric
+
+class Evaluator(object):
+    def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False,  eval=False, criterion=None):
+
+        if eval:
+            self.dataset = dataset.val
+        else:
+            self.dataset = dataset.test
+        self._batch_size = batch_size
+        self.dataset.enforce_batch(self._batch_size)
+        self.to_tensor = to_tensor
+        self.device = device if device is not None else torch.device('cpu')
+        self.sigmoid = sigmoid
+        # used for getting the validation/test loss
+        self.criterion = criterion
 
     def DCM(self, model, progress_bar=True):
         DCM_accum = []
@@ -73,8 +132,8 @@ class Evaluator(object):
 
         # self.dataset.enforce_batch(1)
         DCM = np.array(DCM_accum).mean()
-        if self.monitor_metric == "DCM":
-            self.update_metric(DCM)
+        # if self.monitor_metric == "DCM":
+        #     self.update_metric(DCM)
         return DCM
 
     def calculate_metric(self, model, progress_bar=False, metrics=('val_loss')):

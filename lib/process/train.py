@@ -40,19 +40,11 @@ class Trainer(object):
         self.lr = 0.01
         self.optimizer = None
         self._epoch = 0
-        self._loss_per_iter = []
-        # initialization of measurements collections
-        self._measurements = {"train_loss": [],
-                              "val_loss": [],
-                              "DCS": []}
-        for m in kwargs.get('measurements', []):
-            self._measurements[m] = []
 
     def update_lr(self, lr):
         if not self.lr==lr or self.optimizer is None:
             self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
             self.lr = lr
-
 
     def train_batch(self):
         '''
@@ -79,6 +71,7 @@ class Trainer(object):
         self.optimizer.step()
 
         return loss.item()
+
     def train_epoch(self, lr=0.01, progress_bar=True):
         loss = []
         self.update_lr(lr=lr)
@@ -98,18 +91,6 @@ class Trainer(object):
             loss.append(loss_batch)
         return loss
 
-    def update_loss_log(self, loss_values: list):
-        assert isinstance(loss_values, list), "loss_values input must be a list or a tuple"
-        self._loss_per_iter.extend(loss_values)
-
-    def update_measurement(self, mea_dict):
-        assert all([k in self._measurements.keys() for k in mea_dict.keys()]), \
-            "All measurements must be updated at  same time. Given: {}, Expected: {},".format(mea_dict.keys(),
-                                                                                              self._measurements.keys())
-        for t, m in mea_dict.items():
-            g = self._measurements[t]
-            g.append(m)
-            self._measurements = g
 
     def save_model(self, path):
         self.model.eval()
@@ -125,7 +106,7 @@ class Trainer(object):
     def get_range(self,EPOCHS):
         return range(self._epoch,EPOCHS)
 
-    def load_checkpoint(self, prefix):
+    def load_checkpoint(self, prefix, eval_logging):
         files = get_npy_files()
         checkpoint_file = list(filter(lambda x: x.endswith('checkpoint.npy') and x.startswith(prefix), files))
         # finds the closest largest checkpoint file
@@ -149,10 +130,17 @@ class Trainer(object):
             d1 = np.load(checkpoint_file[0], allow_pickle=True)
             self._epoch = d1.item().get('e')
             best_metric = d1.item().get('best_metric')
-            print('loaded checkpoint: ', self._epoch, 'best metric: ', best_metric)
+            monitor_metric = d1.item().get('monitor_metric')
+            assert monitor_metric == eval_logging.monitor_metric, \
+                "Cannot load checkpoint if monitor metric is not the same. " \
+                "Expected {} found {}".format(eval_logging.monitor_metric, monitor_metric)
+            print('loaded checkpoint: ', self._epoch, 'best metric: ', best_metric, "monitor_metric: ", monitor_metric)
         else:
             best_metric = None
+        # presets the best metric
+        eval_logging.best_metric = best_metric
 
+        # loads the loss_log_per_iteration and metrics logs
         lossall_file = list(filter(lambda x: x.endswith('lossall.npy') and x.startswith(prefix), files))
         measurements_file = list(filter(lambda x: x.endswith('measurements.npy') and x.startswith(prefix), files))
         assert len(lossall_file) in [0,1], 'something failed while searching for the lossall file. ' \
@@ -164,39 +152,41 @@ class Trainer(object):
         else:
             print('Loading checkpoint')
             loss_all = np.load(lossall_file[0])
-            self._loss_per_iter = loss_all.tolist()
+            eval_logging.update_loss_log(loss_all.tolist())
             measurements = np.load(measurements_file[0], allow_pickle=True)
             measurements = measurements.item() # convert to dictionary
-            for k,v in measurements.items():
-                self._measurements[k] = v
-        return best_metric
-    def save_checkpoint(self, prefix, prefix_model, lr, e, EPOCHS, fig_dir, upload=False, best_metric=None):
-        check_point = {'lr':lr,'e':e,'E':EPOCHS,'best_metric':best_metric}
+            eval_logging.reset_measurements(measurements)
+
+    def save_checkpoint(self, prefix, prefix_model, lr, e, EPOCHS, fig_dir, eval_logging, upload=False):
+        check_point = {'lr':lr,'e':e,'E':EPOCHS,'best_metric': eval_logging.best_metric,
+                       'monitor_metric': eval_logging.monitor_metric}
         print('Saved checkpoint ', e,  '/', EPOCHS)
         np.save("{}_checkpoint.npy".format(prefix), check_point)
-        np.save('{}_lossall'.format(prefix), self._loss_per_iter)
-        np.save('{}_measurements'.format(prefix), self._measurements)
-        if not len(self._loss_per_iter)==0:
+        loss_per_iter = eval_logging.get_loss_per_iter()
+        np.save('{}_lossall'.format(prefix), loss_per_iter)
+        measurements = eval_logging.get_measurements()
+        np.save('{}_measurements'.format(prefix), measurements)
+        if not len(loss_per_iter)==0:
             fig = plt.figure(figsize=(15, 10))
 
             plt.subplot(3, 1, 1)
-            plt.plot(self._loss_per_iter)
+            plt.plot(loss_per_iter)
             plt.xlabel('iterations')
             plt.ylabel('loss')
             plt.title('Loss history per iteration')
 
             plt.subplot(3, 1, 2)
-            plt.plot(self._measurements["train_loss"], label="train loss")
-            plt.plot(self._measurements["val_loss"], label="val loss")
+            plt.plot(measurements["train_loss"], label="train loss")
+            plt.plot(measurements["val_loss"], label="val loss")
             plt.xlabel('epochs')
             plt.ylabel('loss')
             plt.title('Loss history avg per epoch')
             plt.legend()
 
             plt.subplot(3, 1, 3)
-            for target, mea in self._measurements.items():
+            for target, mea in measurements.items():
                 if target not in ["train_loss", "val_loss"]:
-                    plt.plot(self._measurements[target], label=target)
+                    plt.plot(measurements[target], label=target)
             plt.xlabel('epochs')
             plt.ylabel('metrics')
             plt.title('Evaluation metrics')
@@ -204,7 +194,7 @@ class Trainer(object):
             savefigs(fig_name='{}_loss_history'.format(prefix), fig_dir=fig_dir, fig=fig)
         if upload:
             print('Uploading training')
-            upload_training(prefix=prefix,EPOCHS=EPOCHS,lr=lr)
+            upload_training(prefix_model=prefix_model, prefix=prefix,EPOCHS=EPOCHS,lr=lr)
 
 class KTrainer(Trainer):
     def __init__(self,model,dataset,**kwargs):
@@ -267,13 +257,13 @@ class KTrainer(Trainer):
         # B = self.dataset._batch_size
         # history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
         # return history.history['loss']
-    def save_checkpoint(self, loss_all, measurements, prefix, prefix_model, lr, e, EPOCHS, fig_dir, upload=False, best_metric=None):
-        super(KTrainer,self).save_checkpoint(loss_all=loss_all, measurements=measurements,prefix=prefix,
+    def save_checkpoint(self, prefix, prefix_model, lr, e, EPOCHS, fig_dir, eval_logging, upload=False):
+        super(KTrainer,self).save_checkpoint(prefix=prefix, prefix_model=prefix_model,
                                              lr=lr,  e=e,
-                                             EPOCHS=EPOCHS, fig_dir=fig_dir, upload=False, best_metric=best_metric)
+                                             EPOCHS=EPOCHS, fig_dir=fig_dir, eval_logging=eval_logging, upload=False)
         if upload:
             print('Uploading training')
-            upload_training(prefix_model=prefix_model, prefix=prefix, EPOCHS=EPOCHS,lr=lr,dataset_name=dataset_name,h5format=True)
+            upload_training(prefix_model=prefix_model, prefix=prefix, EPOCHS=EPOCHS,lr=lr, h5format=True)
     # def compile(self):
     #     self.update_lr(self.lr)
     #     self.model.compile(optimizer=self.optimizer,
