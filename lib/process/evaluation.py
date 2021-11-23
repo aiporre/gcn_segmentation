@@ -2,6 +2,7 @@ import torch
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from torch_geometric.data import Data, Batch
+from hausdorff import hausdorff_distance
 
 from .losses import DiceCoeff
 from .progress_bar import printProgressBar
@@ -49,9 +50,23 @@ class MetricsLogs(object):
         self.current_metric = None
         self._metric_logs = measurements
 
-    def get_binary_metrics(self, metrics):
+    def get_binary_metrics(self):
         # Gets only binary metrics. Metrics is a dictionary
-        pass
+        # PPV stands for Positive Predicted Value
+        # COD stands for Coeficient of Determination
+        # AUC stands for area under the curve
+        supported_binary_metrics = ["AUC", "accuracy", "recall", "precision", "PPV", "COD"]
+        binary_metrics = {m: self._metric_logs[m] for m in supported_binary_metrics
+                          if m in self._metric_logs.keys()}
+        return binary_metrics
+
+    def get_non_binary_metrics(self):
+        # get only the non binary metrics.
+        # ASSD stands for Avg.Sym.Surf.Dist (ASSD)
+        supported_non_binary_metrics = ["train_loss", "val_loss", "DCM", "HD", "ASSD"]
+        non_binary_metrics = {m: self._metric_logs[m] for m in supported_non_binary_metrics
+                              if m in self._metric_logs.keys()}
+        return non_binary_metrics
 
     def update_loss_log(self, loss_values: list):
         # loss_values are the outputs from the training epoch. A list of loss values per batch in the epoch.
@@ -160,6 +175,23 @@ class Evaluator(object):
                     g = metrics_values['val_loss']
                     g.append(self.criterion(prediction, label).item())
                     metrics_values['val_loss'] = g
+                pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
+                # reorganize prediction according to the batch.
+                if not pred_mask.size(0) == label.size(0):
+                    b = label.size(0)
+                    pred_mask = pred_mask.view(b, -1)
+                if m == "DCM":
+                    dcm = dice_coeff(pred_mask, label).item()
+                    g = metrics_values["DCM"]
+                    g.append(dcm)
+                    metrics_values["DCM"] = g
+                if m == "HD":
+                    hd = hausdorff_distance(prediction.detach().cpu().numpy().reshape(-1,1),
+                                            label.detach().cpu().numpy().reshape(-1,1))
+                    g = metrics_values["HD"]
+                    g.append(hd)
+                    metrics_values["HD"] = g
+
             if progress_bar:
                 printProgressBar(i, L, prefix=prefix, suffix='Complete', length=50)
             else:
@@ -168,7 +200,7 @@ class Evaluator(object):
         metrics_avgs = {m: np.array(g).mean() for m, g in metrics_values.items()}
         return metrics_avgs
 
-    def bin_scores(self, model, progress_bar=False):
+    def bin_scores(self, model, progress_bar=False, metrics=("accuracy","recall","precision")):
         correct = 0
         TP = 0
         FP = 0
@@ -211,7 +243,14 @@ class Evaluator(object):
             else:
                 print('Bin Scores: in batch ', i+1, ' out of ', L, '(Completed {}%)'.format(100.0*(i+1)/L))
             i += 1
-        return correct/N, TP/(TP+FP+eps), TP/(TP+FN+eps)
+        metric_values = {}
+        if "accuracy" in metrics:
+            metric_values["accuracy"] = correct/N
+        if "recall" in metrics:
+            metric_values["precision"] = (TP+eps)/(TP+FP+eps)
+        if "precision" in metrics:
+            metric_values["precision"] = (TP+eps)/(TP+FN+eps)
+        return metric_values
 
     def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None):
 
