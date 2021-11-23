@@ -261,7 +261,7 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
                 print('Evaluation Epoch {}/{}...'.format(e,EPOCHS))
                 model.eval()
                 # DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
-                DCM = evaluator_val.DCM(model, progress_bar=progress_bar)
+                # DCM = evaluator_val.DCM(model, progress_bar=progress_bar)
                 # include all the metrics calcuated using True Positive, False Negative and so on..
                 binary_metrics_names = tuple(eval_metric_logging.get_binary_metrics().keys())
                 binary_metrics = evaluator_val.bin_scores(model, progress_bar=progress_bar,
@@ -271,7 +271,7 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
                 non_binary_metrics = evaluator_val.calculate_metric(model, progress_bar=progress_bar,
                                                                     metrics=non_binary_metrics_names)
                 metrics = dict(non_binary_metrics, **binary_metrics)
-                metrics["DCM"]=DCM
+                # metrics["DCM"]=DCM
                 metrics["train_loss"]=mean_loss
                 eval_metric_str = ""
                 for m_name, m_value in metrics.items():
