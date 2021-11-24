@@ -305,13 +305,13 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ"):
     savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
     # plt.show()
     print('calculating stats...')
-    measurements_test = [m for m in MEASUREMENTS if m not in ["train_loss", "val_loss"]]
-    metric_logs = MetricsLogs(measurements_test, monitor_metric=args.monitor_metric)
+    metric_logs = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     binary_metrics_names = tuple(metric_logs.get_binary_metrics().keys())
     binary_metrics = evaluator_test.bin_scores(model, progress_bar=progress_bar,
                                               metrics=binary_metrics_names)
     # include all non binary metrics. for example val_loss,
-    non_binary_metrics_names = tuple(metric_logs.get_non_binary_metrics().keys())
+    non_binary_metrics_names = list(metric_logs.get_non_binary_metrics().keys())
+    non_binary_metrics_names.pop(non_binary_metrics_names.index("train_loss"))
     non_binary_metrics = evaluator_test.calculate_metric(model, progress_bar=progress_bar,
                                                         metrics=non_binary_metrics_names)
     metrics = dict(non_binary_metrics, **binary_metrics)
