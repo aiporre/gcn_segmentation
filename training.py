@@ -305,8 +305,18 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ"):
     savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
     # plt.show()
     print('calculating stats...')
-    print('DCM factor: ', evaluator_test.DCM(model, progress_bar=progress_bar))
-    print('stats: PAR ', evaluator_test.bin_scores(model, progress_bar=progress_bar))
+    metric_logs = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
+    binary_metrics_names = tuple(metric_logs.get_binary_metrics().keys())
+    binary_metrics = evaluator_test.bin_scores(model, progress_bar=progress_bar,
+                                              metrics=binary_metrics_names)
+    # include all non binary metrics. for example val_loss,
+    non_binary_metrics_names = tuple(metric_logs.get_non_binary_metrics().keys())
+    non_binary_metrics = evaluator_test.calculate_metric(model, progress_bar=progress_bar,
+                                                        metrics=non_binary_metrics_names)
+    metrics = dict(non_binary_metrics, **binary_metrics)
+    print('Calculated metrics testing set: \n', ''.join([f"{m} = {v}" for m,v in metrics.items()]))
+    # print('DCM factor: ', evaluator_test.DCM(model, progress_bar=progress_bar))
+    # print('stats: PAR ', evaluator_test.bin_scores(model, progress_bar=progress_bar))
 
 
 if not args.skip_training:
