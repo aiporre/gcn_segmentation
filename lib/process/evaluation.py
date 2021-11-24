@@ -259,7 +259,7 @@ class Evaluator(object):
             FN = pred_mask[:,mask_neg].ne(label[:,mask_neg]).sum(axis=1)
 
             if "accuracy" in metrics:
-                metric_values["accuracy"].append(torch.mean(correct/N).item())
+                metric_values["accuracy"].append(torch.mean(correct/N+eps).item())
             if "recall" in metrics:
                 metric_values["recall"].append(torch.mean((TP)/(TP+FP+eps)).item())
             if "precision" in metrics:
@@ -352,7 +352,7 @@ class Evaluator(object):
             p = (A + epsilon)/(A+B+epsilon)
             r = (A+epsilon)/(A+C+epsilon)
             dcm = 2*(p*r+epsilon)/(p+r+epsilon)
-            print('Accuracy: ', a ,' Precision: ', p, ', Recall: ', r, 'Dice: ', dcm)
+            print('OVERLAY IMAGE STATS ==> Accuracy: ', a ,' Precision: ', p, ', Recall: ', r, 'Dice: ', dcm)
         else:
             ax1 = fig.add_subplot(2, 2, 1)
             ax2 = fig.add_subplot(2, 2, 2)
