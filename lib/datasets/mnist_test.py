@@ -16,17 +16,17 @@ class MNISTTest(TestCase):
     def test_shapes(self):
         images, labels = data.train.next_batch(32, shuffle=False)
         self.assertEqual((32, 1, 28, 28), images.shape)
-        self.assertEqual(labels.shape, (32, 28, 28))
+        self.assertEqual(labels.shape, (32, 1, 28, 28))
         data.train.next_batch(data.train.num_examples - 32, shuffle=False)
 
         images, labels = data.val.next_batch(32, shuffle=False)
         self.assertEqual((32, 1, 28, 28), images.shape)
-        self.assertEqual(labels.shape, (32, 28, 28))
+        self.assertEqual(labels.shape, (32, 1, 28, 28))
         data.val.next_batch(data.val.num_examples - 32, shuffle=False)
 
         images, labels = data.test.next_batch(32, shuffle=False)
         self.assertEqual((32, 1, 28, 28), images.shape)
-        self.assertEqual(labels.shape, (32, 28, 28))
+        self.assertEqual(labels.shape, (32, 1, 28, 28))
         data.test.next_batch(data.test.num_examples - 32, shuffle=False)
 
     def test_images(self):

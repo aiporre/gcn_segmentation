@@ -114,9 +114,9 @@ def read_data_sets(train_dir,
 
   options = dict(dtype=dtype, reshape=reshape, seed=seed)
 
-  train = MDataset(train_images, train_labels, **options)
-  validation = MDataset(validation_images, validation_labels, **options)
-  test = MDataset(test_images, test_labels, **options)
+  train = MDataset(train_images, train_labels, options)
+  validation = MDataset(validation_images, validation_labels, options)
+  test = MDataset(test_images, test_labels, options)
 
   return MDatasets(train=train, validation=validation, test=test)
 
@@ -184,10 +184,11 @@ class MNIST(Datasets):
 
     def _preprocess_labels(self, images):
         threshold = 0.1
-        images = np.reshape(images, (-1, self.height, self.width,
-                            self.num_channels))
+        # images = np.reshape(images, (-1, self.height, self.width,
+        #                     self.num_channels))
+        images = np.reshape(images, (-1, self.num_channels, self.height, self.width))
         masks = (images > threshold).astype(np.float)
-        return masks.squeeze()
+        return masks#.squeeze()
 def get_pattern():
 
 
