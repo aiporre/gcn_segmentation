@@ -18,7 +18,7 @@ class MetricsLogs(object):
         if measurements is None:
             self._measurements = ["train_loss",
                                   "val_loss",
-                                  "DCS",]
+                                  "DCM",]
         else:
             # additional metrics are introduced in measurements list.
             self._measurements = measurements
@@ -45,6 +45,10 @@ class MetricsLogs(object):
         default_metrics = ["train_loss", "val_loss", "DCM"]
         assert all([d in measurements.keys() for d in
                     default_metrics]), "Failed to reset metrics, Measurements must contain default metrics"
+        if not all([d in self._measurements for d in measurements.keys()]) \
+            or not all([d in measurements.keys() for d in self._measurements]):
+            print("Warning: reset metrics will overwrite existing metrics list with different values. Before: \n "
+                  "{} \n After: {}".format(self._measurements, measurements.keys()))
         self._measurements = list(measurements.keys())
         self.best_metric = None
         self.current_metric = None
@@ -55,7 +59,7 @@ class MetricsLogs(object):
         # PPV stands for Positive Predicted Value
         # COD stands for Coeficient of Determination
         # AUC stands for area under the curve
-        supported_binary_metrics = ["AUC", "accuracy", "recall", "precision", "PPV", "COD"]
+        supported_binary_metrics = ["AUC", "accuracy", "recall", "precision", "PPV"]
         binary_metrics = {m: self._metric_logs[m] for m in supported_binary_metrics
                           if m in self._metric_logs.keys()}
         return binary_metrics
@@ -63,7 +67,7 @@ class MetricsLogs(object):
     def get_non_binary_metrics(self):
         # get only the non binary metrics.
         # ASSD stands for Avg.Sym.Surf.Dist (ASSD)
-        supported_non_binary_metrics = ["train_loss", "val_loss", "DCM", "HD", "ASSD"]
+        supported_non_binary_metrics = ["train_loss", "val_loss", "DCM", "HD", "ASSD", "COD"]
         non_binary_metrics = {m: self._metric_logs[m] for m in supported_non_binary_metrics
                               if m in self._metric_logs.keys()}
         return non_binary_metrics
@@ -74,15 +78,15 @@ class MetricsLogs(object):
         # updates the list loss per iteration, equivalent to the loss per step
         self._loss_per_iter.extend(loss_values)
 
-    def update_measurement(self, mea_dict):
+    def update_measurement(self, metric_values):
         # accepts a metric dictionary to update values.
-        assert all([k in self._measurements.keys() for k in mea_dict.keys()]), \
-            "All measurements must be updated at  same time. Given: {}, Expected: {},".format(mea_dict.keys(),
+        assert all([k in self._measurements for k in metric_values.keys()]), \
+            "All measurements must be updated at  same time. Given: {}, Expected: {},".format(metric_values.keys(),
                                                                                               self._measurements.keys())
-        for t, m in mea_dict.items():
-            g = self._measurements[t]
+        for t, m in metric_values.items():
+            g = self._metric_logs[t]
             g.append(m)
-            self._measurements = g
+            self._metric_logs[t] = g
             if t == self.best_metric:
                 self._update_best_metric(m)
 
@@ -99,6 +103,12 @@ class MetricsLogs(object):
 
     def is_best_metric(self):
         return self.best_metric is not None and self.current_metric >= self.best_metric
+
+    def get_measurements(self):
+        return self._metric_logs
+
+    def get_loss_per_iter(self):
+        return self._loss_per_iter
 
 class Evaluator(object):
     def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False,  eval=False, criterion=None):
@@ -142,7 +152,7 @@ class Evaluator(object):
             if progress_bar:
                 printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
             else:
-                print('DCS Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+                print('DCM Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
             i += 1
 
         # self.dataset.enforce_batch(1)
@@ -152,9 +162,9 @@ class Evaluator(object):
         return DCM
 
     def calculate_metric(self, model, progress_bar=False, metrics=('val_loss')):
-        if self.criterion is None:
+        if 'val_loss' in metrics and self.criterion is None:
             raise ValueError('Criterion must be specified in the instance of the object Evaluator')
-        metrics_values = {m:[] for m in metrics}
+        metrics_values = {m:[] for m in metrics if m != "train_loss"}
         L = self.dataset.num_batches
         prefix = f"Calculating metrics {metrics}: "
         if progress_bar:
@@ -188,10 +198,16 @@ class Evaluator(object):
                 if m == "HD":
                     hd = hausdorff_distance(prediction.detach().cpu().numpy().reshape(-1,1),
                                             label.detach().cpu().numpy().reshape(-1,1))
+                    hd = float(hd)
                     g = metrics_values["HD"]
                     g.append(hd)
                     metrics_values["HD"] = g
-
+                if m == "COD":
+                    SS_res = torch.nn.functional.mse_loss(prediction, label)
+                    pred_mean = pred_mask.mean(axis=0)
+                    SS_var = torch.mean((label-pred_mean)**2)
+                    COD = (1 - (SS_res/SS_var)).item()
+                    metrics_values["COD"].append(COD)
             if progress_bar:
                 printProgressBar(i, L, prefix=prefix, suffix='Complete', length=50)
             else:
@@ -201,15 +217,17 @@ class Evaluator(object):
         return metrics_avgs
 
     def bin_scores(self, model, progress_bar=False, metrics=("accuracy","recall","precision")):
-        correct = 0
-        TP = 0
-        FP = 0
-        FN = 0
-        N = 0
+        # correct = 0
+        # TP = 0
+        # FP = 0
+        # FN = 0
+        # N = 0
+        metric_values = {m: [] for m in metrics}
         eps = 0.0001
         L = self.dataset.num_batches
+        prefix_text = f"Calculating binary metrics {metrics}: "
         if progress_bar:
-            printProgressBar(0, L, prefix='Binary Scores:', suffix='Complete', length=50)
+            printProgressBar(0, L, prefix=prefix_text, suffix='Complete', length=50)
         i = 0
         self.dataset.enforce_batch(self._batch_size)
         for image, label in self.dataset.batches():
@@ -222,35 +240,44 @@ class Evaluator(object):
             prediction = model(features)
             if isinstance(prediction, Data):
                 prediction = to_torch_batch(prediction)
-            pred = (sigmoid(prediction) > 0.5).long() if self.sigmoid else (prediction > 0.5).long()
-            if not pred.size(0) == label.size(0):
+            pred_mask = (sigmoid(prediction) > 0.5).long() if self.sigmoid else (prediction > 0.5).long()
+            if not pred_mask.size(0) == label.size(0):
                 b = label.size(0)
-                pred = pred.view(b, -1)
+                pred_mask = pred_mask.view(b, -1)
             if len(label.shape)>2:
                 b = label.size(0)
                 label = label.view(b, -1)
-                pred = pred.view(b, -1)
-            correct += pred.eq(label).sum().item()
-            N += label.numel()
-            mask_pos = label.eq(1).squeeze().nonzero()
-            mask_neg = label.eq(0).squeeze().nonzero()
-            TP += pred[:,mask_pos].eq(label[:,mask_pos]).sum().item()
-            FP += pred[:,mask_pos].ne(label[:,mask_pos]).sum().item()
-            FN += pred[:,mask_neg].ne(label[:,mask_neg]).sum().item()
+                pred_mask = pred_mask.view(b, -1)
+            correct = pred_mask.eq(label).sum(axis=1)
+            N = label.eq(label).sum(axis=1)
+            mask_pos = torch.nonzero(label.eq(1).squeeze())
+            mask_neg = torch.nonzero(label.eq(0).squeeze())
+            TP = pred_mask[:,mask_pos].eq(label[:,mask_pos]).sum(axis=1)
+            FP = pred_mask[:,mask_pos].ne(label[:,mask_pos]).sum(axis=1)
+            FN = pred_mask[:,mask_neg].ne(label[:,mask_neg]).sum(axis=1)
+
+            if "accuracy" in metrics:
+                metric_values["accuracy"].append(torch.mean(correct/N).item())
+            if "recall" in metrics:
+                metric_values["recall"].append(torch.mean((TP+eps)/(TP+FP+eps)).item())
+            if "precision" in metrics:
+                metric_values["precision"].append(torch.mean((TP+eps)/(TP+FN+eps)).item())
 
             if progress_bar:
-                printProgressBar(i, L, prefix='Acc, Rec, Pre:', suffix='Complete', length=50)
+                printProgressBar(i, L, prefix=prefix_text, suffix='Complete', length=50)
             else:
-                print('Bin Scores: in batch ', i+1, ' out of ', L, '(Completed {}%)'.format(100.0*(i+1)/L))
+                if i % int(L/10) == 0 or i == 0:
+                    print('Bin Scores: in batch ', i+1, ' out of ', L, '(Completed {}%)'.format(100.0*(i+1)/L))
             i += 1
-        metric_values = {}
-        if "accuracy" in metrics:
-            metric_values["accuracy"] = correct/N
-        if "recall" in metrics:
-            metric_values["precision"] = (TP+eps)/(TP+FP+eps)
-        if "precision" in metrics:
-            metric_values["precision"] = (TP+eps)/(TP+FN+eps)
-        return metric_values
+        # metric_values = {}
+        # if "accuracy" in metrics:
+        #     metric_values["accuracy"] = correct/N
+        # if "recall" in metrics:
+        #     metric_values["precision"] = (TP+eps)/(TP+FP+eps)
+        # if "precision" in metrics:
+        #     metric_values["precision"] = (TP+eps)/(TP+FN+eps)
+        metrics_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
+        return metrics_avgs
 
     def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None):
 
@@ -292,6 +319,7 @@ class Evaluator(object):
         if not fig:
             fig = plt.figure(figsize=figsize)
         if overlap:
+            mask = mask.squeeze()
             pred_mask = pred_mask.squeeze()
             cmap_TP = ListedColormap([[73/255, 213/255, 125/255, 1]])
             cmap_FP = ListedColormap([[255/255, 101/255, 80/255, 1]])
@@ -518,7 +546,7 @@ class KEvaluator(Evaluator):
                 printProgressBar(i, L, prefix='DCM:', suffix='Complete', length=50)
             else:
                 if (i+1)%10 == 0:
-                    print('DCS Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+                    print('DCM Epoch: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
             i += 1
 
         # self.dataset.enforce_batch(1)

@@ -131,7 +131,7 @@ MODEL_PATH = './{}-ds{}-id{}.pth'.format(args.net, args.dataset, args.id)
 EPOCHS = args.epochs
 BATCH = args.batch
 DEEPVESSEL =False
-MEASUREMENTS = ["train_loss", "val_loss", "DCS", 'accuracy', 'precision', 'recall']
+MEASUREMENTS = ["train_loss", "val_loss", "DCM", 'accuracy', 'precision', 'recall', "HD", "COD"]
 
 if args.pre_transform:
     if args.dataset.startswith('G'):
@@ -144,6 +144,7 @@ else:
 
 if args.dataset == 'MNIST':
     dataset = MNIST(background=args.background)
+    reshape_transform = None
 elif args.dataset == 'GMNIST':
     dataset = GMNIST(background=args.background)
     reshape_transform = None
@@ -167,6 +168,7 @@ elif args.dataset == 'GISLES2018':
     reshape_transform = isles2018_reshape
 else:
     dataset = MNIST()
+    reshape_transform = None
 
 if args.net=='GFCN':
     model = GFCN()
@@ -217,20 +219,20 @@ else:
 
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
-    trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, criterion=criterion, measurements=MEASUREMENTS)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True, criterion=trainer.criterion, measurements=MEASUREMENTS)
-    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
+    trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, criterion=criterion)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, eval=True, criterion=trainer.criterion)
+    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid)
     trainer.load_model(model, MODEL_PATH)
 elif args.net == 'DeepVessel':
-    trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH, measurements=MEASUREMENTS)
-    evaluator_val = KEvaluator(dataset, eval=True, criterion=trainer.criterion, measurements=MEASUREMENTS)
+    trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH)
+    evaluator_val = KEvaluator(dataset, eval=True, criterion=trainer.criterion)
     evaluator_test= KEvaluator(dataset)
     trainer.load_model(model,MODEL_PATH)
     model = trainer.model
 else:
-    trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion, measurements=MEASUREMENTS)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric, eval=True, criterion=trainer.criterion, measurements=MEASUREMENTS)
-    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, monitor_metric=args.monitor_metric)
+    trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, eval=True, criterion=trainer.criterion)
+    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid)
     trainer.load_model(model, MODEL_PATH)
 
 
@@ -290,14 +292,14 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
                             eval_metric_logging, args.upload)
 
 
-def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET'):
+def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ"):
     model.eval() if not DEEPVESSEL else None
     print('plotting one prediction')
     fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
                                         reshape_transform=reshape_transform)
     result = evaluator_test.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
                                         reshape_transform=reshape_transform)
-    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{args.id}"
+    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{id}"
     z, y, x = result.shape[0], result.shape[1], result.shape[2]
     result.tofile('{}_vol_{}x{}x{}.raw'.format(prefix_checkpoint, x, y, z))
     savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
