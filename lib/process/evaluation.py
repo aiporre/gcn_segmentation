@@ -203,10 +203,11 @@ class Evaluator(object):
                     g.append(hd)
                     metrics_values["HD"] = g
                 if m == "COD":
+                    eps = 1E-10
                     SS_res = torch.nn.functional.mse_loss(prediction, label)
                     pred_mean = pred_mask.mean(axis=0)
                     SS_var = torch.mean((label-pred_mean)**2)
-                    COD = (1 - (SS_res/SS_var)).item()
+                    COD = (1 - (SS_res+eps)/(SS_var+eps)).item()
                     metrics_values["COD"].append(COD)
             if progress_bar:
                 printProgressBar(i, L, prefix=prefix, suffix='Complete', length=50)
