@@ -221,18 +221,18 @@ model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, criterion=criterion)
     evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, eval=True, criterion=trainer.criterion)
-    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid)
+    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, criterion=criterion)
     trainer.load_model(model, MODEL_PATH)
 elif args.net == 'DeepVessel':
     trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH)
     evaluator_val = KEvaluator(dataset, eval=True, criterion=trainer.criterion)
-    evaluator_test= KEvaluator(dataset)
+    evaluator_test= KEvaluator(dataset, criterion=criterion)
     trainer.load_model(model,MODEL_PATH)
     model = trainer.model
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion)
     evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, eval=True, criterion=trainer.criterion)
-    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid)
+    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, criterion=criterion)
     trainer.load_model(model, MODEL_PATH)
 
 
