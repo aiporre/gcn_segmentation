@@ -131,7 +131,7 @@ MODEL_PATH = './{}-ds{}-id{}.pth'.format(args.net, args.dataset, args.id)
 EPOCHS = args.epochs
 BATCH = args.batch
 DEEPVESSEL =False
-MEASUREMENTS = ["train_loss", "val_loss", "DCM", 'accuracy', 'precision', 'recall', "HD", "COD"]
+MEASUREMENTS = ["train_loss", "val_loss", "DCM", 'accuracy', 'precision', 'recall', "HD", "COD", "PPV"]
 
 if args.pre_transform:
     if args.dataset.startswith('G'):

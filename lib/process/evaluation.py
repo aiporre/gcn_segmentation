@@ -211,7 +211,9 @@ class Evaluator(object):
             if progress_bar:
                 printProgressBar(i, L, prefix=prefix, suffix='Complete', length=50)
             else:
-                print('Eval-Loss: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+
+                if i % int(L/10) == 0 or i == 0:
+                    print('Eval-Loss: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
             i += 1
         metrics_avgs = {m: np.array(g).mean() for m, g in metrics_values.items()}
         return metrics_avgs
@@ -259,10 +261,11 @@ class Evaluator(object):
             if "accuracy" in metrics:
                 metric_values["accuracy"].append(torch.mean(correct/N).item())
             if "recall" in metrics:
-                metric_values["recall"].append(torch.mean((TP+eps)/(TP+FP+eps)).item())
+                metric_values["recall"].append(torch.mean((TP)/(TP+FP+eps)).item())
             if "precision" in metrics:
-                metric_values["precision"].append(torch.mean((TP+eps)/(TP+FN+eps)).item())
-
+                metric_values["precision"].append(torch.mean((TP)/(TP+FN+eps)).item())
+            if "PPV" in metrics:
+                metric_values["PPV"].append(torch.mean((TP)/(N+eps)).item())
             if progress_bar:
                 printProgressBar(i, L, prefix=prefix_text, suffix='Complete', length=50)
             else:
