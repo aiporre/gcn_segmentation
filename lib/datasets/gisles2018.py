@@ -100,7 +100,8 @@ class _GISLES2018(Dataset):
                  pre_transform=None,
                  pre_filter=None,
                  fold=1,
-                 split_dir="TRAINING"):
+                 split_dir="TRAINING", 
+                 modalities=("CTN", " CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT")):
         print('Warning: In the ISLES2018 dataset, the test/train rate is predefined by file distribution.')
         self.root = root
         self.test_rate = 1
@@ -118,6 +119,7 @@ class _GISLES2018(Dataset):
         super(_GISLES2018, self).__init__(root, transform, pre_transform, pre_filter)
         self.raw_dir = raw_dir
         self.processed_dir = processed_dir
+        self.modalities = modalities
 
     # @property
     # def raw_dir(self):
@@ -172,7 +174,14 @@ class _GISLES2018(Dataset):
         for case_id in self.raw_file_names:
             raw_path = os.path.join(self.root, 'raw', self.split_dir, case_id)
             patient_files = get_files_patient_path(raw_path)
-            ct_scan = load_nifti(patient_files["CTP-CBV"][0], neurological_convension=True)
+            if len(self.modalities) > 1:
+                ct_scan = np.stack(
+                    [load_nifti(patient_files[mod][0], neurological_convension=True) for mod in self.modalities],
+                    axis=-1)
+            else:
+                mod = self.modalities[0]
+                ct_scan = load_nifti(patient_files[mod][0], neurological_convension=True)
+
             ct_scan = ct_scan.astype(np.float)
             ct_scan_norm = (ct_scan-ct_scan.min())/(ct_scan.max()-ct_scan.min())
             lesion_files = patient_files['LESION']
@@ -183,15 +192,16 @@ class _GISLES2018(Dataset):
             for i, case_index in enumerate(self.indices.get_by_case_id(case_id)):
                 printProgressBar(cnt_slices + i, len(self.indices), prefix=progressBarPrefix, suffix=f'sample={case_index}', length=50)
                 # Read data from `raw_path`.
-                image = ct_scan_norm[i, :, :]
-                mask = lesion_mask[i, :, :]
+                image = ct_scan_norm[i]
+                mask = lesion_mask[i]
                 if self.pre_transform is not None:
                     data = (image, mask)
                     data = self.pre_transform(data)
                 else:
                     grid = grid_tensor((NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X']), connectivity=4)
                     num_elements = NORMALIZED_SHAPE['Y'] * NORMALIZED_SHAPE['X']
-                    grid.x = torch.tensor(image.reshape(num_elements)).float()
+                    nodes_shape = num_elements if len(image.shape) > 2 else (num_elements, -1)
+                    grid.x = torch.tensor(image.reshape(nodes_shape)).float()
                     grid.y = torch.tensor([mask.reshape(num_elements)]).float()
                     data = grid
 
