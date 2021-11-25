@@ -85,10 +85,9 @@ class GISLES2018(Datasets):
         self.batch_size = batch_size
         self.test_rate = test_rate
         train_dataset = _GISLES2018(self.data_dir, dataset_type='train', transform=T.Cartesian(),
-                                   pre_transform=pre_transform, fold=fold)
+                                   pre_transform=pre_transform, fold=fold, modalities=modalities)
         val_dataset = _GISLES2018(self.data_dir, dataset_type='val', transform=T.Cartesian(),
-                                   pre_transform=pre_transform, fold=fold)
-
+                                   pre_transform=pre_transform, fold=fold, modalities=modalities)
         test_dataset = _GISLES2018(self.data_dir, dataset_type='test', transform=T.Cartesian(),
                                   pre_transform=pre_transform, fold=fold, modalities=modalities)
 
