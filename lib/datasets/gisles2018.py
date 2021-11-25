@@ -28,7 +28,8 @@ NORMALIZED_SHAPE = {'Z': None, 'Y': 256, 'X': 256}
 
 def get_modalities(arg_mod):
     modalities = {"CTN": "CTN", "TMAX": "CTP-TMAX", "CBF": "CTP=CBF", "CBV":"CTP-CBV", "MTT":"CTP-MTT"}
-    return (modalities[mod] for mod in arg_mod)
+    output_modalities = [modalities[mod] for mod in arg_mod]
+    return output_modalities
 
 
 def isles2018_reshape(x):
