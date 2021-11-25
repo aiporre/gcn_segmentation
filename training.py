@@ -3,7 +3,7 @@ import os.path
 
 from scipy.ndimage import measurements
 
-from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape
+from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape, get_modalities
 from lib.process.evaluation import MetricsLogs
 from lib.process.losses import estimatePositiveWeight
 
@@ -117,6 +117,8 @@ def process_command_line():
                         help="produce overlay plot.")
     parser.add_argument("-N", "--sample-to-plot", type=int, default=190,
                         help="sample to plot from the dataset")
+    parser.add_argument("--mod", nargs="+", type=str, default=["CTN", "TMAX", "CBF", "CBV", "MTT"],
+                        help=" Modalities for the ISLES2018 dataset. Defaults to [\"CTN\", \"TMAX\", \"CBF\", \"CBV\", \"MTT\"]")
     return parser.parse_args()
 
 # CONSTANST
@@ -132,6 +134,8 @@ EPOCHS = args.epochs
 BATCH = args.batch
 DEEPVESSEL =False
 MEASUREMENTS = ["train_loss", "val_loss", "DCM", 'accuracy', 'precision', 'recall', "HD", "COD", "PPV"]
+MODALITIES = get_modalities(args.mod) if args.dataset == 'GISLES2018' else None
+NUM_INPUTS = 1 if MODALITIES is None else len(MODALITIES)
 
 if args.pre_transform:
     if args.dataset.startswith('G'):
@@ -164,30 +168,30 @@ elif args.dataset == 'GENDOSTROKE':
     dataset = GENDOSTROKE(data_dir=args.endodir)
     reshape_transform = endostroke_reshape
 elif args.dataset == 'GISLES2018':
-    dataset = GISLES2018(data_dir=args.islesdir)
+    dataset = GISLES2018(data_dir=args.islesdir, modalities=MODALITIES)
     reshape_transform = isles2018_reshape
 else:
     dataset = MNIST()
     reshape_transform = None
 
 if args.net=='GFCN':
-    model = GFCN()
+    model = GFCN(input_channels=NUM_INPUTS)
 elif args.net == 'GFCNA':
-    model = GFCNA()
+    model = GFCNA(input_channels=NUM_INPUTS)
 elif args.net == 'GFCNB':
-    model = GFCNB()
+    model = GFCNB(input_channels=NUM_INPUTS)
 elif args.net == 'GFCNC':
-    model = GFCNC()
+    model = GFCNC(input_channels=NUM_INPUTS)
 elif args.net == 'GFCND':
-    model = GFCND()
+    model = GFCND(input_channels=NUM_INPUTS)
 elif args.net=='PointNet':
     model = PointNet()
 elif args.net == 'UNet':
-    model = UNet(n_channels=1, n_classes=1)
+    model = UNet(n_channels=NUM_INPUTS, n_classes=1)
 elif args.net == 'FCN':
-    model = FCN(n_channels=1, n_classes=1)
+    model = FCN(n_channels=NUM_INPUTS, n_classes=1)
 elif args.net == 'DeepVessel':
-    model = DeepVessel(dim=2, nchannels=1, nlabels=2)
+    model = DeepVessel(dim=2, nchannels=NUM_INPUTS, nlabels=2)
     DEEPVESSEL =True
 else:
     model = GFCNA()

@@ -106,9 +106,9 @@ def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=No
 
 class GFCNB(torch.nn.Module):
     ''' GFCN equivalent to the FCN32s'''
-    def __init__(self):
+    def __init__(self, input_channels=1):
         super(GFCNB, self).__init__()
-        self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
+        self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 64, dim=2, kernel_size=5)
         # self.conv1c = SplineConv(64, 64, dim=2, kernel_size=5)
         # self.bn1 = torch.nn.BatchNorm1d(64)
@@ -174,9 +174,9 @@ class GFCNB(torch.nn.Module):
 
 class GFCNA(torch.nn.Module):
     ''' GFCN equivalent to the FCN16s'''
-    def __init__(self):
+    def __init__(self, input_channels=1):
         super(GFCNA, self).__init__()
-        self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
+        self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
         # self.bn1 = torch.nn.BatchNorm1d(32)
 
@@ -260,9 +260,9 @@ class GFCNA(torch.nn.Module):
 
 class GFCNC(torch.nn.Module):
     ''' model G-FCN 8s equivalent'''
-    def __init__(self):
+    def __init__(self, input_channels=1):
         super(GFCNC, self).__init__()
-        self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
+        self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
         self.bn1 = torch.nn.BatchNorm1d(32)
 
@@ -455,9 +455,9 @@ class GFCND(torch.nn.Module):
     ''' GFCN equivalent to the FCN32s with topk'''
 
 
-    def __init__(self):
+    def __init__(self, input_channels=1):
         super(GFCND, self).__init__()
-        self.down1 = Downsampling(k_range=32, ratio=0.5, in_channels=1, out_channels=32, dim=2, kernel_size=5,batch_norm=False)
+        self.down1 = Downsampling(k_range=32, ratio=0.5, in_channels=input_channels, out_channels=32, dim=2, kernel_size=5,batch_norm=False)
         self.down2 = Downsampling(k_range=64, ratio=0.5, in_channels=32, out_channels=64, dim=2, kernel_size=3)
         self.down3 = Downsampling(k_range=128, ratio=0.5, in_channels=64, out_channels=128, dim=2, kernel_size=3)
         self.up1 = Upsampling(k=3, in_channels=128, out_channels=64, dim=2, kernel_size=3)
@@ -497,9 +497,9 @@ class GFCND(torch.nn.Module):
 
 class GFCN(torch.nn.Module):
     ''' GFCN16s with barycentric upsampling'''
-    def __init__(self):
+    def __init__(self, input_channels=1):
         super(GFCN, self).__init__()
-        self.conv1a = SplineConv(1, 32, dim=2, kernel_size=5)
+        self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
         # self.bn1 = torch.nn.BatchNorm1d(32)
 

@@ -26,6 +26,10 @@ from pathlib import Path
 
 NORMALIZED_SHAPE = {'Z': None, 'Y': 256, 'X': 256}
 
+def get_modalities(arg_mod):
+    modalities = {"CTN": "CTN", "TMAX": "CTP-TMAX", "CBF": "CTP=CBF", "CBV":"CTP-CBV", "MTT":"CTP-MTT"}
+    return (modalities[mod] for mod in arg_mod)
+
 
 def isles2018_reshape(x):
     '''
@@ -69,7 +73,13 @@ def erode_mask(mask):
 
 
 class GISLES2018(Datasets):
-    def __init__(self, data_dir=ISLES2018_DIR, batch_size=32, test_rate=0.2, annotated_slices=False, pre_transform=None, fold=1):
+    def __init__(self, data_dir=ISLES2018_DIR,
+                 batch_size=32,
+                 test_rate=0.2,
+                 annotated_slices=False,
+                 pre_transform=None,
+                 fold=1,
+                 modalities=("CTN", "CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT")):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.test_rate = test_rate
@@ -79,7 +89,7 @@ class GISLES2018(Datasets):
                                    pre_transform=pre_transform, fold=fold)
 
         test_dataset = _GISLES2018(self.data_dir, dataset_type='test', transform=T.Cartesian(),
-                                  pre_transform=pre_transform, fold=fold)
+                                  pre_transform=pre_transform, fold=fold, modalities=modalities)
 
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
         val = GraphDataset(val_dataset, batch_size=self.batch_size, shuffle=False)
