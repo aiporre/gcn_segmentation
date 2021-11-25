@@ -27,7 +27,7 @@ from pathlib import Path
 NORMALIZED_SHAPE = {'Z': None, 'Y': 256, 'X': 256}
 
 def get_modalities(arg_mod):
-    modalities = {"CTN": "CTN", "TMAX": "CTP-TMAX", "CBF": "CTP=CBF", "CBV":"CTP-CBV", "MTT":"CTP-MTT"}
+    modalities = {"CTN": "CTN", "TMAX": "CTP-TMAX", "CBF": "CTP-CBF", "CBV": "CTP-CBV", "MTT": "CTP-MTT"}
     output_modalities = [modalities[mod] for mod in arg_mod]
     return output_modalities
 
