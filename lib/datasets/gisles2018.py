@@ -198,7 +198,6 @@ class _GISLES2018(Dataset):
             lesion_mask = load_nifti(lesion_files[0], neurological_convension=True)
             # generates the graph inputs
             processed_num = len(lesion_mask)
-            print('processing...: ' , processed_num)
             for i, case_index in enumerate(self.indices.get_by_case_id(case_id)):
                 printProgressBar(cnt_slices + i, len(self.indices), prefix=progressBarPrefix, suffix=f'sample={case_index}', length=50)
                 # Read data from `raw_path`.
