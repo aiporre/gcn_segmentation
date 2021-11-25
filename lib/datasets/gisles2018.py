@@ -101,13 +101,14 @@ class _GISLES2018(Dataset):
                  pre_filter=None,
                  fold=1,
                  split_dir="TRAINING", 
-                 modalities=("CTN", " CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT")):
+                 modalities=("CTN", "CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT")):
         print('Warning: In the ISLES2018 dataset, the test/train rate is predefined by file distribution.')
         self.root = root
         self.test_rate = 1
         self.fold = fold
         self.dataset_type = dataset_type
         self.split_dir = split_dir
+        self.modalities = modalities
         # creates the processed dir
 
         raw_dir = os.path.join(self.root, 'raw', self.split_dir)
@@ -119,7 +120,6 @@ class _GISLES2018(Dataset):
         super(_GISLES2018, self).__init__(root, transform, pre_transform, pre_filter)
         self.raw_dir = raw_dir
         self.processed_dir = processed_dir
-        self.modalities = modalities
 
     # @property
     # def raw_dir(self):
@@ -200,7 +200,7 @@ class _GISLES2018(Dataset):
                 else:
                     grid = grid_tensor((NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X']), connectivity=4)
                     num_elements = NORMALIZED_SHAPE['Y'] * NORMALIZED_SHAPE['X']
-                    nodes_shape = num_elements if len(image.shape) > 2 else (num_elements, -1)
+                    nodes_shape = num_elements if len(image.shape) <= 2 else (num_elements, -1)
                     grid.x = torch.tensor(image.reshape(nodes_shape)).float()
                     grid.y = torch.tensor([mask.reshape(num_elements)]).float()
                     data = grid
