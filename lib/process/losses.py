@@ -61,10 +61,10 @@ class DCS(object):
         # have to use contiguous since they may from a torch.view op
         iflat = inputs.flatten(start_dim=1) if not self.pre_sigmoid else sigmoid(inputs.flatten(start_dim=1))
         tflat = targets.flatten(start_dim=1)
-        intersection = (iflat*tflat).sum(axis=1)
+        intersection = (iflat*tflat).sum(dim=1)
 
-        A_sum = torch.sum(iflat*iflat, axis=1)
-        B_sum = torch.sum(tflat*tflat, axis=1)
+        A_sum = torch.sum(iflat*iflat, dim=1)
+        B_sum = torch.sum(tflat*tflat, dim=1)
 
         return torch.mean(1 - ((2. * intersection + smooth) / (A_sum + B_sum + smooth)))
 
@@ -81,16 +81,16 @@ class GeneralizedDiceLoss:
         prob = inputs.flatten(start_dim=1) if not self.pre_sigmoid else sigmoid(inputs.flatten(start_dim=1))
         f = targets.flatten(start_dim=1)
         b = 1 - f
-        w_f = 1 / (self.epsilon + torch.sum(f, axis=1) ** 2)
-        w_b = 1 / (self.epsilon + torch.sum(b, axis=1) ** 2)
+        w_f = 1 / (self.epsilon + torch.sum(f, dim=1) ** 2)
+        w_b = 1 / (self.epsilon + torch.sum(b, dim=1) ** 2)
         prob_f = prob * f
         prob_b = (1 - prob) * b
 
-        A_sum = w_f * torch.sum(prob_f, axis=1)
-        B_sum = w_b * torch.sum(prob_b, axis=1)
+        A_sum = w_f * torch.sum(prob_f, dim=1)
+        B_sum = w_b * torch.sum(prob_b, dim=1)
 
-        C_sum = w_f * torch.sum(prob_f + f, axis=1)
-        D_sum = w_b * torch.sum(prob_b + b, axis=1)
+        C_sum = w_f * torch.sum(prob_f + f, dim=1)
+        D_sum = w_b * torch.sum(prob_b + b, dim=1)
 
         return torch.mean(1 - 2 * ((A_sum + B_sum + self.smooth) / (C_sum + D_sum + self.smooth)))
 
@@ -122,10 +122,10 @@ class DiceLoss:
         iflat = inputs.flatten(start_dim=1) if not self.pre_sigmoid else sigmoid(inputs.flatten(start_dim=1))
         tflat = targets.flatten(start_dim=1)
 
-        A_sum = torch.sum(iflat * tflat, axis=1) + self.epsilon
-        B_sum = torch.sum(iflat + tflat, axis=1) + self.epsilon
-        C_sum = torch.sum((1 - iflat) * (1 - tflat), axis=1) + self.epsilon
-        D_sum = torch.sum(2 - iflat - tflat, axis=1) + self.epsilon
+        A_sum = torch.sum(iflat * tflat, dim=1) + self.epsilon
+        B_sum = torch.sum(iflat + tflat, dim=1) + self.epsilon
+        C_sum = torch.sum((1 - iflat) * (1 - tflat), dim=1) + self.epsilon
+        D_sum = torch.sum(2 - iflat - tflat, dim=1) + self.epsilon
 
         return torch.mean(1 - (A_sum / B_sum) - (C_sum / D_sum))
 

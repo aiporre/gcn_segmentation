@@ -1,6 +1,6 @@
 from unittest import TestCase
 import torch
-from .losses import DCS, DiceLoss, FocalLoss, GeneralizedDiceLoss
+from .losses import DCS, DiceLoss, FocalLoss, GeneralizedDiceLoss, DiceCoeff
 from .evaluation import dice_coeff
 import matplotlib.pyplot as plt
 
@@ -149,13 +149,17 @@ class TestDCS(TestCase):
 
     def test_DCS(self):
         loss = DCS_mixed()
+        dcs_mixed_value = loss(self.a, self.b)
+        print('metric : ', dcs_mixed_value)
+        self.assertAlmostEqual(dcs_mixed_value.numpy(), 0.16342, delta=0.0001)
         loss_mixed = loss(self.a,self.b)
         metric = dice_coeff(self.a, self.b)
         print('metric : ', metric)
-        self.assertAlmostEqual(metric.numpy(), 0.76, delta=0.0001)
+        self.assertAlmostEqual(metric.numpy(), 0.760004, delta=0.0001)
         loss = DCS()
         loss_mod = loss(self.a, self.b)
         print('modified loss: ', loss_mod)
+        self.assertAlmostEqual(loss_mod.numpy(), 0.14893, delta=0.0001)
         self.assertNotEqual(loss_mixed, loss_mod)
 
     def test_backward_DCS(self):
