@@ -36,7 +36,7 @@ def isles2018_reshape(x):
     '''
     Transform used by plotting functions
     '''
-    N = x.numel()
+    N = x.numel() if isinstance(x, torch.Tensor) else x.size
     nn = NORMALIZED_SHAPE['Y'] * NORMALIZED_SHAPE['X']
     if N == nn:
         isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'])
