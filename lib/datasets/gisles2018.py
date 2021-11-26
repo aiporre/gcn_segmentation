@@ -36,12 +36,20 @@ def isles2018_reshape(x):
     '''
     Transform used by plotting functions
     '''
-    if isinstance(x, torch.Tensor):
-        x = torch.reshape(x, (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X']))
-        return x
+    N = x.numel()
+    nn = NORMALIZED_SHAPE['Y'] * NORMALIZED_SHAPE['X']
+    if N == nn:
+        isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'])
     else:
-        x = np.reshape(x, (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X']))
-        return x
+        N_channels = N // nn
+        isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'], N_channels)
+    if isinstance(x, torch.Tensor):
+        x = torch.reshape(x, isles_shape)
+    else:
+        x = np.reshape(x, isles_shape)
+    if N != nn:
+        x = x[...,0]
+    return x
 
 def load_nifti(filename, show_description=False, neurological_convension=False):
     '''
