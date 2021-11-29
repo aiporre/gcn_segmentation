@@ -311,7 +311,7 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ", 
         savefigs(fig_name='{}_overlap'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
     else:
         z, y, x, c = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
-        result = result.reshape(0, 3, 1, 2)
+        result = result.transpose(0, 3, 1, 2)
         tifffile.imwrite('{}_vol_{}x{}x{}x{}.tiff'.format(prefix_checkpoint, x, y, z, c),
                          result, imagej=True, metadata={'axes': 'ZCYX'})
         savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
