@@ -421,9 +421,9 @@ class Evaluator(object):
                     else:
                         mask = reshape_transform(mask.cpu().detach().numpy())
                         pred_mask = reshape_transform(pred_mask)
-                TP = pred_mask.cpu().numpy()*mask
-                FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
-                FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
+                TP = pred_mask*mask
+                FP = 1*((pred_mask-mask) > 0)
+                FN = 1*((mask-pred_mask) > 0)
                 mix = TP+2*FP+3*FN
                 images.append(mix.squeeze())
             else:
