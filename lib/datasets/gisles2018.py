@@ -33,22 +33,22 @@ def get_modalities(arg_mod):
     return output_modalities
 
 
-def isles2018_reshape(x, channel=0):
+def isles2018_reshape(x, channels=None, channel=None):
     '''
     Transform used by plotting functions
     '''
-    N = x.numel() if isinstance(x, torch.Tensor) else x.size
+    if isinstance(x, torch.Tensor):
+        x = x.cpu().detach().numpy()
+    N = x.size
     nn = NORMALIZED_SHAPE['Y'] * NORMALIZED_SHAPE['X']
-    if N == nn:
+    # channels are deduced from N // nn if input is None
+    N_channels = N // nn if channels is None else channels
+    if N_channels == 1:
         isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'])
     else:
-        N_channels = N // nn
         isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'], N_channels)
-    if isinstance(x, torch.Tensor):
-        x = torch.reshape(x, isles_shape)
-    else:
-        x = np.reshape(x, isles_shape)
-    if N != nn:
+    x = np.reshape(x, isles_shape)
+    if N_channels > 1 and channel is not None:
         x = x[..., channel]
     return x
 
