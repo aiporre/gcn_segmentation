@@ -254,7 +254,7 @@ class _GISLES2018(Dataset):
         case_id_processed_file_names = ['gendo_{:04}.pt'.format(case_id_index) for case_id_index in case_id_indices]
         for c_id_fname in case_id_processed_file_names:
             c_id_idx = self.processed_file_names.index(c_id_fname)
-            data = super()[c_id_idx]
+            data = super().__getitem__(c_id_idx)
             yield data
 
     def get(self, idx):
