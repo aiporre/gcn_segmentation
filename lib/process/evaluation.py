@@ -9,6 +9,7 @@ from .progress_bar import printProgressBar
 from torch import sigmoid
 import numpy as np
 
+from ..datasets.transforms import reshape_square
 from ..graph.batch import to_torch_batch
 
 class MetricsLogs(object):
@@ -283,12 +284,13 @@ class Evaluator(object):
         metrics_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
         return metrics_avgs
 
-    def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None):
+    def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None, modalities=None):
 
         # loading the image: it can be a numpy.ndarray or a Data/Batch object
         # image, mask = self.dataset.next_batch(1, shuffle=False) # selects an aleatory value from the dataset
         sample = self.dataset[N]
-        if not isinstance(sample,tuple):
+        is_graph_tensor = isinstance(sample, (Data, Batch))
+        if is_graph_tensor:
             # this graph tensor
             image = sample
             mask = sample.y
@@ -300,24 +302,28 @@ class Evaluator(object):
         input = torch.tensor(image).float() if self.to_tensor else image.clone()
         input = input.to(self.device)
         prediction = model(input)
-        # pred_mask = (sigmoid(prediction) > 0.5).float()
-        if isinstance(prediction, (Data, Batch)):
+        if is_graph_tensor:
             prediction =  prediction.x
         pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
-
-        if not isinstance(image,np.ndarray):
-            dimension = image.x.size(0)# it will assume a square image, if the transform is None.
+        # after using prediction for calculating the mask then the prediction is transformed to prob,
+        prediction = sigmoid(prediction) if self.sigmoid else prediction
+        # converts to an square if necessary
+        if is_graph_tensor:
             if reshape_transform is None:
-                dimension = np.sqrt(dimension).astype(int)
-                mask = mask.cpu().detach().numpy().reshape((dimension,dimension))
-                image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
-                prediction = prediction.reshape((dimension, dimension))
-                pred_mask = pred_mask.reshape((dimension,dimension))
+                mask = reshape_square(mask)
+                channels = None if modalities is None else len(modalities)
+                image = reshape_square(image.x, channels=channels)
+                # takes the fistt channel if more than one modality
+                image = image if channels is None else image[...,0]
+                prediction = reshape_square(prediction)
+                pred_mask = reshape_square(pred_mask)
             else:
-                mask = reshape_transform(mask.cpu().detach().numpy())
-                image = reshape_transform(image.x.cpu().detach().numpy())
-                prediction = reshape_transform(torch.sigmoid(prediction))
-                pred_mask = reshape_transform(pred_mask)
+                mask = reshape_transform(mask)
+                channels = None if modalities is None else len(modalities)
+                # takes the first channel if there is more than one modality
+                image = reshape_transform(image.x, channels=channels, channel=0)
+                prediction = reshape_square(prediction)
+                pred_mask = reshape_square(pred_mask)
 
         # plot input image
         if not fig:
@@ -372,13 +378,23 @@ class Evaluator(object):
             ax4.set_title('predicted mask >0.5 prob')
         return fig
 
-    def plot_volumen(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None):
-
-
+    def plot_volumen(self,model, index=0, fig=None, figsize=(10,10), N=1, overlap=True, reshape_transform=None, modalities=None):
+        # index was the offset of the processed_files list to concatenate into a volume,
+        # but we change it is behavior , so index points the case_id index (raw_files). For example, if dataset.test
+        # has the cases 10,12,13 with corresponding processed_files = [20,21,21,23,45,46,100,101,102] then index=1 will
+        # comput the volume for the processed files 45 and 46.
         images = []
-        for ii in range(index,N):
-            sample = self.dataset[ii]
-            if not isinstance(sample, tuple):
+        # FIXME: Euclidean datasets dont have this method implemented yet or other datasets.
+        # extracts the case_id from the dataset that corresponds to the index given
+        case_id = self.dataset.get_cases()[index]
+
+        # check if it is is_graph_tensor:
+        sample = self.dataset[0]
+        is_graph_tensor = isinstance(sample, (Data, Batch))
+
+        # computes predictions for all the volume
+        for sample in self.dataset.get_by_case_id(case_id):
+            if is_graph_tensor:
                 # this graph tensor
                 image = sample
                 mask = sample.y
@@ -387,6 +403,7 @@ class Evaluator(object):
                 image, mask = sample[0], sample[1]
                 image = image.reshape([1]+list(image.shape))
 
+            # makes a prediction for the image and generate the prediciont mask with boundary 0.5
             input = torch.tensor(image).float() if self.to_tensor else image.clone()
             input = input.to(self.device)
             prediction = model(input)
@@ -395,77 +412,44 @@ class Evaluator(object):
                 prediction = prediction.x
             pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
 
-            if not isinstance(image, np.ndarray):
-                dimension = image.x.size(0)  # it will assume a square image,if the transform is None.t :
-                if reshape_transform is None:
-                    dimension = np.sqrt(dimension).astype(int)
-                    mask = mask.cpu().detach().numpy().reshape((dimension,dimension))
-                    image = image.x.cpu().detach().numpy().reshape((dimension, dimension))
-                    prediction = prediction.reshape((dimension, dimension))
-                    pred_mask = pred_mask.reshape((dimension,dimension))
-                else:
-                    mask = reshape_transform(mask.cpu().detach().numpy())
-                    image = reshape_transform(image.x.cpu().detach().numpy())
-                    prediction = reshape_transform(torch.sigmoid(prediction))
-                    pred_mask = reshape_transform(pred_mask)
-            TP = pred_mask.cpu().numpy()*mask
-            FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
-            FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
-            mix = TP+2*FP+3*FN
-            images.append(mix.squeeze())
+            # if overlap flag then creates a plot of three colors TP, FN and FP.
+            if overlap:
+                if is_graph_tensor:
+                    if reshape_transform is None:
+                        mask = reshape_square(mask)
+                        pred_mask = reshape_square(pred_mask)
+                    else:
+                        mask = reshape_transform(mask.cpu().detach().numpy())
+                        pred_mask = reshape_transform(pred_mask)
+                TP = pred_mask.cpu().numpy()*mask
+                FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
+                FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
+                mix = TP+2*FP+3*FN
+                images.append(mix.squeeze())
+            else:
+                # show predictions and input channels
+                if is_graph_tensor:
+                    if reshape_transform is None:
+                        mask = reshape_square(mask)
+                        channels = None if modalities is None else len(modalities)
+                        image = reshape_square(image.x, channels=channels)
+                        prediction = reshape_square(prediction)
+                        pred_mask = reshape_square(pred_mask)
+                    else:
+                        mask = reshape_transform(mask)
+                        channels = None if modalities is None else len(modalities)
+                        # takes the first channel if there is more than one modality
+                        image = reshape_transform(image.x, channels=channels)
+                        prediction = reshape_transform(prediction)
+                        pred_mask = reshape_transform(pred_mask)
+                # concatenate the modality channels and prediction results
+                pred_results = np.stack([mask, prediction, pred_mask], axis=-1)
+                image = np.concatenate([image, pred_results], axis=-1)
+                images.append(image)
+
         result = np.stack(images).astype('float32')
         return result
-        # # plot input image
-        # # TODO: image will change its shape I need a transformer class
-        # if not fig:
-        #     fig = plt.figure(figsize=figsize)
-        # if overlap:
-        #     pred_mask = pred_mask.squeeze()
-        #     cmap_TP = ListedColormap([[73/255, 213/255, 125/255, 1]])
-        #     cmap_FP = ListedColormap([[255/255, 101/255, 80/255, 1]])
-        #     cmap_FN = ListedColormap([[15/255, 71/255, 196/255, 1]])
-        #     TP = pred_mask.cpu().numpy()*mask
-        #     FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
-        #     FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
-        #     N = prediction.numel()
-        #
-        #     alpha = 0.5
-        #     fig = plt.figure(figsize=(10, 10))
-        #     ax = fig.add_subplot(1, 1, 1)
-        #     ax.imshow(image.copy().squeeze(), cmap='gray')
-        #     masked = np.ma.masked_where(FP == 0, FP)
-        #     ax.imshow(masked, cmap=cmap_FP, alpha=alpha)
-        #     masked = np.ma.masked_where(FN == 0, FN)
-        #     ax.imshow(masked, cmap=cmap_FN, alpha=alpha)
-        #     masked = np.ma.masked_where(TP == 0, TP)
-        #     ax.imshow(masked, cmap=cmap_TP, alpha=alpha)
-        #
-        #     A = TP.sum()
-        #     B = FP.sum()
-        #     C = FN.sum()
-        #     C = N-A-B-C
-        #     a = (A+C)/N
-        #     p = A/(A+B)
-        #     r = A/(A+C)
-        #     dcm = 2*p*r/(p+r)
-        #     print('Accuracy: ', a, ' Precision: ', p, ', Recall: ', r, 'Dice: ', dcm)
-        # else:
-        #     ax1 = fig.add_subplot(2, 2, 1)
-        #     ax2 = fig.add_subplot(2, 2, 2)
-        #     ax3 = fig.add_subplot(2, 2, 3)
-        #     ax4 = fig.add_subplot(2, 2, 4)
-        #     ax1.imshow(image.copy().squeeze(), cmap='gray')
-        #     ax1.set_title('original image')
-        #     # plot p(y=1|X=x)
-        #     ax2.imshow(prediction.cpu().detach().numpy().squeeze(), cmap='gray')
-        #     ax2.set_title('probability map')
-        #     # plot mask
-        #     ax3.imshow(mask.squeeze(), cmap='gray')
-        #     ax3.set_title('ground truth mask')
-        #     # plot prediction
-        #     ax4.imshow(pred_mask.cpu().detach().numpy().squeeze(), cmap='gray')
-        #     ax4.set_title('predicted mask >0.5 prob')
-        # return fig
+
 
 class KEvaluator(Evaluator):
     def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False, eval=False, criterion=None):

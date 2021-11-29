@@ -296,13 +296,13 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
                             eval_metric_logging, args.upload)
 
 
-def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ"):
+def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ", modalities=None):
     model.eval() if not DEEPVESSEL else None
     print('plotting one prediction')
     fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
-                                        reshape_transform=reshape_transform)
-    result = evaluator_test.plot_volumen(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
-                                        reshape_transform=reshape_transform)
+                                        reshape_transform=reshape_transform, modalities=modalities)
+    result = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=args.overlay_plot,
+                                        reshape_transform=reshape_transform, modalities=modalities)
     prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{id}"
     z, y, x = result.shape[0], result.shape[1], result.shape[2]
     result.tofile('{}_vol_{}x{}x{}.raw'.format(prefix_checkpoint, x, y, z))
