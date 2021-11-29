@@ -187,6 +187,9 @@ class Evaluator(object):
                     g.append(self.criterion(prediction, label).item())
                     metrics_values['val_loss'] = g
                 pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
+                # now converts the predictino from logits to probabilities if necessary.
+                prediction = sigmoid(prediction) if self.sigmoid else prediction
+
                 # reorganize prediction according to the batch.
                 if not pred_mask.size(0) == label.size(0):
                     b = label.size(0)
