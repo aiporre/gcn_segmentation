@@ -443,11 +443,17 @@ class Evaluator(object):
                         prediction = reshape_transform(prediction)
                         pred_mask = reshape_transform(pred_mask)
                 # concatenate the modality channels and prediction results
-                pred_results = np.stack([mask.T, prediction.T, pred_mask.T])
-                image = np.concatenate([image.transpose(2,1,0), pred_results])
+                if channels is None:
+                    image = np.expand_dims(image, axis=-1)
+                pred_results = np.stack([mask, prediction, pred_mask], axis=-1)
+                image = np.concatenate([image, pred_results], axis=-1)
                 images.append(image)
-
-        result = np.stack(images).astype('float32')
+        if overlap:
+            # the resulting image is Z,X,Y
+            result = np.stack(images).astype(np.float32)
+        else:
+            # the resulting image is X,Y,C,Z
+            result = np.stack(images, axis=-1).astype('float32')
         return result
 
 

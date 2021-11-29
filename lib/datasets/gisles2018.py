@@ -207,16 +207,15 @@ class _GISLES2018(Dataset):
             if len(self.modalities) > 1:
                 ct_scan = []
                 for mod in self.modalities:
-                    x = load_nifti(patient_files[mod][0], neurological_convension=True)
-                    if mod == "CTN":
-                        x = skull_strippen(x)
-                    ct_scan.append(norm(x.astype(np.float)))
+                    x = load_nifti(patient_files[mod][0], neurological_convension=True).astype(np.float)
+                    x = norm(x)
+                    x = skull_strippen(x)
+                    ct_scan.append(x)
                 ct_scan = np.stack(ct_scan, axis=-1)
             else:
                 mod = self.modalities[0]
-                if mod == "CTN":
-                    x = skull_strippen(x)
                 ct_scan = norm(load_nifti(patient_files[mod][0], neurological_convension=True).astype(np.float))
+                ct_scan = skull_strippen(ct_scan)
             lesion_files = patient_files['LESION']
             lesion_mask = load_nifti(lesion_files[0], neurological_convension=True)
             # generates the graph inputs

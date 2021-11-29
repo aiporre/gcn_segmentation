@@ -310,10 +310,9 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ", 
         result.tofile('{}_vol_{}x{}x{}.raw'.format(prefix_checkpoint, x, y, z))
         savefigs(fig_name='{}_overlap'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
     else:
-        c, z, y, x = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
-        result = np.moveaxis(result, 0, 1)
-        tifffile.imwrite('{}_vol_{}_{}x{}x{}.tiff'.format(prefix_checkpoint, x, y, z, c), result, imagej=True, metadata={'axes': 'ZCYX'})
-
+        x, y, c, z = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
+        tifffile.imwrite('{}_vol_{}x{}x{}x{}.tiff'.format(prefix_checkpoint, x, y, z, c),
+                         result, metadata={'axes': 'XYCZ'})
         savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
 
     savefigs(fig_name='{}_overlap'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
