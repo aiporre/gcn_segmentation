@@ -1,7 +1,28 @@
+import numpy as np
 import torch
 
 from lib.graph import grid_tensor
 
+
+def reshape_square(x, channels=None):
+    # transform to numpy
+    if isinstance(x, torch.Tensor):
+        x = x.cpu().detach().numpy()
+    N = x.size
+    if channels is None:
+        # assumes that there is just one one channel
+        dimension = x.size[0]
+        dimension = np.sqrt(dimension).astype(int)
+        assert dimension*dimension == N, "This input cannot be transformed to a square dimension are improper %s" \
+                                                 % str(x.size)
+        x = x.reshape((dimension, dimension))
+    else:
+        dimension = x.size[0] // channels
+        dimension = np.sqrt(dimension).astype(int)
+        assert dimension * dimension * channels == N, "This input cannot be transformed to a square dimension are " \
+                                                      "improper %s" % str(x.size)
+        x = x.reshape((dimension, dimension, channels))
+    return x
 
 class Crop(object):
     def __init__(self,x,y,w,h,graph_mode = True):
