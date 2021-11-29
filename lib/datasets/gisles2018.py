@@ -12,7 +12,7 @@ import pandas as pd
 import os
 from .dataset import Datasets, Dataset, GraphDataset
 import torch
-from torch_geometric.data import (Dataset, Data )
+from torch_geometric.data import (Dataset, Data)
 from torch_geometric.data.makedirs import makedirs
 import torch_geometric.transforms as T
 import numpy as np
@@ -26,13 +26,14 @@ from pathlib import Path
 
 NORMALIZED_SHAPE = {'Z': None, 'Y': 256, 'X': 256}
 
+
 def get_modalities(arg_mod):
     modalities = {"CTN": "CTN", "TMAX": "CTP-TMAX", "CBF": "CTP-CBF", "CBV": "CTP-CBV", "MTT": "CTP-MTT"}
     output_modalities = [modalities[mod] for mod in arg_mod]
     return output_modalities
 
 
-def isles2018_reshape(x):
+def isles2018_reshape(x, channel=0):
     '''
     Transform used by plotting functions
     '''
@@ -48,8 +49,9 @@ def isles2018_reshape(x):
     else:
         x = np.reshape(x, isles_shape)
     if N != nn:
-        x = x[...,0]
+        x = x[..., channel]
     return x
+
 
 def load_nifti(filename, show_description=False, neurological_convension=False):
     '''
@@ -61,7 +63,7 @@ def load_nifti(filename, show_description=False, neurological_convension=False):
     data = img.get_fdata()
     # if neurological convension then we transformt the data into Z,Y,X otherwise the X,Y, Z is keept
     if neurological_convension:
-        data = np.transpose(data, (2,1,0))
+        data = np.transpose(data, (2, 1, 0))
     return data
 
 
@@ -93,11 +95,11 @@ class GISLES2018(Datasets):
         self.batch_size = batch_size
         self.test_rate = test_rate
         train_dataset = _GISLES2018(self.data_dir, dataset_type='train', transform=T.Cartesian(),
-                                   pre_transform=pre_transform, fold=fold, modalities=modalities)
+                                    pre_transform=pre_transform, fold=fold, modalities=modalities)
         val_dataset = _GISLES2018(self.data_dir, dataset_type='val', transform=T.Cartesian(),
-                                   pre_transform=pre_transform, fold=fold, modalities=modalities)
-        test_dataset = _GISLES2018(self.data_dir, dataset_type='test', transform=T.Cartesian(),
                                   pre_transform=pre_transform, fold=fold, modalities=modalities)
+        test_dataset = _GISLES2018(self.data_dir, dataset_type='test', transform=T.Cartesian(),
+                                   pre_transform=pre_transform, fold=fold, modalities=modalities)
 
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
         val = GraphDataset(val_dataset, batch_size=self.batch_size, shuffle=False)
@@ -118,7 +120,7 @@ class _GISLES2018(Dataset):
                  pre_transform=None,
                  pre_filter=None,
                  fold=1,
-                 split_dir="TRAINING", 
+                 split_dir="TRAINING",
                  modalities=("CTN", "CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT")):
         print('Warning: In the ISLES2018 dataset, the test/train rate is predefined by file distribution.')
         self.root = root
@@ -192,24 +194,37 @@ class _GISLES2018(Dataset):
         for case_id in self.raw_file_names:
             raw_path = os.path.join(self.root, 'raw', self.split_dir, case_id)
             patient_files = get_files_patient_path(raw_path)
+
+            def norm(x):
+                return (x - x.min()) / (x.max() - x.min())
+
+            skull_strippen = lambda x: x
+            if "CTN" in self.modalities:
+                brain_mask = 1
+                for m in ["CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT"]:
+                    brain_mask *= (load_nifti(patient_files["CTP-TMAX"][0], neurological_convension=True) > 0).astype(
+                        float)
+                skull_strippen = lambda x: x * brain_mask
             if len(self.modalities) > 1:
-                ct_scan = np.stack(
-                    [load_nifti(patient_files[mod][0], neurological_convension=True) for mod in self.modalities],
-                    axis=-1)
+                ct_scan = []
+                for mod in self.modalities:
+                    x = load_nifti(patient_files[mod][0], neurological_convension=True)
+                    if mod == "CTN":
+                        x = skull_strippen(x)
+                    ct_scan.append(norm(x.astype(np.float)))
+                ct_scan = np.stack(ct_scan, axis=-1)
             else:
                 mod = self.modalities[0]
-                ct_scan = load_nifti(patient_files[mod][0], neurological_convension=True)
-
-            ct_scan = ct_scan.astype(np.float)
-            ct_scan_norm = (ct_scan-ct_scan.min())/(ct_scan.max()-ct_scan.min())
+                ct_scan = norm(load_nifti(patient_files[mod][0], neurological_convension=True).astype(np.float))
             lesion_files = patient_files['LESION']
             lesion_mask = load_nifti(lesion_files[0], neurological_convension=True)
             # generates the graph inputs
             processed_num = len(lesion_mask)
             for i, case_index in enumerate(self.indices.get_by_case_id(case_id)):
-                printProgressBar(cnt_slices + i, len(self.indices), prefix=progressBarPrefix, suffix=f'sample={case_index}', length=50)
+                printProgressBar(cnt_slices + i, len(self.indices), prefix=progressBarPrefix,
+                                 suffix=f'sample={case_index}', length=50)
                 # Read data from `raw_path`.
-                image = ct_scan_norm[i]
+                image = ct_scan[i]
                 mask = lesion_mask[i]
                 if self.pre_transform is not None:
                     data = (image, mask)
@@ -225,19 +240,27 @@ class _GISLES2018(Dataset):
                 if self.pre_filter is not None and not self.pre_filter(data):
                     continue
 
-                #torch.save(data, os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(case_index)))
+                # torch.save(data, os.path.join(self.processed_dir, 'gendo_{:04d}.pt'.format(case_index)))
                 torch.save(data, os.path.join(self.root, 'processed',
-                    self.split_dir, 'gendo_{:04d}.pt'.format(case_index)))
+                                              self.split_dir, 'gendo_{:04d}.pt'.format(case_index)))
             # update counter
-            cnt_slices+=processed_num
+            cnt_slices += processed_num
 
+    def get_all_cases_id(self):
+        return self.raw_file_names
 
+    def get_by_case_id(self, case_id):
+        case_id_indices = self.indices.get_by_case_id(case_id)
+        case_id_processed_file_names = ['gendo_{:04}.pt'.format(case_id_index) for case_id_index in case_id_indices]
+        for c_id_fname in case_id_processed_file_names:
+            processed_fname = os.path.join(self.processed_dir, c_id_fname)
+            data = torch.load(processed_fname)
+            yield data
 
     def get(self, idx):
         # compute offset
         data = torch.load(os.path.join(self.processed_dir, self.processed_file_names[idx]))
         return data
-
 
 
 class _ISLESFoldIndices:
@@ -258,9 +281,11 @@ class _ISLESFoldIndices:
         '''
         creates the indices for each case
         '''
+
         def get_offset():
-            indices =  csv_to_dict(self.cache_file,',', item_col=0, key_col=1)
+            indices = csv_to_dict(self.cache_file, ',', item_col=0, key_col=1)
             return max([int(k) for k in indices.keys()])
+
         offset = get_offset() + 1 if os.path.exists(self.cache_file) else 0
         mode = 'a' if os.path.exists(self.cache_file) else 'w'
         with open(self.cache_file, mode, newline='') as csvfile:
@@ -268,9 +293,9 @@ class _ISLESFoldIndices:
             for case_id in self.cases_ids:
                 patient_files = get_files_patient_path(os.path.join(self.root, case_id))
                 data = load_nifti(patient_files['LESION'][0], neurological_convension=True)
-                num_elements= len(data)
+                num_elements = len(data)
                 for i in range(num_elements):
-                    csvwriter.writerow([case_id, i+offset])
+                    csvwriter.writerow([case_id, i + offset])
                 offset += num_elements
         self._load_indices()
 
@@ -295,9 +320,10 @@ class _ISLESFoldIndices:
         index_case_dict = csv_to_dict(self.cache_file, ',', key_col=1, item_col=0)
         self.indices = {}
         for case_id in self.get_cases():
-            indices_case_id=[int(i) for i, c in index_case_dict.items() if c == case_id]
+            indices_case_id = [int(i) for i, c in index_case_dict.items() if c == case_id]
             if indices_case_id:
                 self.indices[case_id] = indices_case_id
+
     def get_by_case_id(self, case_id):
         '''
         returns the cases ifor  agiven case id
