@@ -443,8 +443,8 @@ class Evaluator(object):
                         prediction = reshape_transform(prediction)
                         pred_mask = reshape_transform(pred_mask)
                 # concatenate the modality channels and prediction results
-                pred_results = np.stack([mask, prediction, pred_mask], axis=-1)
-                image = np.concatenate([image, pred_results], axis=-1)
+                pred_results = np.stack([mask.T, prediction.T, pred_mask.T])
+                image = np.concatenate([image.transpose(2,1,0), pred_results])
                 images.append(image)
 
         result = np.stack(images).astype('float32')

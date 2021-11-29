@@ -2,6 +2,7 @@ import argparse
 import os.path
 
 from scipy.ndimage import measurements
+from tifffile import tifffile
 
 from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape, get_modalities
 from lib.process.evaluation import MetricsLogs
@@ -304,9 +305,18 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ", 
     result = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=args.overlay_plot,
                                         reshape_transform=reshape_transform, modalities=modalities)
     prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{id}"
-    z, y, x = result.shape[0], result.shape[1], result.shape[2]
-    result.tofile('{}_vol_{}x{}x{}.raw'.format(prefix_checkpoint, x, y, z))
-    savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
+    if args.overlay_plot:
+        z, y, x = result.shape[0], result.shape[1], result.shape[2]
+        result.tofile('{}_vol_{}x{}x{}.raw'.format(prefix_checkpoint, x, y, z))
+        savefigs(fig_name='{}_overlap'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
+    else:
+        c, z, y, x = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
+        result = np.moveaxis(result, 0, 1)
+        tifffile.imwrite('{}_vol_{}_{}x{}x{}.tiff'.format(prefix_checkpoint, x, y, z, c), result, imagej=True, metadata={'axes': 'ZCYX'})
+
+        savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
+
+    savefigs(fig_name='{}_overlap'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
     # plt.show()
     print('calculating stats...')
     metric_logs = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)

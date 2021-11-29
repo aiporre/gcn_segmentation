@@ -202,8 +202,7 @@ class _GISLES2018(Dataset):
             if "CTN" in self.modalities:
                 brain_mask = 1
                 for m in ["CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT"]:
-                    brain_mask *= (load_nifti(patient_files["CTP-TMAX"][0], neurological_convension=True) > 0).astype(
-                        float)
+                    brain_mask *= (load_nifti(patient_files[m][0], neurological_convension=True) > 0).astype(float)
                 skull_strippen = lambda x: x * brain_mask
             if len(self.modalities) > 1:
                 ct_scan = []
@@ -215,6 +214,8 @@ class _GISLES2018(Dataset):
                 ct_scan = np.stack(ct_scan, axis=-1)
             else:
                 mod = self.modalities[0]
+                if mod == "CTN":
+                    x = skull_strippen(x)
                 ct_scan = norm(load_nifti(patient_files[mod][0], neurological_convension=True).astype(np.float))
             lesion_files = patient_files['LESION']
             lesion_mask = load_nifti(lesion_files[0], neurological_convension=True)
