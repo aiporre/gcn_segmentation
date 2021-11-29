@@ -103,6 +103,12 @@ class GraphDataset(object):
 
         return images, labels
 
+    def get_all_cases_id(self):
+        return self._dataset.get_all_cases_id()
+
+    def get_by_case_id(self, case_id):
+        return self._dataset.get_by_case_id(case_id)
+
 class Dataset(object):
     def __init__(self, images, labels, batch_size=1, shuffle=True):
         self.epochs_completed=0
