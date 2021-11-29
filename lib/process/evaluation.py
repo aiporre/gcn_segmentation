@@ -404,7 +404,7 @@ class Evaluator(object):
                 image = image.reshape([1]+list(image.shape))
 
             # makes a prediction for the image and generate the prediciont mask with boundary 0.5
-            input = torch.tensor(image).float() if self.to_tensor else image.clone()
+            input = torch.tensor(image).float() if self.to_tensor else image
             input = input.to(self.device)
             prediction = model(input)
             # pred_mask = (sigmoid(prediction) > 0.5).float()
