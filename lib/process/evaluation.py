@@ -322,8 +322,8 @@ class Evaluator(object):
                 channels = None if modalities is None else len(modalities)
                 # takes the first channel if there is more than one modality
                 image = reshape_transform(image.x, channels=channels, channel=0)
-                prediction = reshape_square(prediction)
-                pred_mask = reshape_square(pred_mask)
+                prediction = reshape_transform(prediction)
+                pred_mask = reshape_transform(pred_mask)
 
         # plot input image
         if not fig:

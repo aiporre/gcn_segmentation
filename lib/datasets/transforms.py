@@ -11,13 +11,13 @@ def reshape_square(x, channels=None):
     N = x.size
     if channels is None:
         # assumes that there is just one one channel
-        dimension = x.size[0]
+        dimension = N
         dimension = np.sqrt(dimension).astype(int)
         assert dimension*dimension == N, "This input cannot be transformed to a square dimension are improper %s" \
                                                  % str(x.size)
         x = x.reshape((dimension, dimension))
     else:
-        dimension = x.size[0] // channels
+        dimension = N // channels
         dimension = np.sqrt(dimension).astype(int)
         assert dimension * dimension * channels == N, "This input cannot be transformed to a square dimension are " \
                                                       "improper %s" % str(x.size)
