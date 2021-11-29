@@ -310,9 +310,10 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ", 
         result.tofile('{}_vol_{}x{}x{}.raw'.format(prefix_checkpoint, x, y, z))
         savefigs(fig_name='{}_overlap'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
     else:
-        x, y, c, z = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
+        z, y, x, c = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
+        result = result.reshape(0, 3, 1, 2)
         tifffile.imwrite('{}_vol_{}x{}x{}x{}.tiff'.format(prefix_checkpoint, x, y, z, c),
-                         result, metadata={'axes': 'XYCZ'})
+                         result, imagej=True, metadata={'axes': 'ZCYX'})
         savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
 
     savefigs(fig_name='{}_overlap'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
@@ -338,4 +339,4 @@ if not args.skip_training:
 if DEEPVESSEL:
     model = trainer.model
 
-eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, id=args.id)
+eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, id=args.id, modalities=MODALITIES)

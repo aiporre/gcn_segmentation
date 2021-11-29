@@ -404,7 +404,7 @@ class Evaluator(object):
                 image = image.reshape([1]+list(image.shape))
 
             # makes a prediction for the image and generate the prediciont mask with boundary 0.5
-            input = torch.tensor(image).float() if self.to_tensor else image
+            input = torch.tensor(image).float() if self.to_tensor else image.clone()
             input = input.to(self.device)
             prediction = model(input)
             # pred_mask = (sigmoid(prediction) > 0.5).float()
@@ -443,17 +443,11 @@ class Evaluator(object):
                         prediction = reshape_transform(prediction)
                         pred_mask = reshape_transform(pred_mask)
                 # concatenate the modality channels and prediction results
-                if channels is None:
-                    image = np.expand_dims(image, axis=-1)
                 pred_results = np.stack([mask, prediction, pred_mask], axis=-1)
                 image = np.concatenate([image, pred_results], axis=-1)
                 images.append(image)
-        if overlap:
-            # the resulting image is Z,X,Y
-            result = np.stack(images).astype(np.float32)
-        else:
-            # the resulting image is X,Y,C,Z
-            result = np.stack(images, axis=-1).astype('float32')
+        # the resulting image is Z,Y,X for overlap, and Z,Y,X,C for no overlap.
+        result = np.stack(images).astype(np.float32)
         return result
 
 
