@@ -386,7 +386,7 @@ class Evaluator(object):
         images = []
         # FIXME: Euclidean datasets dont have this method implemented yet or other datasets.
         # extracts the case_id from the dataset that corresponds to the index given
-        case_id = self.dataset.get_cases()[index]
+        case_id = self.dataset.get_all_cases_id[index]
 
         # check if it is is_graph_tensor:
         sample = self.dataset[0]
