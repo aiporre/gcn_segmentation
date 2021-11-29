@@ -334,10 +334,10 @@ class Evaluator(object):
             cmap_TP = ListedColormap([[73/255, 213/255, 125/255, 1]])
             cmap_FP = ListedColormap([[255/255, 101/255, 80/255, 1]])
             cmap_FN = ListedColormap([[15/255, 71/255, 196/255, 1]])
-            TP = pred_mask.cpu().numpy()*mask
-            FP = 1*((pred_mask.cpu().numpy()-mask) > 0)
-            FN = 1*((mask-pred_mask.cpu().numpy()) > 0)
-            N = prediction.numel()
+            TP = pred_mask*mask
+            FP = 1*((pred_mask-mask) > 0)
+            FN = 1*((mask-pred_mask) > 0)
+            N = prediction.size
 
             alpha = 0.5
             fig = plt.figure(figsize=(10, 10))
@@ -368,13 +368,13 @@ class Evaluator(object):
             ax1.imshow(image.copy().squeeze(),cmap='gray')
             ax1.set_title('original image')
             # plot p(y=1|X=x)
-            ax2.imshow(prediction.cpu().detach().numpy().squeeze(), cmap='gray')
+            ax2.imshow(prediction.squeeze(), cmap='gray')
             ax2.set_title('probability map')
             # plot mask
             ax3.imshow(mask.squeeze(),cmap='gray')
             ax3.set_title('ground truth mask')
             # plot prediction
-            ax4.imshow(pred_mask.cpu().detach().numpy().squeeze(),cmap='gray')
+            ax4.imshow(pred_mask.squeeze(),cmap='gray')
             ax4.set_title('predicted mask >0.5 prob')
         return fig
 
