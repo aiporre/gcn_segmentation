@@ -264,11 +264,15 @@ class Evaluator(object):
                 pred_mask = pred_mask.view(b, -1)
             correct = pred_mask.eq(label).sum(axis=1)
             N = label.eq(label).sum(axis=1)
-            mask_pos = torch.nonzero(label.eq(1).squeeze())
-            mask_neg = torch.nonzero(label.eq(0).squeeze())
-            TP = pred_mask[:,mask_pos].eq(label[:,mask_pos]).sum(axis=1)
-            FN = pred_mask[:,mask_pos].ne(label[:,mask_pos]).sum(axis=1)
-            FP = pred_mask[:,mask_neg].ne(label[:,mask_neg]).sum(axis=1)
+            pos = torch.nonzero(label.eq(1).squeeze(), as_tuple=True)
+            neg = torch.nonzero(label.eq(0).squeeze(), as_tuple=True)
+            def collect_true_values(values, shape, coords):
+                vals = torch.zeros(shape, dtype=torch.bool)
+                vals[coords] = values
+                return vals.sum(dim=1)
+            TP = collect_true_values(pred_mask[pos].eq(label[pos]), label.shape, pos)
+            FN = collect_true_values(pred_mask[pos].ne(label[pos]), label.shape, pos)
+            FP = collect_true_values(pred_mask[neg].ne(label[neg]), label.shape, neg)
 
             if "accuracy" in metrics:
                 metric_values["accuracy"].append(torch.mean(correct/N+eps).item())
