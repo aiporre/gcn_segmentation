@@ -211,10 +211,10 @@ elif args.criterion == 'DCSsigmoid':
     criterion = DCS(pre_sigmoid=True) # criterion accepts logit. network produce logit
     sigmoid = True # evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'BCEweightedlogistic':
-    if args.pos_weight is None:
+    if args.weight is None:
         pos_weight = estimatePositiveWeight(dataset.train, progress_bar=args.progress_bar)
     else:
-        pos_weight = args.pos_weight
+        pos_weight = args.weight
     pos_weight = torch.tensor([pos_weight])
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(device))  # criterion accepts logit. network produce logit
     sigmoid = True  # evaluation flag to comput sigmoid because model output logit
