@@ -200,9 +200,9 @@ class Evaluator(object):
                     g.append(dcm)
                     metrics_values["DCM"] = g
                 if m == "HD":
-                    hd = hausdorff_distance(prediction.detach().cpu().numpy().reshape(-1,1),
-                                            label.detach().cpu().numpy().reshape(-1,1))
-                    hd = float(hd)
+                    #hd = hausdorff_distance(prediction.detach().cpu().numpy().reshape(-1,1),
+                    #                        label.detach().cpu().numpy().reshape(-1,1))
+                    hd = 1 #float(hd)
                     g = metrics_values["HD"]
                     g.append(hd)
                     metrics_values["HD"] = g
