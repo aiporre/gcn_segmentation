@@ -10,7 +10,7 @@ from lib.utils import print_debug
 def estimatePositiveWeight(dataset, progress_bar=True):
     positive_count = 0
     negative_count = 0
-    L = dataset.num_batches
+    L = len(dataset)
     prefix_bar = 'Estimating positive weight: '
     if progress_bar:
         printProgressBar(0, L, prefix=prefix_bar, suffix='Complete', length=50)
@@ -30,7 +30,7 @@ def estimatePositiveWeight(dataset, progress_bar=True):
     if positive_count == 0 or negative_count == 0:
         positive_weight = 1
     else:
-        positive_weight = positive_count/negative_count if negative_count !=0 else 1
+        positive_weight = negative_count/positive_count if positive_count != 0 else 1
     print('Estimated positive weight is :', positive_weight)
     return positive_weight
 
