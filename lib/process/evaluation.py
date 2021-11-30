@@ -27,6 +27,7 @@ class MetricsLogs(object):
         # used to track metric of last evaluation.
         self.best_metric = None
         self.current_metric = None
+        self.recent_update = False
         self.monitor_metric = monitor_metric
         # List will be fill with loss per batch, every epoch produces a list that will extended here (logged)
         self._loss_per_iter = []
@@ -53,6 +54,7 @@ class MetricsLogs(object):
         self._measurements = list(measurements.keys())
         self.best_metric = None
         self.current_metric = None
+        self.recent_update = False
         self._metric_logs = measurements
 
     def get_binary_metrics(self):
@@ -88,7 +90,7 @@ class MetricsLogs(object):
             g = self._metric_logs[t]
             g.append(m)
             self._metric_logs[t] = g
-            if t == self.best_metric:
+            if t == self.monitor_metric:
                 self._update_best_metric(m)
 
     def _update_best_metric(self, metric):
@@ -98,12 +100,17 @@ class MetricsLogs(object):
         # NOTE: this can also be used to change the monitor metrics ... only works for the prev metric
         if self.best_metric is None:
             self.best_metric = self.current_metric
+            self.recent_update = True
+            return
         # updates best metric if current_metric is better
         if self.current_metric > self.best_metric:
             self.best_metric = self.current_metric
+            self.recent_update = True
+        else:
+            self.recent_update = False
 
     def is_best_metric(self):
-        return self.best_metric is not None and self.current_metric >= self.best_metric
+        return self.best_metric is not None and self.recent_update and self.current_metric > self.best_metric
 
     def get_measurements(self):
         return self._metric_logs

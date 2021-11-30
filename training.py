@@ -286,9 +286,10 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
                 print("Evaluation Metrics: ", eval_metric_str)
         # update metrics and loss logs in the trainer
         eval_metric_logging.update_measurement(metrics)
+        if eval_metric_logging.is_best_metric():
+            print('Saving new model: {} > {}'.format(eval_metric_logging.best_metric, eval_metric_logging.current_metric))
+            trainer.save_model(MODEL_PATH)
         if timer.is_time():
-            if eval_metric_logging.is_best_metric():
-                trainer.save_model(MODEL_PATH)
             trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, fig_dir,
                                     eval_metric_logging, args.upload)
     # loss_all = np.array(loss_all)
