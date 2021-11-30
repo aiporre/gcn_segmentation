@@ -266,8 +266,8 @@ class Evaluator(object):
             N = label.eq(label).sum(axis=1)
             pos = torch.nonzero(label.eq(1).squeeze(), as_tuple=True)
             neg = torch.nonzero(label.eq(0).squeeze(), as_tuple=True)
-            def collect_true_values(values, shape, coords):
-                vals = torch.zeros(shape, dtype=torch.bool)
+            def collect_true_values(values, coords):
+                vals = torch.zeros_like(label).bool()
                 vals[coords] = values
                 return vals.sum(dim=1)
             TP = collect_true_values(pred_mask[pos].eq(label[pos]), label.shape, pos)
