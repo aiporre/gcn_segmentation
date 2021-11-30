@@ -260,15 +260,15 @@ class Evaluator(object):
             mask_pos = torch.nonzero(label.eq(1).squeeze())
             mask_neg = torch.nonzero(label.eq(0).squeeze())
             TP = pred_mask[:,mask_pos].eq(label[:,mask_pos]).sum(axis=1)
-            FP = pred_mask[:,mask_pos].ne(label[:,mask_pos]).sum(axis=1)
-            FN = pred_mask[:,mask_neg].ne(label[:,mask_neg]).sum(axis=1)
+            FN = pred_mask[:,mask_pos].ne(label[:,mask_pos]).sum(axis=1)
+            FP = pred_mask[:,mask_neg].ne(label[:,mask_neg]).sum(axis=1)
 
             if "accuracy" in metrics:
                 metric_values["accuracy"].append(torch.mean(correct/N+eps).item())
             if "recall" in metrics:
-                metric_values["recall"].append(torch.mean((TP)/(TP+FP+eps)).item())
+                metric_values["recall"].append(torch.mean((TP)/(TP+FN+eps)).item())
             if "precision" in metrics:
-                metric_values["precision"].append(torch.mean((TP)/(TP+FN+eps)).item())
+                metric_values["precision"].append(torch.mean((TP)/(TP+FP+eps)).item())
             if "PPV" in metrics:
                 metric_values["PPV"].append(torch.mean((TP)/(N+eps)).item())
             if progress_bar:
