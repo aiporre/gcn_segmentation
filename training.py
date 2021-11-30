@@ -212,7 +212,7 @@ elif args.criterion == 'DCSsigmoid':
     sigmoid = True # evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'BCEweightedlogistic':
     if args.weight is None:
-        pos_weight = estimatePositiveWeight(dataset.train, progress_bar=args.progress_bar)
+        pos_weight = estimatePositiveWeight(dataset.train, progress_bar=args.progressbar)
     else:
         pos_weight = args.weight
     pos_weight = torch.tensor([pos_weight])
