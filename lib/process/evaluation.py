@@ -110,7 +110,7 @@ class MetricsLogs(object):
             self.recent_update = False
 
     def is_best_metric(self):
-        return self.best_metric is not None and self.recent_update and self.current_metric > self.best_metric
+        return self.recent_update
 
     def get_measurements(self):
         return self._metric_logs
