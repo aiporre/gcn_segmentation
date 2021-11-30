@@ -414,6 +414,7 @@ class Evaluator(object):
             if isinstance(prediction, (Data, Batch)):
                 prediction = prediction.x
             pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
+            prediction = sigmoid(prediction) if self.sigmoid else prediction
 
             # if overlap flag then creates a plot of three colors TP, FN and FP.
             if overlap:
