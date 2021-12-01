@@ -151,6 +151,7 @@ class Evaluator(object):
             prediction = model(features)
             if isinstance(prediction, Data):
                 prediction = to_torch_batch(prediction)
+            prediction = sigmoid(prediction) if self.sigmoid else prediction
             if check_label_not_unique(label):
                 opt_ths.extend(calculate_optimal_threshold(prediction, label))
             if progress_bar:
