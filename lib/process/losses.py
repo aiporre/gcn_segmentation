@@ -43,10 +43,11 @@ def calculate_optimal_threshold(prediction, label):
     if isinstance(label, torch.Tensor):
         label = label.cpu().detach().numpy()
     def opt_th(_label, _prediction):
-        fpr, tpr, threshold = roc_curve(_label, _prediction)
+        fpr, tpr, threshold = roc_curve(_label.astype(int), _prediction)
         opt_th = threshold[np.argmax(tpr - fpr)]
         return opt_th
-    opt_ths = [opt_th(l, p) for l, p in zip(prediction, label)]
+    b = label.shape[0]
+    opt_ths = [opt_th(label[i], prediction[i]) for i in range(b)]
     return np.array(opt_ths)
 
 def calculate_auc(prediction, label):
@@ -55,7 +56,8 @@ def calculate_auc(prediction, label):
         prediction = prediction.cpu().detach().numpy()
     if isinstance(label, torch.Tensor):
         label = label.cpu().detach().numpy()
-    aucs =[auc(p, l) for p, l in zip(prediction, label)]
+    B = label.shape[0]
+    aucs =[auc_roc_score(label[i], prediction[i]) for i in range(B)]
     return np.array(aucs)
 
 class DCS(object):

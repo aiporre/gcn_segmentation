@@ -32,12 +32,12 @@ try:
     from lib.models import GFCN, GFCNA, GFCNC, GFCNB, PointNet, GFCND
 except Exception as e:
     print('Warning: No module torch geometric. Failed to import models, Exception: ', str(e))
-    
+
 try:
     from dvn import FCN as DeepVessel
 except Exception as e:
     print('Warning: No module dvn. Failed to import deep vessel models, Exception: ', str(e))
-    
+
 from lib.models import UNet, FCN
 from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop, CropVessel12
 
@@ -253,7 +253,6 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
     opt_th_cnt = 0
     for e in trainer.get_range(EPOCHS):
         model.train() if not DEEPVESSEL else None
-
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
         mean_loss = np.array(loss).mean()
         eval_metric_logging.update_loss_log(loss)
