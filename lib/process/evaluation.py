@@ -4,7 +4,7 @@ from matplotlib.colors import ListedColormap
 from torch_geometric.data import Data, Batch
 from hausdorff import hausdorff_distance
 
-from .losses import DiceCoeff, calculate_optimal_threshold
+from .losses import DiceCoeff, calculate_optimal_threshold, calculate_auc
 from .progress_bar import printProgressBar
 from torch import sigmoid
 import numpy as np
@@ -240,6 +240,9 @@ class Evaluator(object):
                     g = metrics_values["HD"]
                     g.append(hd)
                     metrics_values["HD"] = g
+                if m == "AUC":
+                    auc = calculate_auc(prediction, label)
+                    metrics_values["AUC"].append(auc.mean().item())
                 if m == "COD":
                     eps = 1E-10
                     SS_res = torch.nn.functional.mse_loss(prediction, label)
