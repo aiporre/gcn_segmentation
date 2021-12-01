@@ -158,7 +158,7 @@ class Evaluator(object):
                 if i % int(L / 10) == 0 or i == 0:
                     print(f'{progress_bar_prefix}: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
             i += 1
-        self.opt_th = float(np.array(opt_ths, dtype=np.float).mean())
+        self.opt_th = np.array(opt_ths, dtype=np.float).mean().item()
 
     def DCM(self, model, progress_bar=True):
         DCM_accum = []
@@ -177,7 +177,7 @@ class Evaluator(object):
             prediction = model(features)
             if isinstance(prediction, Data):
                 prediction = to_torch_batch(prediction)
-            pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
+            pred_mask = (sigmoid(prediction) > self.opt_th).float() if self.sigmoid else (prediction > self.opt_th).float()
             # reorganize prediction according to the batch.
             if not pred_mask.size(0) == label.size(0):
                 b = label.size(0)
@@ -220,7 +220,7 @@ class Evaluator(object):
                     g = metrics_values['val_loss']
                     g.append(self.criterion(prediction, label).item())
                     metrics_values['val_loss'] = g
-                pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
+                pred_mask = (sigmoid(prediction) > self.opt_th).float() if self.sigmoid else (prediction > self.opt_th).float()
                 # now converts the predictino from logits to probabilities if necessary.
                 prediction = sigmoid(prediction) if self.sigmoid else prediction
 
@@ -286,7 +286,7 @@ class Evaluator(object):
                 prediction = to_torch_batch(prediction)
             # calculate AUC and optimal threshold.
             # AUC, optimal_threshold = calculate_auc(prediction, label)
-            pred_mask = (sigmoid(prediction) > 0.5).long() if self.sigmoid else (prediction > 0.5).long()
+            pred_mask = (sigmoid(prediction) > self.opt_th).long() if self.sigmoid else (prediction > self.opt_th).long()
             if not pred_mask.size(0) == label.size(0):
                 b = label.size(0)
                 pred_mask = pred_mask.view(b, -1)
@@ -350,7 +350,7 @@ class Evaluator(object):
         prediction = model(input)
         if is_graph_tensor:
             prediction =  prediction.x
-        pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
+        pred_mask = (sigmoid(prediction) > self.opt_th).float() if self.sigmoid else (prediction > self.opt_th).float()
         # after using prediction for calculating the mask then the prediction is transformed to prob,
         prediction = sigmoid(prediction) if self.sigmoid else prediction
         # converts to an square if necessary
@@ -453,10 +453,10 @@ class Evaluator(object):
             input = torch.tensor(image).float() if self.to_tensor else image.clone()
             input = input.to(self.device)
             prediction = model(input)
-            # pred_mask = (sigmoid(prediction) > 0.5).float()
+            # pred_mask = (sigmoid(prediction) > self.opt_th).float()
             if isinstance(prediction, (Data, Batch)):
                 prediction = prediction.x
-            pred_mask = (sigmoid(prediction) > 0.5).float() if self.sigmoid else (prediction > 0.5).float()
+            pred_mask = (sigmoid(prediction) > self.opt_th).float() if self.sigmoid else (prediction > self.opt_th).float()
             prediction = sigmoid(prediction) if self.sigmoid else prediction
 
             # if overlap flag then creates a plot of three colors TP, FN and FP.
@@ -569,7 +569,7 @@ class KEvaluator(Evaluator):
             label = label.to(self.device)
             prediction = model.predict(x=image)
             pred_mask = torch.tensor(prediction).to(self.device)
-            pred_mask = (pred_mask[:,1,:,:] > 0.5).float()
+            pred_mask = (pred_mask[:,1,:,:] > super().opt_th).float()
 
             # reorganize prediction according to the batch.
             if not pred_mask.size(0) == label.size(0):
@@ -603,7 +603,7 @@ class KEvaluator(Evaluator):
         # prediction = model(input)
         prediction = model.predict(x=image)[:,1,:,:]
         # pred_mask = (sigmoid(prediction) > 0.5).float()
-        pred_mask = (prediction > 0.5)
+        pred_mask = (prediction > super().opt_th)
 
         # if not isinstance(image,np.ndarray):
         #     dimension = image.x.size(0)# it will assume a square image, though we need a transformer for that
