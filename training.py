@@ -250,6 +250,7 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     trainer.load_checkpoint(prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
     timer = Timer(args.checkpoint_timer)
+    opt_th_cnt = 0
     for e in trainer.get_range(EPOCHS):
         model.train() if not DEEPVESSEL else None
 
@@ -285,6 +286,8 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
                 for m_name, m_value in metrics.items():
                     eval_metric_str += f" {m_name}={m_value} "
                 print("Evaluation Metrics: ", eval_metric_str)
+                if e % int(EPOCHS/10) == 0 or e == 0:
+                    evaluator_val.update_optimal_threshold(model, progress_bar=progress_bar)
         # update metrics and loss logs in the trainer
         eval_metric_logging.update_measurement(metrics)
         if eval_metric_logging.is_best_metric():

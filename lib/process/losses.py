@@ -1,4 +1,6 @@
+import numpy as np
 import torch
+from sklearn.metrics import roc_curve, auc
 from torch import sigmoid
 from torch.nn.functional import binary_cross_entropy
 from torch.autograd import Function
@@ -34,6 +36,27 @@ def estimatePositiveWeight(dataset, progress_bar=True):
     print('Estimated positive weight is :', positive_weight)
     return positive_weight
 
+def calculate_optimal_threshold(prediction, label):
+    assert len(prediction.shape) == 2 and len(label.shape) == 2, " prediction and label must have two dimension only."
+    if isinstance(prediction, torch.Tensor):
+        prediction = prediction.cpu().detach().numpy()
+    if isinstance(label, torch.Tensor):
+        label = label.cpu().detach().numpy()
+    def opt_th(_label, _prediction):
+        fpr, tpr, threshold = roc_curve(_label, _prediction)
+        opt_th = threshold[np.argmax(tpr - fpr)]
+        return opt_th
+    opt_ths = [opt_th(l, p) for l, p in zip(prediction, label)]
+    return np.array(opt_ths)
+
+def calculate_auc(prediction, label):
+    assert len(prediction.shape) == 2 and len(label.shape) == 2, " prediction and label must have two dimension only."
+    if isinstance(prediction, torch.Tensor):
+        prediction = prediction.cpu().detach().numpy()
+    if isinstance(label, torch.Tensor):
+        label = label.cpu().detach().numpy()
+    aucs =[auc(p, l) for p, l in zip(prediction, label)]
+    return np.array(aucs)
 
 class DCS(object):
     """

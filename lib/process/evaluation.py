@@ -4,7 +4,7 @@ from matplotlib.colors import ListedColormap
 from torch_geometric.data import Data, Batch
 from hausdorff import hausdorff_distance
 
-from .losses import DiceCoeff
+from .losses import DiceCoeff, calculate_optimal_threshold
 from .progress_bar import printProgressBar
 from torch import sigmoid
 import numpy as np
@@ -132,6 +132,33 @@ class Evaluator(object):
         self.sigmoid = sigmoid
         # used for getting the validation/test loss
         self.criterion = criterion
+        self.opt_th = 0.5
+
+    def update_optimal_threshold(self, model, progress_bar=True):
+        opt_ths = []
+        L = self.dataset.num_batches
+        progress_bar_prefix = "Estimating optimal threshold"
+        if progress_bar:
+            printProgressBar(0, L, prefix=progress_bar_prefix, suffix='Complete', length=25)
+        i = 0
+        self.dataset.enforce_batch(self._batch_size)
+
+        for image, label in self.dataset.batches():
+            features = torch.tensor(image).float() if self.to_tensor else image
+            label = torch.tensor(label).float() if self.to_tensor else label
+            features = features.to(self.device)
+            label = label.to(self.device)
+            prediction = model(features)
+            if isinstance(prediction, Data):
+                prediction = to_torch_batch(prediction)
+            opt_ths.extend(calculate_optimal_threshold(prediction, label))
+            if progress_bar:
+                printProgressBar(i, L, prefix=progress_bar_prefix, suffix='Complete', length=50)
+            else:
+                if i % int(L / 10) == 0 or i == 0:
+                    print(f'{progress_bar_prefix}: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+            i += 1
+        self.opt_th = float(np.array(opt_ths, dtype=np.float).mean())
 
     def DCM(self, model, progress_bar=True):
         DCM_accum = []
@@ -254,6 +281,8 @@ class Evaluator(object):
             prediction = model(features)
             if isinstance(prediction, Data):
                 prediction = to_torch_batch(prediction)
+            # calculate AUC and optimal threshold.
+            # AUC, optimal_threshold = calculate_auc(prediction, label)
             pred_mask = (sigmoid(prediction) > 0.5).long() if self.sigmoid else (prediction > 0.5).long()
             if not pred_mask.size(0) == label.size(0):
                 b = label.size(0)
