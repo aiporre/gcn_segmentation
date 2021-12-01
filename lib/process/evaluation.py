@@ -4,7 +4,7 @@ from matplotlib.colors import ListedColormap
 from torch_geometric.data import Data, Batch
 from hausdorff import hausdorff_distance
 
-from .losses import DiceCoeff, calculate_optimal_threshold, calculate_auc
+from .losses import DiceCoeff, calculate_optimal_threshold, calculate_auc, check_label_not_unique
 from .progress_bar import printProgressBar
 from torch import sigmoid
 import numpy as np
@@ -151,15 +151,19 @@ class Evaluator(object):
             prediction = model(features)
             if isinstance(prediction, Data):
                 prediction = to_torch_batch(prediction)
-            opt_ths.extend(calculate_optimal_threshold(prediction, label))
+            if check_label_not_unique(label):
+                opt_ths.extend(calculate_optimal_threshold(prediction, label))
             if progress_bar:
                 printProgressBar(i, L, prefix=progress_bar_prefix, suffix='Complete', length=25)
             else:
                 if i % int(L / 10) == 0 or i == 0:
                     print(f'{progress_bar_prefix}: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
             i += 1
-        self.opt_th = np.array(opt_ths, dtype=np.float).mean().item()
-        print('\nUpdated optimal threshold is now: ', self.opt_th)
+        if len(opt_ths) != 0:
+            self.opt_th = np.array(opt_ths, dtype=np.float).mean().item()
+            print('\nUpdated optimal threshold is now: ', self.opt_th)
+        else:
+            print('Warning: no optimal threshold. Using the old value: ', self.opt_th)
 
     def DCM(self, model, progress_bar=True):
         DCM_accum = []

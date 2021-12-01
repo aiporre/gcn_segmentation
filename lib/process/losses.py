@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from sklearn.metrics import roc_curve, auc
+from sklearn.metrics import roc_curve, auc, roc_auc_score
 from torch import sigmoid
 from torch.nn.functional import binary_cross_entropy
 from torch.autograd import Function
@@ -45,10 +45,10 @@ def calculate_optimal_threshold(prediction, label):
     def opt_th(_label, _prediction):
         fpr, tpr, threshold = roc_curve(_label.astype(int), _prediction)
         opt_th = threshold[np.argmax(tpr - fpr)]
-        return opt_th
+        return opt_th.item()
     b = label.shape[0]
     opt_ths = [opt_th(label[i], prediction[i]) for i in range(b)]
-    return np.array(opt_ths)
+    return opt_ths
 
 def calculate_auc(prediction, label):
     assert len(prediction.shape) == 2 and len(label.shape) == 2, " prediction and label must have two dimension only."
@@ -57,8 +57,16 @@ def calculate_auc(prediction, label):
     if isinstance(label, torch.Tensor):
         label = label.cpu().detach().numpy()
     B = label.shape[0]
-    aucs =[auc_roc_score(label[i], prediction[i]) for i in range(B)]
+    aucs =[roc_auc_score(label[i], prediction[i]) for i in range(B)]
     return np.array(aucs)
+
+def check_label_not_unique(label):
+    assert len(label.shape) == 2, " label must have two dimension only."
+    B = label.shape[0]
+    N = label.shape[1]
+    S = label.sum(dim=1) if isinstance(label, torch.Tensor) else label.sum(axis=1)
+    not_all_unique= all([S[b] != 0 and S[b] != N for b in range(B)])
+    return not_all_unique
 
 class DCS(object):
     """
