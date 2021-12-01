@@ -246,6 +246,7 @@ else:
 def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ'):
     prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{id}_"
     prefix_model = os.path.splitext(os.path.basename(MODEL_PATH))[0]
+    last_model_path = prefix_model + "_last.pth"
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     trainer.load_checkpoint(prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
     timer = Timer(args.checkpoint_timer)
@@ -292,6 +293,8 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
         if timer.is_time():
             trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, fig_dir,
                                     eval_metric_logging, args.upload)
+            trainer.save_model(last_model_path)
+
     # loss_all = np.array(loss_all)
     trainer.save_model(MODEL_PATH)
     trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, fig_dir,

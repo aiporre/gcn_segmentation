@@ -270,9 +270,9 @@ class Evaluator(object):
                 vals = torch.zeros_like(label).bool()
                 vals[coords] = values
                 return vals.sum(dim=1)
-            TP = collect_true_values(pred_mask[pos].eq(label[pos]), label.shape, pos)
-            FN = collect_true_values(pred_mask[pos].ne(label[pos]), label.shape, pos)
-            FP = collect_true_values(pred_mask[neg].ne(label[neg]), label.shape, neg)
+            TP = collect_true_values(pred_mask[pos].eq(label[pos]), pos)
+            FN = collect_true_values(pred_mask[pos].ne(label[pos]), pos)
+            FP = collect_true_values(pred_mask[neg].ne(label[neg]), neg)
 
             if "accuracy" in metrics:
                 metric_values["accuracy"].append(torch.mean(correct/N+eps).item())
