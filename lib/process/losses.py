@@ -114,8 +114,14 @@ class GeneralizedDiceLoss:
         prob = inputs.flatten(start_dim=1) if not self.pre_sigmoid else sigmoid(inputs.flatten(start_dim=1))
         f = targets.flatten(start_dim=1)
         b = 1 - f
-        w_f = 1 / (self.epsilon + torch.sum(f, dim=1) ** 2)
-        w_b = 1 / (self.epsilon + torch.sum(b, dim=1) ** 2)
+        # w_f = 1 / (self.epsilon + torch.sum(f, dim=1) ** 2)
+        # w_b = 1 / (self.epsilon + torch.sum(b, dim=1) ** 2)
+        w_f = 1 / (torch.sum(f, dim=1) ** 2)
+        w_b = 1 / (torch.sum(b, dim=1) ** 2)
+        new_w_f = torch.maximum(torch.zeros_like(w_f), w_b)
+        new_w_b = torch.maximum(torch.zeros_like(w_b), w_f)
+        w_f = new_w_f
+        w_b = new_w_b
         prob_f = prob * f
         prob_b = (1 - prob) * b
 
@@ -125,7 +131,10 @@ class GeneralizedDiceLoss:
         C_sum = w_f * torch.sum(prob_f + f, dim=1)
         D_sum = w_b * torch.sum(prob_b + b, dim=1)
 
-        return torch.mean(1 - 2 * ((A_sum + B_sum + self.smooth) / (C_sum + D_sum + self.smooth)))
+        # return torch.mean(1 - 2 * ((A_sum + B_sum + self.smooth) / (C_sum + D_sum + self.smooth)))
+        loss = 1 - 2 * ((A_sum + B_sum) / (C_sum + D_sum))
+        loss = torch.where(loss.isnan(), torch.ones_like(loss), loss)
+        return torch.mean(loss)
 
 class FocalLoss:
     def __init__(self, pre_sigmoid=False,  alpha=0.25, gamma=2.0):
