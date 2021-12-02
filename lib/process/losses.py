@@ -133,7 +133,7 @@ class GeneralizedDiceLoss:
 
         # return torch.mean(1 - 2 * ((A_sum + B_sum + self.smooth) / (C_sum + D_sum + self.smooth)))
         loss = 1 - 2 * ((A_sum + B_sum) / (C_sum + D_sum))
-        loss = torch.where(loss.isnan(), torch.ones_like(loss), loss)
+        loss = torch.where(torch.isnan(loss), torch.ones_like(loss), loss)
         return torch.mean(loss)
 
 class FocalLoss:
