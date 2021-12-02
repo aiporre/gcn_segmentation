@@ -118,8 +118,8 @@ class GeneralizedDiceLoss:
         # w_b = 1 / (self.epsilon + torch.sum(b, dim=1) ** 2)
         w_f = 1 / (torch.sum(f, dim=1) ** 2)
         w_b = 1 / (torch.sum(b, dim=1) ** 2)
-        new_w_f = torch.maximum(torch.zeros_like(w_f), w_b)
-        new_w_b = torch.maximum(torch.zeros_like(w_b), w_f)
+        new_w_f = torch.max(torch.zeros_like(w_f), w_b)
+        new_w_b = torch.max(torch.zeros_like(w_b), w_f)
         w_f = new_w_f
         w_b = new_w_b
         prob_f = prob * f
