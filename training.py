@@ -6,7 +6,7 @@ from tifffile import tifffile
 
 from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape, get_modalities
 from lib.process.evaluation import MetricsLogs
-from lib.process.losses import estimatePositiveWeight
+from lib.process.losses import estimatePositiveWeight, GeneralizedDiceLoss, FocalLoss, DiceLoss
 
 try:
     from lib.datasets.gendostroke import GENDOSTROKE, endostroke_reshape
@@ -105,7 +105,8 @@ def process_command_line():
     parser.add_argument("-mm", "--monitor-metric", type=str, default='DCM',
                         help="Monitor metric for saving models ")
     parser.add_argument("-c", "--criterion", type=str, default='BCE',
-                        help="criterion: BCE or DCS or BCElogistic or DCSsigmoid")
+                        help="criterion: BCE or DCS or BCElogistic or DCSsigmoid or wBCElogistic or FL or FLsigmoid or "
+                             "DL or DLsigmoid or GDL or GDLsigmoid")
     parser.add_argument("-w", "--weight", type=float, default=None,
                         help="Positive weight value for unbalanced datasets. If not given then it is estimated.")
     parser.add_argument("-u", "--upload", type=str2bool, default=False,
@@ -218,6 +219,24 @@ elif args.criterion == 'BCEweightedlogistic':
     pos_weight = torch.tensor([pos_weight])
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(device))  # criterion accepts logit. network produce logit
     sigmoid = True  # evaluation flag to comput sigmoid because model output logit
+elif args.criterion == 'GDL':
+    criterion = GeneralizedDiceLoss() # criterion accepts probability
+    sigmoid = False # not necesary to compute the sigmoid, because model output probability
+elif args.criterion == 'GDLsigmoid':
+    criterion = GeneralizedDiceLoss(pre_sigmoid=True) # criterion accepts probability
+    sigmoid = True # not necesary to compute the sigmoid, because model output probability
+elif args.criterion == 'FL':
+    criterion = FocalLoss() # criterion accepts probability
+    sigmoid = False # not necesary to compute the sigmoid, because model output probability
+elif args.criterion == 'FLsigmoid':
+    criterion = FocalLoss(pre_sigmoid=True) # criterion accepts probability
+    sigmoid = True # not necesary to compute the sigmoid, because model output probability
+elif args.criterion == 'DL':
+    criterion = DiceLoss() # criterion accepts probability
+    sigmoid = False # not necesary to compute the sigmoid, because model output probability
+elif args.criterion == 'DLsigmoid':
+    criterion = DiceLoss(pre_sigmoid=True) # criterion accepts probability
+    sigmoid = True # not necesary to compute the sigmoid, because model output probability
 else:
     criterion = nn.BCELoss()
     sigmoid = False
