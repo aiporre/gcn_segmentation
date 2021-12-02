@@ -341,7 +341,6 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ", 
                          result, imagej=True, metadata={'axes': 'ZCYX'})
         savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
 
-    savefigs(fig_name='{}_overlap'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
     # plt.show()
     print('calculating stats...')
     metric_logs = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
