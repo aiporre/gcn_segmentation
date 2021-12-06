@@ -235,7 +235,7 @@ class Evaluator(object):
                     b = label.size(0)
                     pred_mask = pred_mask.view(b, -1)
                 if m == "DCM":
-                    dcm = dice_coeff(pred_mask, label).item()
+                    dcm = dice_coeff(prediction, label).item()
                     g = metrics_values["DCM"]
                     g.append(dcm)
                     metrics_values["DCM"] = g
@@ -263,6 +263,7 @@ class Evaluator(object):
                 if i % int(L/10) == 0 or i == 0:
                     print('Eval-Loss: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
             i += 1
+        print('metrics[DCM == : \n ', metrics_values["DCM"])
         metrics_avgs = {m: np.array(g).mean() for m, g in metrics_values.items()}
         return metrics_avgs
 
@@ -302,8 +303,9 @@ class Evaluator(object):
                 pred_mask = pred_mask.view(b, -1)
             correct = pred_mask.eq(label).sum(axis=1)
             N = label.eq(label).sum(axis=1)
-            pos = torch.nonzero(label.eq(1).squeeze(), as_tuple=True)
-            neg = torch.nonzero(label.eq(0).squeeze(), as_tuple=True)
+            pos = torch.nonzero(label.eq(1), as_tuple=True)
+            neg = torch.nonzero(label.eq(0), as_tuple=True)
+            pred_mask = pred_mask
             def collect_true_values(values, coords):
                 vals = torch.zeros_like(label).bool()
                 vals[coords] = values

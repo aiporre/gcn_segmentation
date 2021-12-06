@@ -130,18 +130,23 @@ class Trainer(object):
             target_epoch = re.search(r'_e(.*?)_ds', prefix).group(1)
             prefix_flexible = prefix.replace("".join(["_e",target_epoch,"_ds"]), r'_e(.*?)_ds')
             checkpoint_file = [ f for f in files if bool(re.search(prefix_flexible, f)) and f.endswith("checkpoint.npy")]
-            e_list_strs = [re.search(r'_e(.*?)_ds', s).group(1) for s in checkpoint_file]
-            # attempt to parse to int
-            e_list_ints = []
-            for ee in e_list_strs:
-                if ee.isdigit():
-                    e_list_ints.append(int(ee))
-                else:
-                    raise ValueError(
-                        'Something went wrong while extracting epoch list in your checkpoints {} with prefix {}'.format(
-                            checkpoint_file, prefix))
-            checkpoint_file = [checkpoint_file[argmax(e_list_ints)]]
-            prefix = checkpoint_file[0].split("_checkpoint.")[0]
+            if checkpoint_file > 1:
+                e_list_strs = [re.search(r'_e(.*?)_ds', s).group(1) for s in checkpoint_file]
+                # attempt to parse to int
+                e_list_ints = []
+                for ee in e_list_strs:
+                    if ee.isdigit():
+                        e_list_ints.append(int(ee))
+                    else:
+                        raise ValueError(
+                            'Something went wrong while extracting epoch list in your checkpoints {} with prefix {}'.format(
+                                checkpoint_file, prefix))
+                checkpoint_file = [checkpoint_file[argmax(e_list_ints)]]
+                prefix = checkpoint_file[0].split("_checkpoint.")[0]
+            elif len(checkpoint_file) == 1:
+                prefix = checkpoint_file[0].split("_checkpoint.")[0]
+            else:
+                print('No checkpoint file was found for given prefix: ', prefix)
 
         # presets the epochs
         if len(checkpoint_file)>0:

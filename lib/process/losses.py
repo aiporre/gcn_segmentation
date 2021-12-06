@@ -179,7 +179,7 @@ class DiceCoeff(Function):
 
     def forward(self, inputs, targets):
         self.save_for_backward(inputs, targets)
-        eps = 0.0001
+        eps = 1E-10 #0.0001
         try:
             self.inter = torch.dot(inputs.view(-1), targets.view(-1))
         except RuntimeError as e:
