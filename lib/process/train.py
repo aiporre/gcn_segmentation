@@ -110,6 +110,8 @@ class Trainer(object):
         files = get_npy_files()
         checkpoint_file = list(filter(lambda x: x.endswith('checkpoint.npy') and x.startswith(prefix), files))
         # finds the closest largest checkpoint file
+        def argmax(iterable):
+            return max(enumerate(iterable), key=lambda x: x[1])[0]
         if len(checkpoint_file) > 1:
             e_list_strs = [re.search(r'_e(.*?)_lr', s).group(1) for s in checkpoint_file]
             # attempt to parse to int
@@ -121,10 +123,26 @@ class Trainer(object):
                     raise ValueError(
                         'Something went wrong while extracting epoch list in your checkpoints {} with prefix {}'.format(
                             checkpoint_file, prefix))
-            def argmax(iterable):
-                return max(enumerate(iterable), key=lambda x: x[1])[0]
+
             checkpoint_file = [checkpoint_file[argmax(e_list_ints)]]
             prefix = checkpoint_file[0].split("_checkpoint.")[0]
+        if len(checkpoint_file) == 0: # this means that the epoch could be higher than the one in the checkpoint files
+            target_epoch = re.search(r'_e(.*?)_ds', prefix).group(1)
+            prefix_flexible = prefix.replace("".join(["_e",target_epoch,"_ds"]), r'_e(.*?)_ds')
+            checkpoint_file = [ f for f in files if bool(re.search(prefix_flexible, f)) and f.endswith("checkpoint.npy")]
+            e_list_strs = [re.search(r'_e(.*?)_ds', s).group(1) for s in checkpoint_file]
+            # attempt to parse to int
+            e_list_ints = []
+            for ee in e_list_strs:
+                if ee.isdigit():
+                    e_list_ints.append(int(ee))
+                else:
+                    raise ValueError(
+                        'Something went wrong while extracting epoch list in your checkpoints {} with prefix {}'.format(
+                            checkpoint_file, prefix))
+            checkpoint_file = [checkpoint_file[argmax(e_list_ints)]]
+            prefix = checkpoint_file[0].split("_checkpoint.")[0]
+
         # presets the epochs
         if len(checkpoint_file)>0:
             d1 = np.load(checkpoint_file[0], allow_pickle=True)
