@@ -10,7 +10,7 @@ from torch_geometric.data import Data
 
 from lib.utils import savefigs, get_npy_files, upload_training
 from ..graph.batch import to_torch_batch
-
+from lib.process.evaluation import dice_coeff
 try:
     from dvn import FCN
 except Exception as e:
@@ -130,7 +130,7 @@ class Trainer(object):
             target_epoch = re.search(r'_e(.*?)_ds', prefix).group(1)
             prefix_flexible = prefix.replace("".join(["_e",target_epoch,"_ds"]), r'_e(.*?)_ds')
             checkpoint_file = [ f for f in files if bool(re.search(prefix_flexible, f)) and f.endswith("checkpoint.npy")]
-            if checkpoint_file > 1:
+            if len(checkpoint_file) > 1:
                 e_list_strs = [re.search(r'_e(.*?)_ds', s).group(1) for s in checkpoint_file]
                 # attempt to parse to int
                 e_list_ints = []

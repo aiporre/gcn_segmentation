@@ -1,6 +1,5 @@
 import argparse
 import os.path
-
 from scipy.ndimage import measurements
 from tifffile import tifffile
 
@@ -88,7 +87,7 @@ def process_command_line():
                         help="path to save figs")
     parser.add_argument("-ed", "--endodir", type=str, default=ENDOSTROKE_DIR,
                         help="endovascular dataset dir")
-    parser.add_argument("-id", "--islesdir", type=str, default=ISLES2018_DIR,
+    parser.add_argument("-idir", "--islesdir", type=str, default=ISLES2018_DIR,
                         help="ISLES 2018  dataset dir")
     parser.add_argument("-b", "--batch", type=int, default=2,
                         help="batch size of trainer and evaluator")
@@ -244,38 +243,49 @@ else:
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, criterion=criterion)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, eval=True, criterion=trainer.criterion)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, eval=True, criterion=criterion)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, criterion=criterion)
+    for name, p in model.named_parameters():
+        print(name, p.mean())
     trainer.load_model(model, MODEL_PATH)
+    print('=============')
+    for name, p in model.named_parameters():
+        print(name, p.mean())
+    model.eval()
+    print('not with eval=======')
+
+    for name, p in model.named_parameters():
+        print(name, p.mean())
 elif args.net == 'DeepVessel':
     trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH)
-    evaluator_val = KEvaluator(dataset, eval=True, criterion=trainer.criterion)
+    evaluator_val = KEvaluator(dataset, eval=True, criterion=criterion)
     evaluator_test= KEvaluator(dataset, criterion=criterion)
     trainer.load_model(model,MODEL_PATH)
     model = trainer.model
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, eval=True, criterion=trainer.criterion)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, eval=True, criterion=criterion)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, criterion=criterion)
     trainer.load_model(model, MODEL_PATH)
 
 
 
 
-def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ'):
-    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{id}_"
+def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', tid='XYZ'):
+    global model
+    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{tid}_"
     prefix_model = os.path.splitext(os.path.basename(MODEL_PATH))[0]
     last_model_path = prefix_model + "_last.pth"
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     trainer.load_checkpoint(prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
     timer = Timer(args.checkpoint_timer)
-    opt_th_cnt = 0
     for e in trainer.get_range(EPOCHS):
-        model.train() if not DEEPVESSEL else None
+        trainer.model.train() if not DEEPVESSEL else None
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
         mean_loss = np.array(loss).mean()
         eval_metric_logging.update_loss_log(loss)
         print('EPOCH ', e, 'loss epoch', mean_loss)
+        model = trainer.model
         if DEEPVESSEL:
             print('Evaluation Epoch {}/{}...'.format(e, EPOCHS))
             # DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
@@ -307,6 +317,7 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
                 if e % int(EPOCHS/10) == 0 or e == 0:
                     evaluator_val.update_optimal_threshold(model, progress_bar=progress_bar)
         # update metrics and loss logs in the trainer
+        model = trainer.model
         eval_metric_logging.update_measurement(metrics)
         if eval_metric_logging.is_best_metric():
             print('Saving new model: {} > {}'.format(eval_metric_logging.best_metric, eval_metric_logging.current_metric))
@@ -322,14 +333,14 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id='XYZ')
                             eval_metric_logging, args.upload)
 
 
-def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ", modalities=None):
+def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', tid="XYZ", modalities=None):
     model.eval() if not DEEPVESSEL else None
     print('plotting one prediction')
     fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
                                         reshape_transform=reshape_transform, modalities=modalities)
     result = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=args.overlay_plot,
                                         reshape_transform=reshape_transform, modalities=modalities)
-    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{id}"
+    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{tid}"
     if args.overlay_plot:
         z, y, x = result.shape[0], result.shape[1], result.shape[2]
         result.tofile('{}_vol_{}x{}x{}.raw'.format(prefix_checkpoint, x, y, z))
@@ -359,8 +370,8 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', id="XYZ", 
 
 
 if not args.skip_training:
-    train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, id=args.id)
+    train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, tid=args.id)
 if DEEPVESSEL:
     model = trainer.model
 
-eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, id=args.id, modalities=MODALITIES)
+eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, tid=args.id, modalities=MODALITIES)
