@@ -134,19 +134,3 @@ else
 fi
 
 
- running with 2 channel in CBV and CBF
- training losses case GFCNC
-GFNC BCE
-GFCNC with soft Dice loss
-GFCNC with wBCE
-GFCNC with generalized dice loss
-GFCNC with Focal loss
-GFCNC with Dice loss (1- DCM
- running with 2 channel in CBV and CBF
- training losses case GFCNC
-GFNC BCE
-GFCNC with soft Dice loss
- running with 2 channel in CBV and CBF
- training losses case GFCNC
-GFNC BCE
-GFCNC with soft Dice loss
