@@ -165,7 +165,8 @@ class GFCNB(torch.nn.Module):
         data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
 
         # TODO handle contract on trainer and  evaluator
-        data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        # data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        data.x = self.convout(data.x, data.edge_index, data.edge_attr)
 
         # x = data.x
 
@@ -252,7 +253,8 @@ class GFCNA(torch.nn.Module):
         data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
 
         #
-        data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        # data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        data.x = self.convout(data.x, data.edge_index, data.edge_attr)
 
         # x = data.x
 
@@ -363,7 +365,8 @@ class GFCNC(torch.nn.Module):
         # data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1, batch=batch1, transform=None)
 
         # TODO handle contract on trainer and  evaluator
-        data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        # data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        data.x = self.convout(data.x, data.edge_index, data.edge_attr)
 
 
         return data
@@ -490,7 +493,8 @@ class GFCND(torch.nn.Module):
         data = self.up3(data, backsampling_1)
         # convout
         # V0,32 -> V0,1
-        data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        # data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        data.x = self.convout(data.x, data.edge_index, data.edge_attr)
         x = data.x
         # return F.sigmoid(x)
         return data
@@ -590,7 +594,8 @@ class GFCN(torch.nn.Module):
                                         batch=batch1, transform=T.Cartesian(cat=False))
 
         #
-        data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        # data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
+        data.x = self.convout(data.x, data.edge_index, data.edge_attr)
 
         # x = data.x
 
