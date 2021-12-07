@@ -80,7 +80,7 @@ class TrainingDir(object):
 
     @property
     def prefix_model(self):
-        return "{}-ds{}-id{}.pth".format(self.net_name, self.dataset_name, self.id)
+        return "{}-ds{}-id{}".format(self.net_name, self.dataset_name, self.id)
 
     @property
     def prefix(self):
