@@ -49,6 +49,7 @@ class TrainingDir(object):
             os.makedirs(self.root)
         if not os.path.exists(self.fig_dir):
             os.makedirs(self.fig_dir)
+        self.legacy()
 
     def legacy(self):
         if self.mode == "best" and not os.path.exists(self.model_path):
