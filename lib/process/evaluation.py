@@ -221,38 +221,39 @@ class Evaluator(object):
             prediction = model(features)
             if isinstance(prediction, Data):
                 prediction = to_torch_batch(prediction)
+            pred_mask = (sigmoid(prediction) > self.opt_th).float() if self.sigmoid else (
+                    prediction > self.opt_th).float()
+            # now converts the predictino from logits to probabilities if necessary.
+            pred_prob = sigmoid(prediction) if self.sigmoid else prediction.clone()
+            # reorganize prediction according to the batch.
+            if not pred_mask.size(0) == label.size(0):
+                b = label.size(0)
+                pred_mask = pred_mask.view(b, -1)
+                pred_prob = pred_prob.view(b, -1)
             for m in metrics:
                 if m == 'val_loss':
                     g = metrics_values['val_loss']
                     g.append(self.criterion(prediction, label).item())
                     metrics_values['val_loss'] = g
-                pred_mask = (sigmoid(prediction) > self.opt_th).float() if self.sigmoid else (prediction > self.opt_th).float()
-                # now converts the predictino from logits to probabilities if necessary.
-                prediction = sigmoid(prediction) if self.sigmoid else prediction
-
-                # reorganize prediction according to the batch.
-                if not pred_mask.size(0) == label.size(0):
-                    b = label.size(0)
-                    pred_mask = pred_mask.view(b, -1)
-                if m == "DCM":
-                    dcm = dice_coeff(prediction, label).item()
+                elif m == "DCM":
+                    dcm = dice_coeff(pred_prob, label).item()
                     g = metrics_values["DCM"]
                     g.append(dcm)
                     metrics_values["DCM"] = g
-                if m == "HD":
+                elif m == "HD":
                     #hd = hausdorff_distance(prediction.detach().cpu().numpy().reshape(-1,1),
                     #                        label.detach().cpu().numpy().reshape(-1,1))
                     hd = 1 #float(hd)
                     g = metrics_values["HD"]
                     g.append(hd)
                     metrics_values["HD"] = g
-                if m == "AUC":
-                    auc = calculate_auc(prediction, label)
+                elif m == "AUC":
+                    auc = calculate_auc(pred_prob, label)
                     metrics_values["AUC"].append(auc.mean().item())
-                if m == "COD":
+                elif m == "COD":
                     eps = 1E-10
-                    SS_res = torch.nn.functional.mse_loss(prediction, label)
-                    pred_mean = pred_mask.mean(axis=0)
+                    SS_res = torch.nn.functional.mse_loss(pred_prob, label)
+                    pred_mean = pred_prob.mean(axis=0)
                     SS_var = torch.mean((label-pred_mean)**2)
                     COD = (1 - (SS_res+eps)/(SS_var+eps)).item()
                     metrics_values["COD"].append(COD)
