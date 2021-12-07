@@ -323,11 +323,12 @@ def train(lr=0.001, progress_bar=False):
 
     # loss_all = np.array(loss_all)
     trainer.save_model(TRAINING_DIR.model_path)
-    trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, eval_metric_logging, args.upload)
+    trainer.save_checkpoint(TRAINING_DIR, lr, e, EPOCHS, eval_metric_logging, args.upload)
 
 
 def eval(progress_bar=False,  modalities=None):
     model.eval() if not DEEPVESSEL else None
+    evaluator_test.update_optimal_threshold(model, progress_bar=progress_bar)
     print('plotting one prediction')
     fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
                                          reshape_transform=reshape_transform, modalities=modalities)
