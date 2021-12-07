@@ -44,7 +44,7 @@ class TrainingDir(object):
 
     def makedirs(self, make_unique_root=True):
         if make_unique_root:
-            self.root = self.prefix_model
+            self.root = os.path.join(self.root, self.prefix_model)
         if not os.path.exists(self.root):
             os.makedirs(self.root)
         if not os.path.exists(self.fig_dir):

@@ -251,8 +251,6 @@ if args.dataset[0] == 'G':
                               eval=True, criterion=criterion)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid,
                                criterion=criterion)
-    for name, p in model.named_parameters():
-        print(name, p.mean())
     trainer.load_model(model, TRAINING_DIR.model_path)
 elif args.net == 'DeepVessel':
     trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH)
