@@ -318,7 +318,7 @@ def train(lr=0.001, progress_bar=False):
                 'Saving new model: {} > {}'.format(eval_metric_logging.best_metric, eval_metric_logging.current_metric))
             trainer.save_model(TRAINING_DIR.model_path_best)
         if timer.is_time():
-            trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, eval_metric_logging, args.upload)
+            trainer.save_checkpoint(TRAINING_DIR,  lr, e, EPOCHS, eval_metric_logging, args.upload)
             trainer.save_model(TRAINING_DIR.model_path_last)
 
     # loss_all = np.array(loss_all)

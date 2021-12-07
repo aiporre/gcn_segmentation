@@ -368,13 +368,14 @@ class KTrainer(Trainer):
         # history = self.model.fit(x=X, y=Y, epochs=1, batch_size=B)
         # return history.history['loss']
 
-    def save_checkpoint(self, prefix, prefix_model, lr, e, EPOCHS, fig_dir, eval_logging, upload=False):
-        super(KTrainer, self).save_checkpoint(prefix=prefix, prefix_model=prefix_model,
+    def save_checkpoint(self, training_path: TrainingDir, lr, e, EPOCHS, eval_logging, upload=False):
+        super(KTrainer, self).save_checkpoint(training_path=training_path,
                                               lr=lr, e=e,
-                                              EPOCHS=EPOCHS, fig_dir=fig_dir, eval_logging=eval_logging, upload=False)
+                                              EPOCHS=EPOCHS, eval_logging=eval_logging, upload=False)
         if upload:
             print('Uploading training')
-            upload_training(prefix_model=prefix_model, prefix=prefix, EPOCHS=EPOCHS, lr=lr, h5format=True)
+            upload_training(prefix_model=training_path.prefix_model, prefix=training_path.prefix,
+                            EPOCHS=EPOCHS, lr=lr, h5format=True)
     # def compile(self):
     #     self.update_lr(self.lr)
     #     self.model.compile(optimizer=self.optimizer,
