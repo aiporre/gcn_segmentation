@@ -41,15 +41,15 @@ then
   echo "GFNC BCE"
   # python training.py -s GISLES2018 -n GFCNC -b 4 -c BCElogistic -O False -t True -N 10 --id BCElogistic2Ch -lr 1E-4 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_BCElogistic2Ch.log
   echo "GFCNC with soft Dice loss"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid -O False -t True -N 10 --id DCSsigmoid2Ch -lr 1E-4 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_DCSsigmoid2Ch.log
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid -O False -t True -N 10 --id DCSsigmoid2Ch -lr 1E-5 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_DCSsigmoid2Ch.log
   echo "GFCNC with wBCE"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c BCEweightedlogistic -O False -t True -N 10 --id BCEweightedlogistic2Ch -lr 1E-4 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_BCEweightedlogistic2Ch.log
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c BCEweightedlogistic -O False -t True -N 10 --id BCEweightedlogistic2Ch -lr 1E-6 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_BCEweightedlogistic2Ch.log
   echo "GFCNC with generalized dice loss"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c GDLsigmoid -O False -t True -N 10 --id GDLsigmoid2Ch -lr 1E-4 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_GDLsigmoid2Ch.log
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c GDLsigmoid -O False -t True -N 10 --id GDLsigmoid2Ch -lr 1E-5 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_GDLsigmoid2Ch.log
   echo "GFCNC with Focal loss"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c FLsigmoid -O False -t True -N 10 --id FLsigmoid2Ch -lr 1E-4 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_FLsigmoid2Ch.log
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c FLsigmoid -O False -t True -N 10 --id FLsigmoid2Ch -lr 1E-6 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_FLsigmoid2Ch.log
   echo "GFCNC with Dice loss (1- DCM"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c DLsigmoid -O False -t True -N 10 --id DLsigmoid2Ch -lr 1E-4 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_DLsigmoid2Ch.log
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DLsigmoid -O False -t True -N 10 --id DLsigmoid2Ch -lr 1E-6 -g 100 --mod CBF CBV --weight 5.5 >> gfcnc_DLsigmoid2Ch.log
 
 #  echo "training losses case GFCNB"
 #  echo "GFCNB BCE"
