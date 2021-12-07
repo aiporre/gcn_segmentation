@@ -40,8 +40,7 @@ except Exception as e:
 from lib.models import UNet, FCN
 from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop, CropVessel12
 
-
-from lib.process import Trainer, Evaluator, DCS , KEvaluator, KTrainer
+from lib.process import Trainer, Evaluator, DCS, KEvaluator, KTrainer, TrainingDir
 import matplotlib.pyplot as plt
 import torch
 from torch import nn
@@ -49,6 +48,7 @@ from torch import nn
 from config import VESSEL_DIR, SVESSEL_DIR, ENDOSTROKE_DIR, ISLES2018_DIR
 from lib.utils import savefigs, Timer
 import numpy as np
+
 try:
     from keras import backend as K
 except:
@@ -69,7 +69,6 @@ def str2bool(v):
 def process_command_line():
     """Parse the command line arguments.
     """
-
 
     parser = argparse.ArgumentParser(description="Machine Learning Training: :)",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -96,7 +95,9 @@ def process_command_line():
     parser.add_argument("--id", type=str, default='XYZ',
                         help="id for the training name")
     parser.add_argument("-n", "--net", type=str, default='GFCN',
-                            help="network to be used. ...." )
+                        help="network to be used. ....")
+    parser.add_argument("--load-model", type=str, default='best',
+                        help="loading model mode. Options are best, and last")
     parser.add_argument("-p", "--pre-transform", type=str2bool, default=False,
                         help="use a pre-transfrom to the dataset")
     parser.add_argument("-z", "--background", type=str2bool, default=True,
@@ -122,6 +123,7 @@ def process_command_line():
                         help=" Modalities for the ISLES2018 dataset. Defaults to [\"CTN\", \"TMAX\", \"CBF\", \"CBV\", \"MTT\"]")
     return parser.parse_args()
 
+
 # CONSTANST
 
 args = process_command_line()
@@ -130,22 +132,21 @@ print('ARGUMENTS: ')
 print(args)
 print('=====================')
 EPOCHS = args.epochs
-MODEL_PATH = './{}-ds{}-id{}.pth'.format(args.net, args.dataset, args.id)
+TRAINING_DIR = TrainingDir('./', args.network, args.dataset, args.id, EPOCHS, args.load_model)
 EPOCHS = args.epochs
 BATCH = args.batch
-DEEPVESSEL =False
+DEEPVESSEL = False
 MEASUREMENTS = ["train_loss", "val_loss", "DCM", 'accuracy', 'precision', 'recall', "HD", "COD", "PPV"]
 MODALITIES = get_modalities(args.mod) if args.dataset == 'GISLES2018' else None
 NUM_INPUTS = 1 if MODALITIES is None else len(MODALITIES)
 
 if args.pre_transform:
     if args.dataset.startswith('G'):
-        pre_transform = Crop(30,150,256,256)
+        pre_transform = Crop(30, 150, 256, 256)
     else:
         pre_transform = CropVessel12(30, 150, 256, 256)
 else:
     pre_transform = None
-
 
 if args.dataset == 'MNIST':
     dataset = MNIST(background=args.background)
@@ -175,7 +176,7 @@ else:
     dataset = MNIST()
     reshape_transform = None
 
-if args.net=='GFCN':
+if args.net == 'GFCN':
     model = GFCN(input_channels=NUM_INPUTS)
 elif args.net == 'GFCNA':
     model = GFCNA(input_channels=NUM_INPUTS)
@@ -185,7 +186,7 @@ elif args.net == 'GFCNC':
     model = GFCNC(input_channels=NUM_INPUTS)
 elif args.net == 'GFCND':
     model = GFCND(input_channels=NUM_INPUTS)
-elif args.net=='PointNet':
+elif args.net == 'PointNet':
     model = PointNet()
 elif args.net == 'UNet':
     model = UNet(n_channels=NUM_INPUTS, n_classes=1)
@@ -193,23 +194,23 @@ elif args.net == 'FCN':
     model = FCN(n_channels=NUM_INPUTS, n_classes=1)
 elif args.net == 'DeepVessel':
     model = DeepVessel(dim=2, nchannels=NUM_INPUTS, nlabels=2)
-    DEEPVESSEL =True
+    DEEPVESSEL = True
 else:
     model = GFCNA()
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 if args.criterion == 'BCE':
-    criterion = nn.BCELoss() # criterion accepts probabilities, we assume that the network outputs prob
-    sigmoid=False # therefore, we don't calculate sigmoid during evaluation, we set eval flag to zero.
+    criterion = nn.BCELoss()  # criterion accepts probabilities, we assume that the network outputs prob
+    sigmoid = False  # therefore, we don't calculate sigmoid during evaluation, we set eval flag to zero.
 elif args.criterion == 'BCElogistic':
-    criterion = nn.BCEWithLogitsLoss()# criterion accepts logit. network produce logit
-    sigmoid = True# evaluation flag to comput sigmoid because model output logit
+    criterion = nn.BCEWithLogitsLoss()  # criterion accepts logit. network produce logit
+    sigmoid = True  # evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'DCS':
-    criterion = DCS() # DCS assume network computes prob.
-    sigmoid = False # not necesary to compute the signmout in the evaluation
+    criterion = DCS()  # DCS assume network computes prob.
+    sigmoid = False  # not necesary to compute the signmout in the evaluation
 elif args.criterion == 'DCSsigmoid':
-    criterion = DCS(pre_sigmoid=True) # criterion accepts logit. network produce logit
-    sigmoid = True # evaluation flag to comput sigmoid because model output logit
+    criterion = DCS(pre_sigmoid=True)  # criterion accepts logit. network produce logit
+    sigmoid = True  # evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'BCEweightedlogistic':
     if args.weight is None:
         pos_weight = estimatePositiveWeight(dataset.train, progress_bar=args.progressbar)
@@ -219,65 +220,59 @@ elif args.criterion == 'BCEweightedlogistic':
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight.to(device))  # criterion accepts logit. network produce logit
     sigmoid = True  # evaluation flag to comput sigmoid because model output logit
 elif args.criterion == 'GDL':
-    criterion = GeneralizedDiceLoss() # criterion accepts probability
-    sigmoid = False # not necesary to compute the sigmoid, because model output probability
+    criterion = GeneralizedDiceLoss()  # criterion accepts probability
+    sigmoid = False  # not necesary to compute the sigmoid, because model output probability
 elif args.criterion == 'GDLsigmoid':
-    criterion = GeneralizedDiceLoss(pre_sigmoid=True) # criterion accepts probability
-    sigmoid = True # not necesary to compute the sigmoid, because model output probability
+    criterion = GeneralizedDiceLoss(pre_sigmoid=True)  # criterion accepts probability
+    sigmoid = True  # not necesary to compute the sigmoid, because model output probability
 elif args.criterion == 'FL':
-    criterion = FocalLoss() # criterion accepts probability
-    sigmoid = False # not necesary to compute the sigmoid, because model output probability
+    criterion = FocalLoss()  # criterion accepts probability
+    sigmoid = False  # not necesary to compute the sigmoid, because model output probability
 elif args.criterion == 'FLsigmoid':
-    criterion = FocalLoss(pre_sigmoid=True) # criterion accepts probability
-    sigmoid = True # not necesary to compute the sigmoid, because model output probability
+    criterion = FocalLoss(pre_sigmoid=True)  # criterion accepts probability
+    sigmoid = True  # not necesary to compute the sigmoid, because model output probability
 elif args.criterion == 'DL':
-    criterion = DiceLoss() # criterion accepts probability
-    sigmoid = False # not necesary to compute the sigmoid, because model output probability
+    criterion = DiceLoss()  # criterion accepts probability
+    sigmoid = False  # not necesary to compute the sigmoid, because model output probability
 elif args.criterion == 'DLsigmoid':
-    criterion = DiceLoss(pre_sigmoid=True) # criterion accepts probability
-    sigmoid = True # not necesary to compute the sigmoid, because model output probability
+    criterion = DiceLoss(pre_sigmoid=True)  # criterion accepts probability
+    sigmoid = True  # not necesary to compute the sigmoid, because model output probability
 else:
     criterion = nn.BCELoss()
     sigmoid = False
 
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
-    trainer = Trainer(model=model,dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, criterion=criterion)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, eval=True, criterion=criterion)
-    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, criterion=criterion)
+    trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, to_tensor=False, device=device,
+                      criterion=criterion)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid,
+                              eval=True, criterion=criterion)
+    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid,
+                               criterion=criterion)
     for name, p in model.named_parameters():
         print(name, p.mean())
-    trainer.load_model(model, MODEL_PATH)
-    print('=============')
-    for name, p in model.named_parameters():
-        print(name, p.mean())
-    model.eval()
-    print('not with eval=======')
-
-    for name, p in model.named_parameters():
-        print(name, p.mean())
+    trainer.load_model(model, TRAINING_DIR.model_path)
 elif args.net == 'DeepVessel':
     trainer = KTrainer(model=model, dataset=dataset, batch_size=BATCH)
     evaluator_val = KEvaluator(dataset, eval=True, criterion=criterion)
-    evaluator_test= KEvaluator(dataset, criterion=criterion)
-    trainer.load_model(model,MODEL_PATH)
+    evaluator_test = KEvaluator(dataset, criterion=criterion)
+    trainer.load_model(model, TRAINING_DIR.model_path)
     model = trainer.model
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion)
-    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, eval=True, criterion=criterion)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, eval=True,
+                              criterion=criterion)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, criterion=criterion)
-    trainer.load_model(model, MODEL_PATH)
+    trainer.load_model(model, TRAINING_DIR.model_path)
 
 
-
-
-def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', tid='XYZ'):
+def train(lr=0.001, progress_bar=False, fig_dir='./figs', prefix='NET', tid='XYZ'):
     global model
-    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{tid}_"
-    prefix_model = os.path.splitext(os.path.basename(MODEL_PATH))[0]
-    last_model_path = prefix_model + "_last.pth"
+    prefix_checkpoint = TRAINING_DIR.prefix
+    prefix_model = TRAINING_DIR.prefix_model
+    last_model_path = TRAINING_DIR.model_path_last
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
-    trainer.load_checkpoint(prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
+    trainer.load_checkpoint(root=TRAINING_DIR.root, prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
     timer = Timer(args.checkpoint_timer)
     for e in trainer.get_range(EPOCHS):
         trainer.model.train() if not DEEPVESSEL else None
@@ -295,76 +290,77 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', tid='XYZ'
             print('DCS score:', dcs, 'accuracy ', a, 'precision ', p, 'recall ', r, 'val_loss ', val_loss)
         else:
             with torch.no_grad():
-                print('Evaluation Epoch {}/{}...'.format(e,EPOCHS))
+                print('Evaluation Epoch {}/{}...'.format(e, EPOCHS))
                 model.eval()
+                if e % int(EPOCHS / 10) == 0 or e == 0:
+                    evaluator_val.update_optimal_threshold(model, progress_bar=progress_bar)
                 # DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
                 # DCM = evaluator_val.DCM(model, progress_bar=progress_bar)
                 # include all the metrics calcuated using True Positive, False Negative and so on..
                 binary_metrics_names = tuple(eval_metric_logging.get_binary_metrics().keys())
                 binary_metrics = evaluator_val.bin_scores(model, progress_bar=progress_bar,
-                                                                    metrics=binary_metrics_names)
+                                                          metrics=binary_metrics_names)
                 # include all non binary metrics. for example val_loss,
                 non_binary_metrics_names = tuple(eval_metric_logging.get_non_binary_metrics().keys())
                 non_binary_metrics = evaluator_val.calculate_metric(model, progress_bar=progress_bar,
                                                                     metrics=non_binary_metrics_names)
                 metrics = dict(non_binary_metrics, **binary_metrics)
                 # metrics["DCM"]=DCM
-                metrics["train_loss"]=mean_loss
+                metrics["train_loss"] = mean_loss
                 eval_metric_str = ""
                 for m_name, m_value in metrics.items():
                     eval_metric_str += f" {m_name}={m_value} "
                 print("Evaluation Metrics: ", eval_metric_str)
-                if e % int(EPOCHS/10) == 0 or e == 0:
-                    evaluator_val.update_optimal_threshold(model, progress_bar=progress_bar)
         # update metrics and loss logs in the trainer
         model = trainer.model
         eval_metric_logging.update_measurement(metrics)
         if eval_metric_logging.is_best_metric():
-            print('Saving new model: {} > {}'.format(eval_metric_logging.best_metric, eval_metric_logging.current_metric))
-            trainer.save_model(MODEL_PATH)
+            print(
+                'Saving new model: {} > {}'.format(eval_metric_logging.best_metric, eval_metric_logging.current_metric))
+            trainer.save_model(TRAINING_DIR.model_path_best)
         if timer.is_time():
             trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, fig_dir,
                                     eval_metric_logging, args.upload)
-            trainer.save_model(last_model_path)
+            trainer.save_model(TRAINING_DIR.model_path_last)
 
     # loss_all = np.array(loss_all)
-    trainer.save_model(MODEL_PATH)
+    trainer.save_model(TRAINING_DIR.model_path)
     trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, fig_dir,
                             eval_metric_logging, args.upload)
 
 
-def eval(lr=0.001, progress_bar=False, fig_dir='./figs',prefix='NET', tid="XYZ", modalities=None):
+def eval(lr=0.001, progress_bar=False, fig_dir='./figs', prefix='NET', tid="XYZ", modalities=None):
     model.eval() if not DEEPVESSEL else None
     print('plotting one prediction')
     fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
-                                        reshape_transform=reshape_transform, modalities=modalities)
+                                         reshape_transform=reshape_transform, modalities=modalities)
     result = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=args.overlay_plot,
-                                        reshape_transform=reshape_transform, modalities=modalities)
-    prefix_checkpoint = f"{prefix}_e{EPOCHS}_ds{args.dataset}_id{tid}"
+                                         reshape_transform=reshape_transform, modalities=modalities)
     if args.overlay_plot:
         z, y, x = result.shape[0], result.shape[1], result.shape[2]
-        result.tofile('{}_vol_{}x{}x{}.raw'.format(prefix_checkpoint, x, y, z))
-        savefigs(fig_name='{}_overlap'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
+        result.tofile(os.path.join(TRAINING_DIR.fig_dir, '{}_vol_{}x{}x{}.raw'.format(TRAINING_DIR.prefix, x, y, z)))
+        savefigs(fig_name='{}_overlap'.format(TRAINING_DIR.prefix), fig_dir=TRAINING_DIR.fig_dir, fig=fig)
     else:
         z, y, x, c = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
         result = result.transpose(0, 3, 1, 2)
-        tifffile.imwrite('{}_vol_{}x{}x{}x{}.tiff'.format(prefix_checkpoint, x, y, z, c),
+        tiff_filename = '{}_vol_{}x{}x{}x{}.tiff'.format(TRAINING_DIR.prefix_checkpoint, x, y, z, c)
+        tifffile.imwrite(os.path.join(TRAINING_DIR.fig_dir, tiff_filename),
                          result, imagej=True, metadata={'axes': 'ZCYX'})
-        savefigs(fig_name='{}_performance'.format(prefix_checkpoint), fig_dir=fig_dir, fig=fig)
+        savefigs(fig_name='{}_performance'.format(TRAINING_DIR.prefix), fig_dir=TRAINING_DIR.fig_dir, fig=fig)
 
     # plt.show()
     print('calculating stats...')
     metric_logs = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     binary_metrics_names = tuple(metric_logs.get_binary_metrics().keys())
     binary_metrics = evaluator_test.bin_scores(model, progress_bar=progress_bar,
-                                              metrics=binary_metrics_names)
+                                               metrics=binary_metrics_names)
     # include all non binary metrics. for example val_loss,
     non_binary_metrics_names = list(metric_logs.get_non_binary_metrics().keys())
     non_binary_metrics_names.pop(non_binary_metrics_names.index("train_loss"))
     non_binary_metrics = evaluator_test.calculate_metric(model, progress_bar=progress_bar,
-                                                        metrics=non_binary_metrics_names)
+                                                         metrics=non_binary_metrics_names)
     metrics = dict(non_binary_metrics, **binary_metrics)
-    print('Calculated metrics testing set: \n', ''.join([f"{m} = {v}, " for m,v in metrics.items()]))
+    print('Calculated metrics testing set: \n', ''.join([f"{m} = {v}, " for m, v in metrics.items()]))
     # print('DCM factor: ', evaluator_test.DCM(model, progress_bar=progress_bar))
     # print('stats: PAR ', evaluator_test.bin_scores(model, progress_bar=progress_bar))
 
@@ -374,4 +370,5 @@ if not args.skip_training:
 if DEEPVESSEL:
     model = trainer.model
 
-eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, tid=args.id, modalities=MODALITIES)
+eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, tid=args.id,
+     modalities=MODALITIES)
