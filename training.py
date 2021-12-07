@@ -266,11 +266,10 @@ else:
     trainer.load_model(model, TRAINING_DIR.model_path)
 
 
-def train(lr=0.001, progress_bar=False, fig_dir='./figs', prefix='NET', tid='XYZ'):
+def train(lr=0.001, progress_bar=False):
     global model
     prefix_checkpoint = TRAINING_DIR.prefix
     prefix_model = TRAINING_DIR.prefix_model
-    last_model_path = TRAINING_DIR.model_path_last
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     trainer.load_checkpoint(root=TRAINING_DIR.root, prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
     timer = Timer(args.checkpoint_timer)
@@ -319,17 +318,15 @@ def train(lr=0.001, progress_bar=False, fig_dir='./figs', prefix='NET', tid='XYZ
                 'Saving new model: {} > {}'.format(eval_metric_logging.best_metric, eval_metric_logging.current_metric))
             trainer.save_model(TRAINING_DIR.model_path_best)
         if timer.is_time():
-            trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, fig_dir,
-                                    eval_metric_logging, args.upload)
+            trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, eval_metric_logging, args.upload)
             trainer.save_model(TRAINING_DIR.model_path_last)
 
     # loss_all = np.array(loss_all)
     trainer.save_model(TRAINING_DIR.model_path)
-    trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, fig_dir,
-                            eval_metric_logging, args.upload)
+    trainer.save_checkpoint(prefix_checkpoint, prefix_model, lr, e, EPOCHS, eval_metric_logging, args.upload)
 
 
-def eval(lr=0.001, progress_bar=False, fig_dir='./figs', prefix='NET', tid="XYZ", modalities=None):
+def eval(progress_bar=False,  modalities=None):
     model.eval() if not DEEPVESSEL else None
     print('plotting one prediction')
     fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
@@ -366,9 +363,9 @@ def eval(lr=0.001, progress_bar=False, fig_dir='./figs', prefix='NET', tid="XYZ"
 
 
 if not args.skip_training:
-    train(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, tid=args.id)
+    train(lr=args.lr, progress_bar=args.progressbar)
 if DEEPVESSEL:
     model = trainer.model
 
-eval(lr=args.lr, progress_bar=args.progressbar, fig_dir=args.figdir, prefix=args.net, tid=args.id,
-     modalities=MODALITIES)
+eval(progress_bar=args.progressbar, modalities=MODALITIES)
+

@@ -99,8 +99,8 @@ class TrainingDir(object):
         return os.path.join(self.root, f"fig_{self.prefix}")
 
     @property
-    def history_plot_path(self):
-        return os.path.join(self.fig_dir, "{}_checkpoint.npy".format(self.prefix))
+    def history_plot_name(self):
+        return '{}_loss_history'.format(self.prefix)
 
     def __str__(self):
         _str = '(' + ','.join([self.root, self.prefix, self.fig_dir, self.model_path]) + ')'
@@ -262,7 +262,7 @@ class Trainer(object):
             measurements = measurements.item()  # convert to dictionary
             eval_logging.reset_measurements(measurements)
 
-    def save_checkpoint(self, training_path, lr, e, EPOCHS, fig_dir, eval_logging, upload=False):
+    def save_checkpoint(self, training_path: TrainingDir, lr, e, EPOCHS,  eval_logging, upload=False):
         check_point = {'lr': lr, 'e': e, 'E': EPOCHS, 'best_metric': eval_logging.best_metric,
                        'monitor_metric': eval_logging.monitor_metric}
         print('Saved checkpoint ', e, '/', EPOCHS)
@@ -296,7 +296,7 @@ class Trainer(object):
             plt.ylabel('metrics')
             plt.title('Evaluation metrics')
             plt.legend()
-            savefigs(fig_name=training_path.history_plot_path, fig_dir=fig_dir, fig=fig)
+            savefigs(fig_name=training_path.history_plot_name, fig_dir=training_path.fig_dir, fig=fig)
 
         if upload:
             print('Uploading training')
