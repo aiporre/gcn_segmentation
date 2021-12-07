@@ -194,7 +194,7 @@ class Trainer(object):
         def argmax(iterable):
             return max(enumerate(iterable), key=lambda x: x[1])[0]
 
-        if len(checkpoint_file) > 1:
+        if len(checkpoint_file) > 1 and all([bool(re.search(r'_e(.*?)_lr', s)) for s in checkpoint_file]):
             e_list_strs = [re.search(r'_e(.*?)_lr', s).group(1) for s in checkpoint_file]
             # attempt to parse to int
             e_list_ints = []
@@ -208,6 +208,10 @@ class Trainer(object):
 
             checkpoint_file = [checkpoint_file[argmax(e_list_ints)]]
             prefix = checkpoint_file[0].split("_checkpoint.")[0]
+        else:
+            print('WARNING: no legacy checkpoint with learning rate, or mixed cases not supported.'
+                  'Delete or move these files.')
+
         if len(checkpoint_file) == 0:  # this means that the epoch could be higher than the one in the checkpoint files
             target_epoch = re.search(r'_e(.*?)_ds', prefix).group(1)
             prefix_flexible = prefix.replace("".join(["_e", target_epoch, "_ds"]), r'_e(.*?)_ds')
