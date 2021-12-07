@@ -132,7 +132,7 @@ print('ARGUMENTS: ')
 print(args)
 print('=====================')
 EPOCHS = args.epochs
-TRAINING_DIR = TrainingDir('./', args.network, args.dataset, args.id, EPOCHS, args.load_model)
+TRAINING_DIR = TrainingDir('./', args.net, args.dataset, args.id, EPOCHS, args.load_model)
 EPOCHS = args.epochs
 BATCH = args.batch
 DEEPVESSEL = False
