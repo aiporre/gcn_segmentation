@@ -82,8 +82,8 @@ def process_command_line():
                         help=" Vessel12 dataset dir")
     parser.add_argument("-sd", "--svesseldir", type=str, default=VESSEL_DIR,
                         help="syntetic vessel dataset dir")
-    parser.add_argument("-f", "--figdir", type=str, default='./fig',
-                        help="path to save figs")
+    parser.add_argument("-D", "--training-dir", type=str, default='./',
+                        help="path to save models, checkpoints and figures")
     parser.add_argument("-ed", "--endodir", type=str, default=ENDOSTROKE_DIR,
                         help="endovascular dataset dir")
     parser.add_argument("-idir", "--islesdir", type=str, default=ISLES2018_DIR,
@@ -132,7 +132,9 @@ print('ARGUMENTS: ')
 print(args)
 print('=====================')
 EPOCHS = args.epochs
-TRAINING_DIR = TrainingDir('./', args.net, args.dataset, args.id, EPOCHS, args.load_model)
+TRAINING_DIR = TrainingDir(args.training_dir, args.net, args.dataset, args.id, EPOCHS, args.load_model)
+TRAINING_DIR.makedirs()
+print('Training Directory configuration is: ', str(TRAINING_DIR))
 EPOCHS = args.epochs
 BATCH = args.batch
 DEEPVESSEL = False
