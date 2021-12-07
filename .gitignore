@@ -5,3 +5,9 @@ data/
 data/M2NIST
 .idea
 *.DS_Store
+*.raw
+*.npy
+*.tiff
+*.pth
+*.log
+fig/*
