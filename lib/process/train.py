@@ -42,6 +42,14 @@ class TrainingDir(object):
         self.EPOCHS = EPOCHS
         self.legacy()
 
+    def makedirs(self, make_unique_root=True):
+        if make_unique_root:
+            self.root = self.prefix_model
+        if not os.path.exists(self.root):
+            os.makedirs(self.root)
+        if not os.path.exists(self.fig_dir):
+            os.makedirs(self.fig_dir)
+
     def legacy(self):
         if self.mode == "best" and not os.path.exists(self.model_path):
             model_path_legacy = os.path.join(self.root, self.prefix_model + ".pth")
@@ -93,6 +101,10 @@ class TrainingDir(object):
     @property
     def history_plot_path(self):
         return os.path.join(self.fig_dir, "{}_checkpoint.npy".format(self.prefix))
+
+    def __str__(self):
+        _str = '(' + ','.join([self.root, self.prefix, self.fig_dir, self.model_path]) + ')'
+        return _str
 
 
 class Trainer(object):
