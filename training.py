@@ -318,7 +318,7 @@ def train(lr=0.001, progress_bar=False):
                 'Saving new model: {} > {}'.format(eval_metric_logging.best_metric, eval_metric_logging.current_metric))
             trainer.save_model(TRAINING_DIR.model_path_best)
         if timer.is_time():
-            trainer.save_checkpoint(TRAINING_DIR,  lr, e, EPOCHS, eval_metric_logging, args.upload)
+            trainer.save_checkpoint(TRAINING_DIR, lr, e, EPOCHS, eval_metric_logging, args.upload)
             trainer.save_model(TRAINING_DIR.model_path_last)
 
     # loss_all = np.array(loss_all)
@@ -326,25 +326,28 @@ def train(lr=0.001, progress_bar=False):
     trainer.save_checkpoint(TRAINING_DIR, lr, e, EPOCHS, eval_metric_logging, args.upload)
 
 
-def eval(progress_bar=False,  modalities=None):
+def eval(progress_bar=False, modalities=None):
     model.eval() if not DEEPVESSEL else None
+    #  TODO: optimal threshold must be calculated with the training set not the validation or testing set
     evaluator_test.update_optimal_threshold(model, progress_bar=progress_bar)
     print('plotting one prediction')
     fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
                                          reshape_transform=reshape_transform, modalities=modalities)
-    result = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=args.overlay_plot,
-                                         reshape_transform=reshape_transform, modalities=modalities)
+    result, case_id = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=args.overlay_plot,
+                                                  reshape_transform=reshape_transform, modalities=modalities)
     if args.overlay_plot:
         z, y, x = result.shape[0], result.shape[1], result.shape[2]
-        result.tofile(os.path.join(TRAINING_DIR.fig_dir, '{}_vol_{}x{}x{}.raw'.format(TRAINING_DIR.prefix, x, y, z)))
-        savefigs(fig_name='{}_overlap'.format(TRAINING_DIR.prefix), fig_dir=TRAINING_DIR.fig_dir, fig=fig)
+        result.tofile(os.path.join(TRAINING_DIR.fig_dir,
+                                   '{}_vol_{}_{}x{}x{}.raw'.format(TRAINING_DIR.prefix, case_id, x, y, z)))
+        savefigs(fig_name='{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir, fig=fig)
     else:
         z, y, x, c = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
         result = result.transpose(0, 3, 1, 2)
-        tiff_filename = '{}_vol_{}x{}x{}x{}.tiff'.format(TRAINING_DIR.prefix, x, y, z, c)
+        tiff_filename = '{}_vol_{}_{}x{}x{}x{}.tiff'.format(TRAINING_DIR.prefix, case_id, x, y, z, c)
         tifffile.imwrite(os.path.join(TRAINING_DIR.fig_dir, tiff_filename),
                          result, imagej=True, metadata={'axes': 'ZCYX'})
-        savefigs(fig_name='{}_performance'.format(TRAINING_DIR.prefix), fig_dir=TRAINING_DIR.fig_dir, fig=fig)
+        savefigs(fig_name='{}_{}_performance'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir,
+                 fig=fig)
 
     # plt.show()
     print('calculating stats...')
@@ -369,4 +372,3 @@ if DEEPVESSEL:
     model = trainer.model
 
 eval(progress_bar=args.progressbar, modalities=MODALITIES)
-

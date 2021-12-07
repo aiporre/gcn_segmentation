@@ -433,7 +433,7 @@ class Evaluator(object):
             ax4.set_title('predicted mask >0.5 prob')
         return fig
 
-    def plot_volumen(self,model, index=0, fig=None, figsize=(10,10), N=1, overlap=True, reshape_transform=None, modalities=None):
+    def plot_volumen(self,model, index=0, overlap=True, reshape_transform=None, modalities=None):
         # index was the offset of the processed_files list to concatenate into a volume,
         # but we change it is behavior , so index points the case_id index (raw_files). For example, if dataset.test
         # has the cases 10,12,13 with corresponding processed_files = [20,21,21,23,45,46,100,101,102] then index=1 will
@@ -504,7 +504,19 @@ class Evaluator(object):
                 images.append(image)
         # the resulting image is Z,Y,X for overlap, and Z,Y,X,C for no overlap.
         result = np.stack(images).astype(np.float32)
-        return result
+        if overlap:
+            # calculate binary stats for volume:
+            num_tp = (result == 1).sum()
+            num_fp = (result == 2).sum()
+            num_fn = (result == 3).sum()
+            num_tn = (result == 0).sum()
+            dice = (2 * num_tp) / (2 * num_tp + num_fp + num_fn)
+            precision = (num_tp) / (num_tp + num_fp)
+            recall = (num_tp) / (num_tp + num_fn)
+            accuracy = (num_tp + num_tn) / (num_tp + num_tn + num_fp + num_fn)
+            print('OVERLAY VOLUME STATS ==> Accuracy: ',  accuracy,
+                  ' Precision: ', precision, ', Recall: ', recall, 'Dice: ', dice)
+        return result, case_id
 
 
 class KEvaluator(Evaluator):
