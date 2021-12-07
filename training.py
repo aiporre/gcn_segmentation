@@ -340,7 +340,7 @@ def eval(progress_bar=False,  modalities=None):
     else:
         z, y, x, c = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
         result = result.transpose(0, 3, 1, 2)
-        tiff_filename = '{}_vol_{}x{}x{}x{}.tiff'.format(TRAINING_DIR.prefix_checkpoint, x, y, z, c)
+        tiff_filename = '{}_vol_{}x{}x{}x{}.tiff'.format(TRAINING_DIR.prefix, x, y, z, c)
         tifffile.imwrite(os.path.join(TRAINING_DIR.fig_dir, tiff_filename),
                          result, imagej=True, metadata={'axes': 'ZCYX'})
         savefigs(fig_name='{}_performance'.format(TRAINING_DIR.prefix), fig_dir=TRAINING_DIR.fig_dir, fig=fig)
