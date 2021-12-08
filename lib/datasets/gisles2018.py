@@ -302,7 +302,7 @@ class _ISLESFoldIndices:
                 patient_files = get_files_patient_path(os.path.join(self.root, case_id))
                 data = load_nifti(patient_files['LESION'][0], neurological_convension=True)
                 num_elements = len(data)
-                useful_scans = list(data.sum(axis=(1, 2)) > 1000)
+                useful_scans = list(data.sum(axis=(1, 2)) > 500)
                 for i in range(num_elements):
                     csvwriter.writerow([case_id, i + offset, str(useful_scans[i])])
                 offset += num_elements
