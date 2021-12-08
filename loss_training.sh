@@ -128,6 +128,26 @@ then
   python training.py -s GISLES2018 -n GFCNB -b 4 -c FLsigmoid -O False -t True -N 10 --id FLsigmoidCBF -lr 1E-4 -g 100 --mod CBF --weight 5.5 >> gfcnb_FLsigmoidCBF.log
   echo "GFCNB with Dice loss (1- DCM)"
   python training.py -s GISLES2018 -n GFCNB -b 4 -c DLsigmoid -O False -t True -N 10 --id DLsigmoidCBF -lr 1E-4 -g 100 --mod CBF --weight 5.5 >> gfcnb_DLsigmoidCBF.log
+elif [[ $channels == "5ch" ]]
+then
+  echo " Deleting files gendo_"
+  rm data/gisles2018/processed/TRAINING/gendo_*.pt
+  echo " running with 1 channel in CBV"
+  echo " training losses case GFCNC"
+#  echo "GFNC BCE"
+#  python training.py -s GISLES2018 -n GFCNC -b 4 -c BCElogistic -O False -t True -N 10 --id BCElogisticCBV -lr 1E-4 -g 100 --weight 5.5 >> gfcnc_BCElogisticCBV.log
+  echo "GFCNC with soft Dice loss"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid -O False -t True -N 10 --id DCSsigmoidCBV5ch -lr 1E-6 -g 50 --weight 5.5 -D experiment2_ch  >> experiment2_ch/gfcnc_DCSsigmoidCBV5ch.log
+#  echo "GFCNC with wBCE"
+#  python training.py -s GISLES2018 -n GFCNC -b 4 -c BCEweightedlogistic -O False -t True -N 10 --id BCEweightedlogisticCBV -lr 1E-4 -g 50--weight 5.5 >> gfcnc_BCEweightedlogisticCBV.log
+#  echo "GFCNC with generalized dice loss"
+#  python training.py -s GISLES2018 -n GFCNC -b 4 -c GDLsigmoid -O False -t True -N 10 --id GDLsigmoidCBV -lr 1E-4 -g 50--weight 5.5 >> gfcnc_GDLsigmoidCBV.log
+  echo "GFCNC with Focal loss"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c FLsigmoid -O False -t True -N 10 --id FLsigmoidCBV5ch -lr 1E-6 -g 50 --weight 5.5  -D experiment2_ch >> experiment2_ch/gfcnc_FLsigmoidCBV.log
+  echo "GFCNC with Dice loss (1- DCM"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DLsigmoid -O False -t True -N 10 --id DLsigmoidCBV5ch -lr 1E-6 -g 50 --weight 5.5  -D experiment2_ch >> experiment2_ch/gfcnc_DLsigmoidCBV.log
+
+
 else
   echo  " nothing to run exit"
   exit 1
