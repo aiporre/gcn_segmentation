@@ -121,7 +121,8 @@ class _GISLES2018(Dataset):
                  pre_filter=None,
                  fold=1,
                  split_dir="TRAINING",
-                 modalities=("CTN", "CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT")):
+                 modalities=("CTN", "CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT"),
+                 useful=False):
         print('Warning: In the ISLES2018 dataset, the test/train rate is predefined by file distribution.')
         self.root = root
         self.test_rate = 1
@@ -140,6 +141,7 @@ class _GISLES2018(Dataset):
         super(_GISLES2018, self).__init__(root, transform, pre_transform, pre_filter)
         self.raw_dir = raw_dir
         self.processed_dir = processed_dir
+        self.useful = useful # flag that activates getting only the relevant samples with masks bigger that 1000 pixels
 
     # @property
     # def raw_dir(self):
@@ -162,7 +164,7 @@ class _GISLES2018(Dataset):
     def processed_file_names(self):
         processed_files = []
         for case_id in self.raw_file_names:
-            processed_indices = self.indices.get_by_case_id(case_id)
+            processed_indices = self.indices.get_by_case_id(case_id, useful=self.useful)
             _processed_files = ['gendo_{:04d}.pt'.format(i) for i in processed_indices]
             processed_files.extend(_processed_files)
         return processed_files
@@ -251,8 +253,11 @@ class _GISLES2018(Dataset):
     def get_all_cases_id(self):
         return self.raw_file_names
 
-    def get_by_case_id(self, case_id):
-        case_id_indices = self.indices.get_by_case_id(case_id)
+    def get_by_case_id(self, case_id, useful=None):
+        if useful is None:
+            # override with the one of the dataset
+            useful = self.useful
+        case_id_indices = self.indices.get_by_case_id(case_id, useful=useful)
         case_id_processed_file_names = ['gendo_{:04}.pt'.format(case_id_index) for case_id_index in case_id_indices]
         for c_id_fname in case_id_processed_file_names:
             c_id_idx = self.processed_file_names.index(c_id_fname)
@@ -296,8 +301,9 @@ class _ISLESFoldIndices:
                 patient_files = get_files_patient_path(os.path.join(self.root, case_id))
                 data = load_nifti(patient_files['LESION'][0], neurological_convension=True)
                 num_elements = len(data)
+                useful_scans = list(data.sum(axis=(1, 2)) > 1000)
                 for i in range(num_elements):
-                    csvwriter.writerow([case_id, i + offset])
+                    csvwriter.writerow([case_id, i + offset, str(useful_scans[i])])
                 offset += num_elements
         self._load_indices()
 
@@ -320,17 +326,26 @@ class _ISLESFoldIndices:
         Load the fold indices if the cache exists
         '''
         index_case_dict = csv_to_dict(self.cache_file, ',', key_col=1, item_col=0)
+        index_useful_dict = csv_to_dict(self.cache_file, ',', key_col=1, item_col=2)
         self.indices = {}
+        self.useful_indices = {}
         for case_id in self.get_cases():
             indices_case_id = [int(i) for i, c in index_case_dict.items() if c == case_id]
+            useful_case_id = [index_useful_dict[str(i)] == 'True' for i in indices_case_id]
             if indices_case_id:
                 self.indices[case_id] = indices_case_id
+                self.useful_indices[case_id] = useful_case_id
 
-    def get_by_case_id(self, case_id):
+    def get_by_case_id(self, case_id, useful=False):
         '''
         returns the cases ifor  agiven case id
         '''
-        return self.indices[case_id]
+        if not useful:
+            return self.indices[case_id]
+        else:
+            indices = self.indices[case_id]
+            useful_indices = self.useful_indices[case_id]
+            return [idx for idx, useful in zip(indices, useful_indices) if useful]
 
     def __len__(self):
         length = 0
