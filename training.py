@@ -92,6 +92,9 @@ def process_command_line():
                         help="batch size of trainer and evaluator")
     parser.add_argument("-s", "--dataset", type=str, default='MNIST',
                         help="dataset to be used. Options: (G)MNIST, (G)VESSEL12, (G)SVESSEL, GENDOSTROKE")
+    parser.add_argument("--useful", type=str2bool, default=False,
+                        help="useful flag True activates filter, and only useful samples are collected in all datasets"
+                             ". If False all samples are collected. Default is False")
     parser.add_argument("--id", type=str, default='XYZ',
                         help="id for the training name")
     parser.add_argument("-n", "--net", type=str, default='GFCN',
@@ -172,7 +175,7 @@ elif args.dataset == 'GENDOSTROKE':
     dataset = GENDOSTROKE(data_dir=args.endodir)
     reshape_transform = endostroke_reshape
 elif args.dataset == 'GISLES2018':
-    dataset = GISLES2018(data_dir=args.islesdir, modalities=MODALITIES)
+    dataset = GISLES2018(data_dir=args.islesdir, modalities=MODALITIES, useful=args.useful)
     reshape_transform = isles2018_reshape
 else:
     dataset = MNIST()
@@ -370,5 +373,5 @@ if not args.skip_training:
     train(lr=args.lr, progress_bar=args.progressbar)
 if DEEPVESSEL:
     model = trainer.model
-
-eval(progress_bar=args.progressbar, modalities=MODALITIES)
+with torch.no_grad():
+    eval(progress_bar=args.progressbar, modalities=MODALITIES)

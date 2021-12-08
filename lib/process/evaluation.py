@@ -448,7 +448,7 @@ class Evaluator(object):
         is_graph_tensor = isinstance(sample, (Data, Batch))
 
         # computes predictions for all the volume
-        for sample in self.dataset.get_by_case_id(case_id):
+        for sample in self.dataset.get_by_case_id(case_id, useful=False):
             if is_graph_tensor:
                 # this graph tensor
                 image = sample

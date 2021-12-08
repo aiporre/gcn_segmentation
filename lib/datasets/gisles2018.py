@@ -90,16 +90,17 @@ class GISLES2018(Datasets):
                  annotated_slices=False,
                  pre_transform=None,
                  fold=1,
-                 modalities=("CTN", "CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT")):
+                 modalities=("CTN", "CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT"),
+                 useful=False):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.test_rate = test_rate
         train_dataset = _GISLES2018(self.data_dir, dataset_type='train', transform=T.Cartesian(),
-                                    pre_transform=pre_transform, fold=fold, modalities=modalities)
+                                    pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
         val_dataset = _GISLES2018(self.data_dir, dataset_type='val', transform=T.Cartesian(),
-                                  pre_transform=pre_transform, fold=fold, modalities=modalities)
+                                  pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
         test_dataset = _GISLES2018(self.data_dir, dataset_type='test', transform=T.Cartesian(),
-                                   pre_transform=pre_transform, fold=fold, modalities=modalities)
+                                   pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
 
         train = GraphDataset(train_dataset, batch_size=self.batch_size, shuffle=True)
         val = GraphDataset(val_dataset, batch_size=self.batch_size, shuffle=False)
