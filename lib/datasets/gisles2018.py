@@ -139,10 +139,10 @@ class _GISLES2018(Dataset):
         # procesed mapping is csv file that tell which proccesd files match with which case_XY e.g. gilses_1000 --> case_10
         self.indices = _ISLESFoldIndices(cache_file=os.path.join(root, 'raw', self.split_dir, 'processed_mapping.txt'),
                                          fold=fold, dataset_type=dataset_type)
+        self.useful = useful # flag that activates getting only the relevant samples with masks bigger that 1000 pixels
         super(_GISLES2018, self).__init__(root, transform, pre_transform, pre_filter)
         self.raw_dir = raw_dir
         self.processed_dir = processed_dir
-        self.useful = useful # flag that activates getting only the relevant samples with masks bigger that 1000 pixels
 
     # @property
     # def raw_dir(self):

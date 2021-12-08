@@ -272,7 +272,6 @@ else:
 def train(lr=0.001, progress_bar=False):
     global model
     prefix_checkpoint = TRAINING_DIR.prefix
-    prefix_model = TRAINING_DIR.prefix_model
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     trainer.load_checkpoint(root=TRAINING_DIR.root, prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
     timer = Timer(args.checkpoint_timer)
