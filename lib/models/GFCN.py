@@ -262,27 +262,41 @@ class GFCNA(torch.nn.Module):
 
 class GFCNC(torch.nn.Module):
     ''' model G-FCN 8s equivalent'''
-    def __init__(self, input_channels=1):
+    def __init__(self, input_channels=1, postnorm_activation=True):
         super(GFCNC, self).__init__()
+        self.prenorm_activation = postnorm_activation
+
         self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
-        self.bn1_1 = torch.nn.BatchNorm1d(32)
-        self.bn1_2 = torch.nn.BatchNorm1d(32)
+        if postnorm_activation:
+            self.bn1 = torch.nn.BatchNorm1d(32)
+        else:
+            self.bn1_1 = torch.nn.BatchNorm1d(32)
+            self.bn1_2 = torch.nn.BatchNorm1d(32)
 
         self.conv2a = SplineConv(32, 64, dim=2, kernel_size=3)
         self.conv2b = SplineConv(64, 64, dim=2, kernel_size=3)
-        self.bn2_1 = torch.nn.BatchNorm1d(64)
-        self.bn2_2 = torch.nn.BatchNorm1d(64)
+        if postnorm_activation:
+            self.bn2= torch.nn.BatchNorm1d(64)
+        else:
+            self.bn2_1 = torch.nn.BatchNorm1d(64)
+            self.bn2_2 = torch.nn.BatchNorm1d(64)
 
         self.conv3a = SplineConv(64, 128, dim=2, kernel_size=3)
         self.conv3b = SplineConv(128, 128, dim=2, kernel_size=1)
-        self.bn3_1 = torch.nn.BatchNorm1d(128)
-        self.bn3_2 = torch.nn.BatchNorm1d(128)
+        if postnorm_activation:
+            self.bn3= torch.nn.BatchNorm1d(128)
+        else:
+            self.bn3_1 = torch.nn.BatchNorm1d(128)
+            self.bn3_2 = torch.nn.BatchNorm1d(128)
 
         self.conv4a = SplineConv(128, 256, dim=2, kernel_size=1)
         self.conv4b = SplineConv(256, 256, dim=2, kernel_size=1)
-        self.bn4_1 = torch.nn.BatchNorm1d(256)
-        self.bn4_2 = torch.nn.BatchNorm1d(256)
+        if postnorm_activation:
+            self.bn4= torch.nn.BatchNorm1d(256)
+        else:
+            self.bn4_1 = torch.nn.BatchNorm1d(256)
+            self.bn4_2 = torch.nn.BatchNorm1d(256)
 
         self.score_fr = SplineConv(256, 32, dim=2, kernel_size=1)
         self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
@@ -294,8 +308,14 @@ class GFCNC(torch.nn.Module):
     def forward(self, data):
         # (1/32,V_0/V_1)
         # aux = data.x.clone()
-        data.x = F.elu(self.bn1_1(self.conv1a(data.x, data.edge_index, data.edge_attr)))
-        data.x = F.elu(self.bn1_2(self.conv1b(data.x, data.edge_index, data.edge_attr)))
+        if self.prenorm_activation:
+            data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
+            data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
+            data.x = self.bn1(data.x)
+        else:
+            data.x = F.elu(self.bn1_1(self.conv1a(data.x, data.edge_index, data.edge_attr)))
+            data.x = F.elu(self.bn1_2(self.conv1b(data.x, data.edge_index, data.edge_attr)))
+
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster1 = graclus(data.edge_index, weight, data.x.size(0))
         pos1 = data.pos
@@ -306,8 +326,13 @@ class GFCNC(torch.nn.Module):
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         # (32/64,V_1/V_2)
-        data.x = F.elu(self.bn2_1(self.conv2a(data.x, data.edge_index, data.edge_attr)))
-        data.x = F.elu(self.bn2_2(self.conv2b(data.x, data.edge_index, data.edge_attr)))
+        if self.prenorm_activation:
+            data.x = F.elu(self.conv2a(data.x, data.edge_index, data.edge_attr))
+            data.x = F.elu(self.conv2b(data.x, data.edge_index, data.edge_attr))
+            data.x = self.bn2(data.x)
+        else:
+            data.x = F.elu(self.bn2_1(self.conv2a(data.x, data.edge_index, data.edge_attr)))
+            data.x = F.elu(self.bn2_2(self.conv2b(data.x, data.edge_index, data.edge_attr)))
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster2 = graclus(data.edge_index, weight, data.x.size(0))
         pos2 = data.pos
@@ -318,8 +343,13 @@ class GFCNC(torch.nn.Module):
         pool2 = data.clone()
 
         # 64/128,V_2/V_3
-        data.x = F.elu(self.bn3_1(self.conv3a(data.x, data.edge_index, data.edge_attr)))
-        data.x = F.elu(self.bn3_2(self.conv3b(data.x, data.edge_index, data.edge_attr)))
+        if self.prenorm_activation:
+            data.x = F.elu(self.conv3a(data.x, data.edge_index, data.edge_attr))
+            data.x = F.elu(self.conv3b(data.x, data.edge_index, data.edge_attr))
+            data.x = self.bn3(data.x)
+        else:
+            data.x = F.elu(self.bn3_1(self.conv3a(data.x, data.edge_index, data.edge_attr)))
+            data.x = F.elu(self.bn3_2(self.conv3b(data.x, data.edge_index, data.edge_attr)))
 
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster3 = graclus(data.edge_index, weight, data.x.size(0))
@@ -332,8 +362,13 @@ class GFCNC(torch.nn.Module):
 
 
         # 128/256,V_3/V_4
-        data.x = F.elu(self.bn4_1(self.conv4a(data.x, data.edge_index, data.edge_attr)))
-        data.x = F.elu(self.bn4_2(self.conv4b(data.x, data.edge_index, data.edge_attr)))
+        if self.prenorm_activation:
+            data.x = F.elu(self.conv4a(data.x, data.edge_index, data.edge_attr))
+            data.x = F.elu(self.conv4b(data.x, data.edge_index, data.edge_attr))
+            data.x = self.bn4(data.x)
+        else:
+            data.x = F.elu(self.bn4_1(self.conv4a(data.x, data.edge_index, data.edge_attr)))
+            data.x = F.elu(self.bn4_2(self.conv4b(data.x, data.edge_index, data.edge_attr)))
 
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster4 = graclus(data.edge_index, weight, data.x.size(0))
@@ -369,8 +404,6 @@ class GFCNC(torch.nn.Module):
         # TODO handle contract on trainer and  evaluator
         # data.x = F.elu(self.convout(data.x, data.edge_index, data.edge_attr))
         data.x = self.convout(data.x, data.edge_index, data.edge_attr)
-
-
         return data
 
 #### MODEL

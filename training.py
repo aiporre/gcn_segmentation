@@ -99,6 +99,9 @@ def process_command_line():
                         help="id for the training name")
     parser.add_argument("-n", "--net", type=str, default='GFCN',
                         help="network to be used. ....")
+    parser.add_argument("--postnorm", type=str2bool, default=True,
+                        help="Only in the GFCNx. If False, batch normalization is applied before the activation. "
+                             "If True, batch, normalization is calculated after activation. Defaults True")
     parser.add_argument("--load-model", type=str, default='best',
                         help="loading model mode. Options are best, and last")
     parser.add_argument("-p", "--pre-transform", type=str2bool, default=False,
@@ -188,7 +191,7 @@ elif args.net == 'GFCNA':
 elif args.net == 'GFCNB':
     model = GFCNB(input_channels=NUM_INPUTS)
 elif args.net == 'GFCNC':
-    model = GFCNC(input_channels=NUM_INPUTS)
+    model = GFCNC(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm)
 elif args.net == 'GFCND':
     model = GFCND(input_channels=NUM_INPUTS)
 elif args.net == 'PointNet':
