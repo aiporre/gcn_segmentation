@@ -3,7 +3,7 @@ import shutil
 import keras
 import numpy as np
 import torch
-from torch import optim
+from torch import optim, sigmoid
 import torch.nn as nn
 import os
 import re
@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from torch_geometric.data import Data
 
 from lib.utils import savefigs, get_npy_files, upload_training
+from .losses import check_label_not_unique, calculate_optimal_threshold
 from ..graph.batch import to_torch_batch
 from lib.process.evaluation import dice_coeff
 
@@ -119,9 +120,44 @@ class Trainer(object):
         self.to_tensor = kwargs['to_tensor'] if 'to_tensor' in kwargs.keys() else True
         self.device = kwargs['device'] if 'device' in kwargs.keys() else torch.device('cpu')
         self.criterion = kwargs['criterion'] if 'criterion' in kwargs.keys() else nn.BCEWithLogitsLoss()
+        self.sigmoid = kwargs['sigmoid'] if 'sigmoid' in kwargs.keys() else True
         self.lr = 0.01
         self.optimizer = None
         self._epoch = 0
+        self.opt_th = 0.5
+    
+    def update_optimal_threshold(self, progress_bar=True):
+        opt_ths = []
+        L = self.dataset.num_batches
+        progress_bar_prefix = "Estimating optimal threshold"
+        if progress_bar:
+            printProgressBar(0, L, prefix=progress_bar_prefix, suffix='Complete', length=25)
+        i = 0
+        self.dataset.enforce_batch(self._batch_size)
+
+        for image, label in self.dataset.batches():
+            features = torch.tensor(image).float() if self.to_tensor else image
+            label = torch.tensor(label).float() if self.to_tensor else label
+            features = features.to(self.device)
+            label = label.to(self.device)
+            prediction = self.model(features)
+            if isinstance(prediction, Data):
+                prediction = to_torch_batch(prediction)
+            prediction = sigmoid(prediction) if self.sigmoid else prediction
+            if check_label_not_unique(label):
+                opt_ths.extend(calculate_optimal_threshold(prediction, label))
+            if progress_bar:
+                printProgressBar(i, L, prefix=progress_bar_prefix, suffix='Complete', length=25)
+            else:
+                if i % int(L / 10) == 0 or i == 0:
+                    print(f'{progress_bar_prefix}: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+            i += 1
+        if len(opt_ths) != 0:
+            self.opt_th = np.array(opt_ths, dtype=np.float).mean().item()
+            print('\nUpdated optimal threshold is now: ', self.opt_th)
+        else:
+            print('Warning: no optimal threshold. Using the old value: ', self.opt_th)
+        return self.opt_th
 
     def update_lr(self, lr):
         if not self.lr == lr or self.optimizer is None:
@@ -241,6 +277,7 @@ class Trainer(object):
             self._epoch = d1.item().get('e')
             best_metric = d1.item().get('best_metric')
             monitor_metric = d1.item().get('monitor_metric')
+            self.opt_th = d1.item().get('opt_th',0.5)
             assert monitor_metric == eval_logging.monitor_metric, \
                 "Cannot load checkpoint if monitor metric is not the same. " \
                 "Expected {} found {}".format(eval_logging.monitor_metric, monitor_metric)
@@ -269,7 +306,7 @@ class Trainer(object):
 
     def save_checkpoint(self, training_path: TrainingDir, lr, e, EPOCHS,  eval_logging, upload=False):
         check_point = {'lr': lr, 'e': e, 'E': EPOCHS, 'best_metric': eval_logging.best_metric,
-                       'monitor_metric': eval_logging.monitor_metric}
+                        'monitor_metric': eval_logging.monitor_metric, 'opt_th': self.opt_th}
         print('Saved checkpoint ', e, '/', EPOCHS)
         np.save(training_path.checkpoint_path, check_point)
         loss_per_iter = eval_logging.get_loss_per_iter()

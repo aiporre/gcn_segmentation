@@ -249,7 +249,7 @@ else:
 model = model.to(device) if not DEEPVESSEL else model
 if args.dataset[0] == 'G':
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, to_tensor=False, device=device,
-                      criterion=criterion)
+                      criterion=criterion, sigmoid=sigmoid)
     evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid,
                               eval=True, criterion=criterion)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid,
@@ -262,7 +262,8 @@ elif args.net == 'DeepVessel':
     trainer.load_model(model, TRAINING_DIR.model_path)
     model = trainer.model
 else:
-    trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion)
+    trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion,
+                      sigmoid=sigmoid)
     evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, eval=True,
                               criterion=criterion)
     evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, device=device, sigmoid=sigmoid, criterion=criterion)
@@ -294,7 +295,7 @@ def train(lr=0.001, progress_bar=False):
                 print('Evaluation Epoch {}/{}...'.format(e, EPOCHS))
                 model.eval()
                 if e % int(EPOCHS / 10) == 0 or e == 0:
-                    evaluator_val.update_optimal_threshold(model, progress_bar=progress_bar)
+                    evaluator_val.opt_th = trainer.update_optimal_threshold(progress_bar=progress_bar)
                 # DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
                 # DCM = evaluator_val.DCM(model, progress_bar=progress_bar)
                 # include all the metrics calcuated using True Positive, False Negative and so on..
@@ -330,8 +331,9 @@ def train(lr=0.001, progress_bar=False):
 
 def eval(progress_bar=False, modalities=None):
     model.eval() if not DEEPVESSEL else None
-    #  TODO: optimal threshold must be calculated with the training set not the validation or testing set
-    evaluator_test.update_optimal_threshold(model, progress_bar=progress_bar)
+    eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
+    trainer.load_checkpoint(root=TRAINING_DIR.root, prefix=TRAINING_DIR.prefix, eval_logging=eval_metric_logging)
+    evaluator_test.opt_th = trainer.update_optimal_threshold(progress_bar=progress_bar)
     print('plotting one prediction')
     fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
                                          reshape_transform=reshape_transform, modalities=modalities)

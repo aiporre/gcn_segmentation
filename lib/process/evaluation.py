@@ -134,38 +134,6 @@ class Evaluator(object):
         self.criterion = criterion
         self.opt_th = 0.5
 
-    def update_optimal_threshold(self, model, progress_bar=True):
-        opt_ths = []
-        L = self.dataset.num_batches
-        progress_bar_prefix = "Estimating optimal threshold"
-        if progress_bar:
-            printProgressBar(0, L, prefix=progress_bar_prefix, suffix='Complete', length=25)
-        i = 0
-        self.dataset.enforce_batch(self._batch_size)
-
-        for image, label in self.dataset.batches():
-            features = torch.tensor(image).float() if self.to_tensor else image
-            label = torch.tensor(label).float() if self.to_tensor else label
-            features = features.to(self.device)
-            label = label.to(self.device)
-            prediction = model(features)
-            if isinstance(prediction, Data):
-                prediction = to_torch_batch(prediction)
-            prediction = sigmoid(prediction) if self.sigmoid else prediction
-            if check_label_not_unique(label):
-                opt_ths.extend(calculate_optimal_threshold(prediction, label))
-            if progress_bar:
-                printProgressBar(i, L, prefix=progress_bar_prefix, suffix='Complete', length=25)
-            else:
-                if i % int(L / 10) == 0 or i == 0:
-                    print(f'{progress_bar_prefix}: in batch ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
-            i += 1
-        if len(opt_ths) != 0:
-            self.opt_th = np.array(opt_ths, dtype=np.float).mean().item()
-            print('\nUpdated optimal threshold is now: ', self.opt_th)
-        else:
-            print('Warning: no optimal threshold. Using the old value: ', self.opt_th)
-
     def DCM(self, model, progress_bar=True):
         DCM_accum = []
         N = 0
