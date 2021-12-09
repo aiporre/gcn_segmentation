@@ -108,6 +108,7 @@ class GFCNB(torch.nn.Module):
     ''' GFCN equivalent to the FCN32s'''
     def __init__(self, input_channels=1, postnorm_activation=True):
         super(GFCNB, self).__init__()
+        self.postnorm_activation = postnorm_activation
         self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
         if postnorm_activation:
@@ -138,7 +139,7 @@ class GFCNB(torch.nn.Module):
 
     def forward(self, data):
         # (V0.1)->(V1,32)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn1(data.x)
@@ -154,7 +155,7 @@ class GFCNB(torch.nn.Module):
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         # (V1,32)=>(V2,64)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv2a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv2b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn2(data.x)
@@ -170,7 +171,7 @@ class GFCNB(torch.nn.Module):
         data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
 
         # (V2,64)=>(V3.128)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv3a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv3b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn3(data.x)
@@ -204,6 +205,7 @@ class GFCNA(torch.nn.Module):
     ''' GFCN equivalent to the FCN16s'''
     def __init__(self, input_channels=1, postnorm_activation=True):
         super(GFCNA, self).__init__()
+        self.postnorm_activation = postnorm_activation
         self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
         if postnorm_activation:
@@ -237,7 +239,7 @@ class GFCNA(torch.nn.Module):
 
     def forward(self, data):
         # (V0.1)=> (V1,32)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn1(data.x)
@@ -253,7 +255,7 @@ class GFCNA(torch.nn.Module):
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         # (V1.32)=> (V2.64)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv2a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv2b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn2(data.x)
@@ -270,7 +272,7 @@ class GFCNA(torch.nn.Module):
         pool2 = data.clone()
 
         # (V2.64)=>(V3.128)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv3a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv3b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn3(data.x)
@@ -313,7 +315,7 @@ class GFCNC(torch.nn.Module):
     ''' model G-FCN 8s equivalent'''
     def __init__(self, input_channels=1, postnorm_activation=True):
         super(GFCNC, self).__init__()
-        self.prenorm_activation = postnorm_activation
+        self.postnorm_activation = postnorm_activation
 
         self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
@@ -356,7 +358,7 @@ class GFCNC(torch.nn.Module):
 
     def forward(self, data):
         # (V0.1)=>(V1.32)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn1(data.x)
@@ -374,7 +376,7 @@ class GFCNC(torch.nn.Module):
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         # (V1.32)=>(V2.64)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv2a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv2b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn2(data.x)
@@ -391,7 +393,7 @@ class GFCNC(torch.nn.Module):
         pool2 = data.clone()
 
         # (V2.64)=>(V3.128)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv3a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv3b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn3(data.x)
@@ -410,7 +412,7 @@ class GFCNC(torch.nn.Module):
 
 
         # (V3.128)=>(V4.256)
-        if self.prenorm_activation:
+        if self.postnorm_activation:
             data.x = F.elu(self.conv4a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv4b(data.x, data.edge_index, data.edge_attr))
             data.x = self.bn4(data.x)
