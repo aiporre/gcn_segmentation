@@ -117,16 +117,16 @@ class GFCNB(torch.nn.Module):
             self.bn1_1 = torch.nn.BatchNorm1d(32)
             self.bn1_2 = torch.nn.BatchNorm1d(32)
 
-        self.conv2a = SplineConv(32, 128, dim=2, kernel_size=3)
-        self.conv2b = SplineConv(128, 256, dim=2, kernel_size=3)
+        self.conv2a = SplineConv(32, 64, dim=2, kernel_size=3)
+        self.conv2b = SplineConv(64, 64, dim=2, kernel_size=3)
         if postnorm_activation:
             self.bn2= torch.nn.BatchNorm1d(64)
         else:
             self.bn2_1 = torch.nn.BatchNorm1d(64)
             self.bn2_2 = torch.nn.BatchNorm1d(64)
 
-        self.conv3a = SplineConv(256, 256, dim=2, kernel_size=3)
-        self.conv3b = SplineConv(256, 128, dim=2, kernel_size=3)
+        self.conv3a = SplineConv(64, 128, dim=2, kernel_size=3)
+        self.conv3b = SplineConv(128, 128, dim=2, kernel_size=3)
         if postnorm_activation:
             self.bn3= torch.nn.BatchNorm1d(128)
         else:
