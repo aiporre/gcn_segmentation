@@ -340,10 +340,10 @@ class Evaluator(object):
                     image, mask = sample[0], sample[1]
                     image = image.reshape([1] + list(image.shape))
                 features = torch.tensor(image).float() if self.to_tensor else image
-                label = torch.tensor(label).float() if self.to_tensor else label
+                mask = torch.tensor(mask).float() if self.to_tensor else mask
 
                 features = features.to(self.device)
-                label = label.to(self.device)
+                mask = mask.to(self.device)
                 # uses the input image to predict
                 prediction = model(features)
                 if isinstance(prediction, Data):
@@ -368,8 +368,8 @@ class Evaluator(object):
             mask = np.stack(masks).astype(np.float32)
             pred_mask = (pred_prob > self.opt_th).astype(np.float32)
             TP = (pred_mask * mask).sum()
-            FP = 1 * ((pred_mask - mask) > 0).sum()
-            FN = 1 * ((mask - pred_mask) > 0).sum()
+            FP = (1 * ((pred_mask - mask) > 0)).sum()
+            FN = (1 * ((mask - pred_mask) > 0)).sum()
             N = mask.size
             TN = N - TP - FP -FN
             for m in metrics:
@@ -377,7 +377,7 @@ class Evaluator(object):
                     dcm = (2 * TP) / (2 * TP + FP + FN)
                     metric_values["DCM"].append(dcm.item())
                 elif m == "HD":
-                    hd = calculate_hausdorff_distance(pred_mask, masks)
+                    hd = calculate_hausdorff_distance(pred_mask, mask)
                     hd = float(hd)
                     metric_values["HD"].append(hd)
                 elif m == "AUC":
