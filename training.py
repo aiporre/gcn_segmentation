@@ -121,8 +121,6 @@ def process_command_line():
                         help="time threshhold to store the training in the dataset.(seconds)")
     parser.add_argument("-X", "--skip-training", type=str2bool, default=False,
                         help="Avoid training and only eval")
-    parser.add_argument("-O", "--overlay-plot", type=str2bool, default=True,
-                        help="produce overlay plot.")
     parser.add_argument("-N", "--sample-to-plot", type=int, default=190,
                         help="sample to plot from the dataset")
     parser.add_argument("--mod", nargs="+", type=str, default=["CTN", "TMAX", "CBF", "CBV", "MTT"],
@@ -340,23 +338,28 @@ def eval(progress_bar=False, modalities=None):
     trainer.load_checkpoint(root=TRAINING_DIR.root, prefix=TRAINING_DIR.prefix, eval_logging=eval_metric_logging)
     evaluator_test.opt_th = trainer.update_optimal_threshold(progress_bar=progress_bar)
     print('plotting one prediction')
-    fig = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=args.overlay_plot,
+    # Making the case if args.overlay_plot == True
+    fig_overlay_image = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=True,
                                          reshape_transform=reshape_transform, modalities=modalities)
-    result, case_id = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=args.overlay_plot,
+    overlay_vol, case_id = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=True,
                                                   reshape_transform=reshape_transform, modalities=modalities)
-    if args.overlay_plot:
-        z, y, x = result.shape[0], result.shape[1], result.shape[2]
-        result.tofile(os.path.join(TRAINING_DIR.fig_dir,
-                                   '{}_vol_{}_{}x{}x{}.raw'.format(TRAINING_DIR.prefix, case_id, x, y, z)))
-        savefigs(fig_name='{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir, fig=fig)
-    else:
-        z, y, x, c = result.shape[0], result.shape[1], result.shape[2], result.shape[3]
-        result = result.transpose(0, 3, 1, 2)
-        tiff_filename = '{}_vol_{}_{}x{}x{}x{}.tiff'.format(TRAINING_DIR.prefix, case_id, x, y, z, c)
-        tifffile.imwrite(os.path.join(TRAINING_DIR.fig_dir, tiff_filename),
-                         result, imagej=True, metadata={'axes': 'ZCYX'})
-        savefigs(fig_name='{}_{}_performance'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir,
-                 fig=fig)
+    z, y, x = overlay_vol.shape[0], overlay_vol.shape[1], overlay_vol.shape[2]
+    overlay_vol.tofile(os.path.join(TRAINING_DIR.fig_dir,
+                               '{}_vol_{}_{}x{}x{}.raw'.format(TRAINING_DIR.prefix, case_id, x, y, z)))
+    savefigs(fig_name='{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir, fig=fig_overlay_image)
+
+    # Making the case with overlay_plot = False
+    fig_four_plots = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=False,
+                                         reshape_transform=reshape_transform, modalities=modalities)
+    multichannel_vol, case_id = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=False,
+                                                  reshape_transform=reshape_transform, modalities=modalities)
+    z, y, x, c = multichannel_vol.shape[0], multichannel_vol.shape[1], multichannel_vol.shape[2], multichannel_vol.shape[3]
+    multichannel_vol = multichannel_vol.transpose(0, 3, 1, 2)
+    tiff_filename = '{}_vol_{}_{}x{}x{}x{}.tiff'.format(TRAINING_DIR.prefix, case_id, x, y, z, c)
+    tifffile.imwrite(os.path.join(TRAINING_DIR.fig_dir, tiff_filename),
+                     multichannel_vol, imagej=True, metadata={'axes': 'ZCYX'})
+    savefigs(fig_name='{}_{}_performance'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir,
+             fig=fig_four_plots)
 
     # plt.show()
     print('calculating stats...')
