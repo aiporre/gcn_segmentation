@@ -291,7 +291,8 @@ def train(lr=0.001, progress_bar=False):
             # DCS.append(evaluator_val.DCM(model, progress_bar=progress_bar))
             dcs = evaluator_val.DCM(model, progress_bar=progress_bar)
             a, p, r = evaluator_val.bin_scores(model, progress_bar=progress_bar)
-            val_loss = evaluator_val.calculate_metric(model, progress_bar=progress_bar)
+            val_loss = evaluator_val.calculate_metric(model, progress_bar=progress_bar,
+                                                      reshape_transform=reshape_transform)
             print('DCS score:', dcs, 'accuracy ', a, 'precision ', p, 'recall ', r, 'val_loss ', val_loss)
         else:
             with torch.no_grad():
@@ -308,7 +309,8 @@ def train(lr=0.001, progress_bar=False):
                 # include all non binary metrics. for example val_loss,
                 non_binary_metrics_names = tuple(eval_metric_logging.get_non_binary_metrics().keys())
                 non_binary_metrics = evaluator_val.calculate_metric(model, progress_bar=progress_bar,
-                                                                    metrics=non_binary_metrics_names)
+                                                                    metrics=non_binary_metrics_names,
+                                                                    reshape_transform=reshape_transform)
                 metrics = dict(non_binary_metrics, **binary_metrics)
                 # metrics["DCM"]=DCM
                 metrics["train_loss"] = mean_loss
@@ -366,7 +368,8 @@ def eval(progress_bar=False, modalities=None):
     non_binary_metrics_names = list(metric_logs.get_non_binary_metrics().keys())
     non_binary_metrics_names.pop(non_binary_metrics_names.index("train_loss"))
     non_binary_metrics = evaluator_test.calculate_metric(model, progress_bar=progress_bar,
-                                                         metrics=non_binary_metrics_names)
+                                                         metrics=non_binary_metrics_names,
+                                                         reshape_transform=reshape_transform)
     metrics = dict(non_binary_metrics, **binary_metrics)
     print('Calculated metrics testing set: \n', ''.join([f"{m} = {v}, " for m, v in metrics.items()]))
 

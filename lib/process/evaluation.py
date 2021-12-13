@@ -171,7 +171,7 @@ class Evaluator(object):
         #     self.update_metric(DCM)
         return DCM
 
-    def calculate_metric(self, model, progress_bar=False, metrics=('val_loss')):
+    def calculate_metric(self, model, progress_bar=False, metrics=('val_loss'), reshape_transform=None):
         if 'val_loss' in metrics and self.criterion is None:
             raise ValueError('Criterion must be specified in the instance of the object Evaluator')
         metrics_values = {m:[] for m in metrics if m != "train_loss"}
@@ -180,7 +180,9 @@ class Evaluator(object):
         if progress_bar:
             printProgressBar(0, L, prefix=prefix, suffix='Complete', length=50)
         i = 0
-
+        sample = self.dataset[0]
+        is_graph_tensor = isinstance(sample, (Data, Batch))
+        del sample
         self.dataset.enforce_batch(self._batch_size)
         for image, label in self.dataset.batches():
             features = torch.tensor(image).float() if self.to_tensor else image
@@ -188,7 +190,7 @@ class Evaluator(object):
             features = features.to(self.device)
             label = label.to(self.device)
             prediction = model(features)
-            if isinstance(prediction, Data):
+            if is_graph_tensor:
                 prediction = to_torch_batch(prediction)
             pred_mask = (sigmoid(prediction) > self.opt_th).float() if self.sigmoid else (
                     prediction > self.opt_th).float()
@@ -210,21 +212,20 @@ class Evaluator(object):
                     g.append(dcm)
                     metrics_values["DCM"] = g
                 elif m == "HD":
-                    #hd = hausdorff_distance(prediction.detach().cpu().numpy().reshape(-1,1),
-                    #                        label.detach().cpu().numpy().reshape(-1,1))
-                    hd = 1 #float(hd)
-                    g = metrics_values["HD"]
-                    g.append(hd)
-                    metrics_values["HD"] = g
+                    if is_graph_tensor:
+                        if reshape_transform is None:
+                            label_square = reshape_square(label)
+                            pred_mask_square = reshape_square(pred_mask)
+                        else:
+                            label_square = reshape_transform(label)
+                            pred_mask_square = reshape_transform(pred_mask)
+                    hd = calculate_hausdorff_distance(pred_mask_square, label_square)
+                    metrics_values["HD"].append(hd)
                 elif m == "AUC":
                     auc = calculate_auc(pred_prob, label)
                     metrics_values["AUC"].append(auc.mean().item())
                 elif m == "COD":
-                    eps = 1E-10
-                    SS_res = torch.nn.functional.mse_loss(pred_prob, label)
-                    pred_mean = pred_prob.mean(axis=0)
-                    SS_var = torch.mean((label-pred_mean)**2)
-                    COD = (1 - (SS_res+eps)/(SS_var+eps)).item()
+                    COD = calculate_cod(pred_prob, label).mean().item()
                     metrics_values["COD"].append(COD)
             if progress_bar:
                 printProgressBar(i, L, prefix=prefix, suffix='Complete', length=50)
@@ -272,7 +273,7 @@ class Evaluator(object):
                 label = label.view(b, -1)
                 pred_mask = pred_mask.view(b, -1)
             correct = pred_mask.eq(label).sum(axis=1)
-            N = label.eq(label).sum(axis=1)
+            N = label.eq(label).sum(axis=1).float()
             pos = torch.nonzero(label.eq(1), as_tuple=True)
             neg = torch.nonzero(label.eq(0), as_tuple=True)
             pred_mask = pred_mask
@@ -280,12 +281,12 @@ class Evaluator(object):
                 vals = torch.zeros_like(label).bool()
                 vals[coords] = values
                 return vals.sum(dim=1)
-            TP = collect_true_values(pred_mask[pos].eq(label[pos]), pos)
-            FN = collect_true_values(pred_mask[pos].ne(label[pos]), pos)
-            FP = collect_true_values(pred_mask[neg].ne(label[neg]), neg)
+            TP = collect_true_values(pred_mask[pos].eq(label[pos]), pos).float()
+            FN = collect_true_values(pred_mask[pos].ne(label[pos]), pos).float()
+            FP = collect_true_values(pred_mask[neg].ne(label[neg]), neg).float()
 
             if "accuracy" in metrics:
-                metric_values["accuracy"].append(torch.mean(correct/N+eps).item())
+                metric_values["accuracy"].append(torch.mean(correct/N).item())
             if "recall" in metrics:
                 metric_values["recall"].append(torch.mean((TP)/(TP+FN+eps)).item())
             if "precision" in metrics:
