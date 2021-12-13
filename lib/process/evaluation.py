@@ -384,7 +384,7 @@ class Evaluator(object):
                     auc = calculate_auc(pred_prob.reshape(1, -1), mask.reshape(1. - 1))
                     metric_values["AUC"].append(auc.mean().item())
                 elif m == "COD":
-                    cod = calculate_cod(pred.reshape(1,-1), mask.reshape(1, -1))
+                    cod = calculate_cod(pred_prob.reshape(1,-1), mask.reshape(1, -1))
                     metric_values["COD"].append(cod.mean().item())
                 if "accuracy" in metrics:
                     accuracy = (TP + TN) / N
