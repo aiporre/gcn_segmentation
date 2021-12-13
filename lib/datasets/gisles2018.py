@@ -260,9 +260,12 @@ class _GISLES2018(Dataset):
             useful = self.useful
         case_id_indices = self.indices.get_by_case_id(case_id, useful=useful)
         case_id_processed_file_names = ['gendo_{:04}.pt'.format(case_id_index) for case_id_index in case_id_indices]
+        self_useful = self.useful
         for c_id_fname in case_id_processed_file_names:
+            self.useful = useful
             c_id_idx = self.processed_file_names.index(c_id_fname)
             data = super().__getitem__(c_id_idx)
+            self.useful = self_useful
             yield data
 
     def get(self, idx):
