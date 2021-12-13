@@ -4,7 +4,8 @@ from matplotlib.colors import ListedColormap
 from torch_geometric.data import Data, Batch
 from hausdorff import hausdorff_distance
 
-from .losses import DiceCoeff, calculate_optimal_threshold, calculate_auc, check_label_not_unique
+from .losses import DiceCoeff, calculate_optimal_threshold, calculate_auc, check_label_not_unique, calculate_cod, \
+    calculate_hausdorff_distance
 from .progress_bar import printProgressBar
 from torch import sigmoid
 import numpy as np
@@ -306,6 +307,99 @@ class Evaluator(object):
         #     metric_values["precision"] = (TP+eps)/(TP+FN+eps)
         metrics_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
         return metrics_avgs
+
+    def scores_volume(self, model, progress_bar=False, metrics=None, reshape_transform=None):
+        if metrics is None:
+            print("Nothing to do metrics is None")
+            return
+        metric_values = {m:[] for m in metrics if m not in ["val_loss", "train_loss"]}
+
+        # todo: validation los must match with crterioin
+        prefix = f"Calculating metrics in volume: "
+        L = len(self.dataset.get_all_cases_id())
+        if progress_bar:
+            printProgressBar(0, L, prefix=prefix, suffix='', length=25)
+
+        # check if it is is_graph_tensor:
+        sample = self.dataset[0]
+        is_graph_tensor = isinstance(sample, (Data, Batch))
+
+        for case_id  in self.dataset.get_all_cases_id():
+            # collecting predictions for case_id
+            preds = []
+            preds_prob = []
+            masks = []
+            for sample in self.dataset.get_by_case_id(case_id, useful=False):
+                if is_graph_tensor:
+                    # this graph tensor
+                    image = sample
+                    mask = sample.y
+                    image['batch'] = torch.zeros_like(sample.x)
+                else:
+                    image, mask = sample[0], sample[1]
+                    image = image.reshape([1] + list(image.shape))
+                features = torch.tensor(image).float() if self.to_tensor else image
+                label = torch.tensor(label).float() if self.to_tensor else label
+
+                features = features.to(self.device)
+                label = label.to(self.device)
+                # uses the input image to predict
+                prediction = model(features)
+                if isinstance(prediction, Data):
+                    # prediction = to_torch_batch(prediction)
+                    prediction = prediction.x
+                # now converts the predictino from logits to probabilities if necessary.
+                pred_prob = sigmoid(prediction) if self.sigmoid else prediction.clone()
+                if is_graph_tensor:
+                    if reshape_transform is None:
+                        mask = reshape_square(mask)
+                        prediction = reshape_square(prediction)
+                        pred_prob = reshape_square(pred_prob)
+                    else:
+                        mask = reshape_transform(mask.cpu().detach().numpy())
+                        prediction = reshape_transform(prediction)
+                        pred_prob = reshape_transform(pred_prob)
+                preds.append(prediction)
+                preds_prob.append(pred_prob)
+                masks.append(mask)
+            pred = np.stack(preds).astype(np.float32)
+            pred_prob = np.stack(preds_prob).astype(np.float32)
+            mask = np.stack(masks).astype(np.float32)
+            pred_mask = (pred_prob > self.opt_th).astype(np.float32)
+            TP = (pred_mask * mask).sum()
+            FP = 1 * ((pred_mask - mask) > 0).sum()
+            FN = 1 * ((mask - pred_mask) > 0).sum()
+            N = mask.size
+            TN = N - TP - FP -FN
+            for m in metrics:
+                if m == "DCM":
+                    dcm = (2 * TP) / (2 * TP + FP + FN)
+                    metric_values["DCM"].append(dcm.item())
+                elif m == "HD":
+                    hd = calculate_hausdorff_distance(pred_mask, masks)
+                    hd = float(hd)
+                    metric_values["HD"].append(hd)
+                elif m == "AUC":
+                    auc = calculate_auc(pred_prob.reshape(1, -1), mask.reshape(1. - 1))
+                    metric_values["AUC"].append(auc.mean().item())
+                elif m == "COD":
+                    cod = calculate_cod(pred.reshape(1,-1), mask.reshape(1, -1))
+                    metric_values["COD"].append(cod.mean().item())
+                if "accuracy" in metrics:
+                    accuracy = (TP + TN) / N
+                    metric_values["accuracy"].append(accuracy.item())
+                if "recall" in metrics:
+                    recall = TP / (TP + FN)
+                    metric_values["recall"].append(recall.item())
+                if "precision" in metrics:
+                    precision = TP / (TP + FP)
+                    metric_values["precision"].append(precision.item())
+                if "PPV" in metrics:
+                    metric_values["PPV"].append((TP/N).item())
+
+        metric_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
+        print("metric avgs")
+        return metric_avgs
 
     def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None, modalities=None):
 

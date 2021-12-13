@@ -369,9 +369,11 @@ def eval(progress_bar=False, modalities=None):
                                                          metrics=non_binary_metrics_names)
     metrics = dict(non_binary_metrics, **binary_metrics)
     print('Calculated metrics testing set: \n', ''.join([f"{m} = {v}, " for m, v in metrics.items()]))
-    # print('DCM factor: ', evaluator_test.DCM(model, progress_bar=progress_bar))
-    # print('stats: PAR ', evaluator_test.bin_scores(model, progress_bar=progress_bar))
 
+    metrics_vol = evaluator_test.scores_volume(model, progress_bar=progress_bar, metrics=MEASUREMENTS,
+                                               reshape_transform=reshape_transform)
+
+    print('Calculated metrics testing set per case: \n', ''.join([f"{m} = {v}, " for m, v in metrics_vol.items()]))
 
 if not args.skip_training:
     train(lr=args.lr, progress_bar=args.progressbar)
