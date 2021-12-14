@@ -54,11 +54,11 @@ def recover_grid(source: Data, pos, edge_index, cluster, batch=None, transform=N
     return source
 
 
-def consecutive_cluster(src):
-    unique, inv = torch.unique(src, sorted=True, return_inverse=True)
-    perm = torch.arange(inv.size(0), dtype=inv.dtype, device=inv.device)
-    perm = inv.new_empty(unique.size(0)).scatter_(0, inv, perm)
-    return inv, perm
+# def consecutive_cluster(src):
+#     unique, inv = torch.unique(src, sorted=True, return_inverse=True)
+#     perm = torch.arange(inv.size(0), dtype=inv.dtype, device=inv.device)
+#     perm = inv.new_empty(unique.size(0)).scatter_(0, inv, perm)
+#     return inv, perm
 
 
 def pweights(x, cluster):
@@ -313,9 +313,10 @@ class GFCNA(torch.nn.Module):
 
 class GFCNC(torch.nn.Module):
     ''' model G-FCN 8s equivalent'''
-    def __init__(self, input_channels=1, postnorm_activation=True):
+    def __init__(self, input_channels=1, postnorm_activation=True, pweights=False):
         super(GFCNC, self).__init__()
         self.postnorm_activation = postnorm_activation
+        self.weight_upool = pweights
 
         self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
@@ -357,6 +358,8 @@ class GFCNC(torch.nn.Module):
 
 
     def forward(self, data):
+        # define weights as None:
+        weights1, weights2, weights3, weights4 = None, None, None, None
         # (V0.1)=>(V1.32)
         if self.postnorm_activation:
             data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
@@ -371,8 +374,8 @@ class GFCNC(torch.nn.Module):
         pos1 = data.pos
         edge_index1 = data.edge_index
         batch1 = data.batch if hasattr(data,'batch') else None
-        # weights1, centroids1 = bweights(data, cluster1)
-        # weights1 = pweights(aux, cluster1)
+        if self.weight_upool:
+            weights1 = pweights(data, cluster1)
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         # (V1.32)=>(V2.64)
@@ -389,6 +392,8 @@ class GFCNC(torch.nn.Module):
         edge_index2 = data.edge_index
         batch2 = data.batch if hasattr(data,'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
+        if self.weight_upool:
+            weights2 = pweights(data, cluster2)
         data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
         pool2 = data.clone()
 
@@ -407,6 +412,8 @@ class GFCNC(torch.nn.Module):
         edge_index3 = data.edge_index
         batch3 = data.batch if hasattr(data,'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
+        if self.weight_upool:
+            weights2 = pweights(data, cluster3)
         data = max_pool(cluster3, data, transform=T.Cartesian(cat=False))
         pool3 = data.clone()
 
@@ -426,6 +433,8 @@ class GFCNC(torch.nn.Module):
         edge_index4 = data.edge_index
         batch4 = data.batch if hasattr(data, 'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
+        if self.weight_upool:
+            weights4 = pweights(data, cluster4)
         data = max_pool(cluster4, data, transform=T.Cartesian(cat=False))
 
         # LAYERS:
@@ -435,22 +444,32 @@ class GFCNC(torch.nn.Module):
         # compute score of latent space (V4.128)=>(V4.32)
         data.x = F.elu(self.score_fr(data.x, data.edge_index, data.edge_attr))
         # upsample V4=>V3
-        data = recover_grid(data, pos4, edge_index4, cluster4, batch=batch4, transform=T.Cartesian(cat=False))
+        if self.weight_upool:
+            data = recover_grid_barycentric(data, weights4, pos4, edge_index4, cluster4, batch=batch4, transform=T.Cartesian(cat=False))
+        else:
+            data = recover_grid(data, pos4, edge_index4, cluster4, batch=batch4, transform=T.Cartesian(cat=False))
 
         # compute score of pool3  (V3.128)=>(V3,32)
         pool3.x = F.elu(self.score_pool3(pool3.x, pool3.edge_index, pool3.edge_attr))
         data.x = data.x+pool3.x
 
         # upsample V3=>V2
-        data = recover_grid(data, pos3, edge_index3, cluster3, batch=batch3, transform=T.Cartesian(cat=False))
+        if self.weight_upool:
+            data = recover_grid_barycentric(data, weights3, pos3, edge_index3, cluster3, batch=batch3, transform=T.Cartesian(cat=False))
+        else:
+            data = recover_grid(data, pos3, edge_index3, cluster3, batch=batch3, transform=T.Cartesian(cat=False))
 
         # compute score of pool2 (V2.64)=>(V2.32)
         pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
         data.x = data.x+pool2.x
 
         # upsample (V2.32)=>(V1.32)=>(V0.32)
-        data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
-        data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
+        if self.weight_upool:
+            data = recover_grid_barycentric(data, weights2, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
+            data = recover_grid_barycentric(data, weights1, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
+        else:
+            data = recover_grid(data, pos2, edge_index2, cluster2, batch=batch2, transform=T.Cartesian(cat=False))
+            data = recover_grid(data, pos1, edge_index1, cluster1, batch=batch1, transform=T.Cartesian(cat=False))
         # data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1, batch=batch1, transform=None)
 
         # TODO handle contract on trainer and  evaluator
