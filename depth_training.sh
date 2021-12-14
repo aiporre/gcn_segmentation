@@ -11,51 +11,40 @@ fi
 conda activate gfcn
 if [[ $channels == "4ch" ]]
 then
-  echo "runing 4ch"
-  echo " Deleting files gendo_"
+  echo "running 4ch"
+  echo "Deleting files gendo_"
   rm data/gisles2018/processed/TRAINING/gendo_*.pt
-  echo " training losses case GFCNC"
-  echo "GFCNC with soft Dice loss"
   tid="Pre4Ch$fold"
-#  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod TMAX CBF CBV MTT --postnorm True -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
+  echo "GFCNC with soft Dice loss"
   python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod TMAX CBF CBV MTT --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
-  echo "training losses case GFCNB"
   echo "GFCNB with soft Dice loss"
-#  python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod TMAX CBF CBV MTT --postnorm True -D experiment3_depth >> "experiment3_depth/gfcnb_pos4Ch.log"
-  python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod TMAX CBF CBV MTT --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnb_pre4Ch.log"
-  echo "training losses case GFCNA"
+  python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod TMAX CBF CBV MTT --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnb_$tid.log"
   echo "GFCNA with soft Dice loss"
-#  python training.py -s GISLES2018 -n GFCNA -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod TMAX CBF CBV MTT --postnorm True -D experiment3_depth >> "experiment3_depth/gfcna_$tid.log"
   python training.py -s GISLES2018 -n GFCNA -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod TMAX CBF CBV MTT --postnorm False -D experiment3_depth >> "experiment3_depth/gfcna_$tid.log"
 
 elif [[ $channels == "5ch" ]]
 then
   echo " Deleting files gendo_"
   rm data/gisles2018/processed/TRAINING/gendo_*.pt
-  echo " running with 2 channel in CBV and CBF"
-  echo " training losses case GFCNC"
-  echo "GFCNC with soft Dice loss"
   tid="Pre5Ch$fold"
-#  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm True -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
-  echo "training losses case GFCNB"
+  echo "GFCNC with soft Dice loss"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
   echo "GFCNB with soft Dice loss"
-#  python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm True -D experiment3_depth >> "experiment3_depth/gfcnb_$tid.log"
-  python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnb_$tid.log"
-  echo "training losses case GFCNA"
+  python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnb_$tid.log"
   echo "GFCNA with soft Dice loss"
-#  python training.py -s GISLES2018 -n GFCNA -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm True -D experiment3_depth >> "experiment3_depth/gfcna_$tid.log"
-  python training.py -s GISLES2018 -n GFCNA -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm False -D experiment3_depth >> "experiment3_depth/gfcna_$tid.log"
+  python training.py -s GISLES2018 -n GFCNA -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --postnorm False -D experiment3_depth >> "experiment3_depth/gfcna_$tid.log"
 elif [[ $channels == "1chCBV" ]]
 then
   echo " Deleting files gendo_"
-  rm data/gisles2018/processed/TRAINING/gendo_*.pt
   echo " running with 1 channel in CBV"
-  echo " training losses case GFCNC"
-  echo "GFCNC with soft Dice loss"
+  rm data/gisles2018/processed/TRAINING/gendo_*.pt
   tid="Pre1ChCBV$fold"
-#  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm True -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
+  echo "GFCNC with soft Dice loss"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod CBV --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
+  echo "GFCNB with soft Dice loss"
+  python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod CBV --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnb_$tid.log"
+  echo "GFCNA with soft Dice loss"
+  python training.py -s GISLES2018 -n GFCNA -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod CBV --postnorm False -D experiment3_depth >> "experiment3_depth/gfcna_$tid.log"
 #
 elif [[ $channels == "1chCBF" ]]
 then
@@ -65,9 +54,12 @@ then
   echo " training losses case GFCNC"
   echo "GFCNC with soft Dice loss"
   tid="Pre1ChCBF$fold"
-#  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm True -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100  --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
-
+  echo "GFCNC with soft Dice loss"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod CBF --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
+  echo "GFCNB with soft Dice loss"
+  python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod CBF --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnb_$tid.log"
+  echo "GFCNA with soft Dice loss"
+  python training.py -s GISLES2018 -n GFCNA -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod CBF --postnorm False -D experiment3_depth >> "experiment3_depth/gfcna_$tid.log"
 else
   echo  " nothing to run exit"
   exit 1
