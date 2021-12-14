@@ -627,6 +627,7 @@ class GFCN(torch.nn.Module):
 
         self.score_fr1 = SplineConv(128, 64, dim=2, kernel_size=1)
         self.score_fr2 = SplineConv(64, 32, dim=2, kernel_size=1)
+        self.score_fr3 = SplineConv(32, input_channels, dim=2, kernel_size=1)
         self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
 
         self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
@@ -699,7 +700,7 @@ class GFCN(torch.nn.Module):
         data.x = data.x+pool2.x
         data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
                                         batch=batch2, transform=T.Cartesian(cat=False))
-
+        data.x = F.elu(self.score_fr3(data.x, data.edge_index, data.edge_attr))
         data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
                                         batch=batch1, transform=T.Cartesian(cat=False))
 
