@@ -106,7 +106,7 @@ def process_command_line():
     parser.add_argument("--postnorm", type=str2bool, default=True,
                         help="Only in the GFCNx. If False, batch normalization is applied before the activation. "
                              "If True, batch, normalization is calculated after activation. Defaults True")
-    parser.add_argument("-W", "--pweights", type=str2bool, default=True,
+    parser.add_argument("-W", "--pweights", type=str2bool, default=False,
                         help="Activate proportional unpooing")
     parser.add_argument("--load-model", type=str, default='best',
                         help="loading model mode. Options are best, and last")
