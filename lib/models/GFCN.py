@@ -361,6 +361,7 @@ class GFCNC(torch.nn.Module):
         # define weights as None:
         weights1, weights2, weights3, weights4 = None, None, None, None
         # (V0.1)=>(V1.32)
+        x_pre = data.x.clone().detach() if self.weight_upool else None
         if self.postnorm_activation:
             data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
@@ -375,10 +376,11 @@ class GFCNC(torch.nn.Module):
         edge_index1 = data.edge_index
         batch1 = data.batch if hasattr(data,'batch') else None
         if self.weight_upool:
-            weights1 = pweights(data, cluster1)
+            weights1 = pweights(x_pre, cluster1)
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         # (V1.32)=>(V2.64)
+        x_pre = data.x.clone().detach() if self.weight_upool else None
         if self.postnorm_activation:
             data.x = F.elu(self.conv2a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv2b(data.x, data.edge_index, data.edge_attr))
@@ -393,11 +395,12 @@ class GFCNC(torch.nn.Module):
         batch2 = data.batch if hasattr(data,'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
         if self.weight_upool:
-            weights2 = pweights(data, cluster2)
+            weights2 = pweights(x_pre, cluster2)
         data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
         pool2 = data.clone()
 
         # (V2.64)=>(V3.128)
+        x_pre = data.x.clone().detach() if self.weight_upool else None
         if self.postnorm_activation:
             data.x = F.elu(self.conv3a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv3b(data.x, data.edge_index, data.edge_attr))
@@ -413,12 +416,13 @@ class GFCNC(torch.nn.Module):
         batch3 = data.batch if hasattr(data,'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
         if self.weight_upool:
-            weights2 = pweights(data, cluster3)
+            weights2 = pweights(x_pre, cluster3)
         data = max_pool(cluster3, data, transform=T.Cartesian(cat=False))
         pool3 = data.clone()
 
 
         # (V3.128)=>(V4.256)
+        x_pre = data.x.clone().detach()
         if self.postnorm_activation:
             data.x = F.elu(self.conv4a(data.x, data.edge_index, data.edge_attr))
             data.x = F.elu(self.conv4b(data.x, data.edge_index, data.edge_attr))
@@ -426,7 +430,6 @@ class GFCNC(torch.nn.Module):
         else:
             data.x = F.elu(self.bn4_1(self.conv4a(data.x, data.edge_index, data.edge_attr)))
             data.x = F.elu(self.bn4_2(self.conv4b(data.x, data.edge_index, data.edge_attr)))
-
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster4 = graclus(data.edge_index, weight, data.x.size(0))
         pos4 = data.pos
@@ -434,7 +437,7 @@ class GFCNC(torch.nn.Module):
         batch4 = data.batch if hasattr(data, 'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
         if self.weight_upool:
-            weights4 = pweights(data, cluster4)
+            weights4 = pweights(x_pre, cluster4)
         data = max_pool(cluster4, data, transform=T.Cartesian(cat=False))
 
         # LAYERS:
