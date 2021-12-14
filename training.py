@@ -95,6 +95,9 @@ def process_command_line():
     parser.add_argument("--useful", type=str2bool, default=False,
                         help="useful flag True activates filter, and only useful samples are collected in all datasets"
                              ". If False all samples are collected. Default is False")
+    parser.add_argument("--fold", type=int, default=1,
+                        help="Fold number that use test=23/train*=71=>train=65/val=6. "
+                             "Number between 1 and 4. Defaults 1")
     parser.add_argument("--id", type=str, default='XYZ',
                         help="id for the training name")
     parser.add_argument("-n", "--net", type=str, default='GFCN',
@@ -176,7 +179,7 @@ elif args.dataset == 'GENDOSTROKE':
     dataset = GENDOSTROKE(data_dir=args.endodir)
     reshape_transform = endostroke_reshape
 elif args.dataset == 'GISLES2018':
-    dataset = GISLES2018(data_dir=args.islesdir, modalities=MODALITIES, useful=args.useful)
+    dataset = GISLES2018(data_dir=args.islesdir, modalities=MODALITIES, useful=args.useful, fold=args.fold)
     reshape_transform = isles2018_reshape
 else:
     dataset = MNIST()
