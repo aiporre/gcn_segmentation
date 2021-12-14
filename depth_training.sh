@@ -12,6 +12,8 @@ conda activate gfcn
 if [[ $channels == "4ch" ]]
 then
   echo "runing 4ch"
+  echo " Deleting files gendo_"
+  rm data/gisles2018/processed/TRAINING/gendo_*.pt
   echo " training losses case GFCNC"
   echo "GFCNC with soft Dice loss"
   tid="Pre4Ch$fold"
