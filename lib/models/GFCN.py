@@ -106,7 +106,7 @@ def recover_grid_barycentric(source, weights, pos, edge_index, cluster, batch=No
 
 class GFCNB(torch.nn.Module):
     ''' GFCN equivalent to the FCN32s'''
-    def __init__(self, input_channels=1, postnorm_activation=True):
+    def __init__(self, input_channels=1, postnorm_activation=True, pweights=False):
         super(GFCNB, self).__init__()
         self.postnorm_activation = postnorm_activation
         self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
@@ -203,7 +203,7 @@ class GFCNB(torch.nn.Module):
 
 class GFCNA(torch.nn.Module):
     ''' GFCN equivalent to the FCN16s'''
-    def __init__(self, input_channels=1, postnorm_activation=True):
+    def __init__(self, input_channels=1, postnorm_activation=True, pweights=False):
         super(GFCNA, self).__init__()
         self.postnorm_activation = postnorm_activation
         self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)

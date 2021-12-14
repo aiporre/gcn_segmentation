@@ -4,6 +4,7 @@ from scipy.ndimage import measurements
 from tifffile import tifffile
 
 from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape, get_modalities
+from lib.models.GFCN import pweights
 from lib.process.evaluation import MetricsLogs
 from lib.process.losses import estimatePositiveWeight, GeneralizedDiceLoss, FocalLoss, DiceLoss
 
@@ -105,6 +106,8 @@ def process_command_line():
     parser.add_argument("--postnorm", type=str2bool, default=True,
                         help="Only in the GFCNx. If False, batch normalization is applied before the activation. "
                              "If True, batch, normalization is calculated after activation. Defaults True")
+    parser.add_argument("-W", "--pweights", type=str2bool, default=True,
+                        help="Activate proportional unpooing")
     parser.add_argument("--load-model", type=str, default='best',
                         help="loading model mode. Options are best, and last")
     parser.add_argument("-p", "--pre-transform", type=str2bool, default=False,
@@ -188,11 +191,11 @@ else:
 if args.net == 'GFCN':
     model = GFCN(input_channels=NUM_INPUTS)
 elif args.net == 'GFCNA':
-    model = GFCNA(input_channels=NUM_INPUTS)
+    model = GFCNA(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, pweights=args.pweights)
 elif args.net == 'GFCNB':
-    model = GFCNB(input_channels=NUM_INPUTS)
+    model = GFCNB(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, pweights=args.pweights)
 elif args.net == 'GFCNC':
-    model = GFCNC(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm)
+    model = GFCNC(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, pweights=args.pweights)
 elif args.net == 'GFCND':
     model = GFCND(input_channels=NUM_INPUTS)
 elif args.net == 'PointNet':
