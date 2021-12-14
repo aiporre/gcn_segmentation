@@ -320,7 +320,7 @@ class Evaluator(object):
         L = len(self.dataset.get_all_cases_id())
         if progress_bar:
             printProgressBar(0, L, prefix=prefix, suffix='', length=25)
-
+        i = 0  # counter for the progress bar
         # check if it is is_graph_tensor:
         sample = self.dataset[0]
         is_graph_tensor = isinstance(sample, (Data, Batch))
@@ -397,6 +397,13 @@ class Evaluator(object):
                     metric_values["precision"].append(precision.item())
                 if "PPV" in metrics:
                     metric_values["PPV"].append((TP/N).item())
+            # printing progress bar
+            if progress_bar:
+                printProgressBar(i, L, prefix=prefix, suffix='Complete', length=50)
+            else:
+                if i % int(L/10) == 0 or i == 0:
+                    print(prefix, ': in case ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
+            i += 1
 
         metric_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
         print("metric avgs")
