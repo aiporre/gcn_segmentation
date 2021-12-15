@@ -901,7 +901,7 @@ class GFCNE(torch.nn.Module):
             data.x = F.elu(self.bn4_2(self.conv4b(data.x, data.edge_index, data.edge_attr)))
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster4 = graclus(data.edge_index, weight, data.x.size(0))
-        weights4 = self.score_w4(pweights(x_pre, cluster4))
+        weights4 = pweights(x_pre, cluster4)
         data = max_pool(cluster4, data, transform=T.Cartesian(cat=False))
 
         # upsample
