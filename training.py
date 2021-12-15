@@ -191,11 +191,11 @@ else:
 if args.net == 'GFCN':
     model = GFCN(input_channels=NUM_INPUTS)
 elif args.net == 'GFCNA':
-    model = GFCNA(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, pweights=args.pweights)
+    model = GFCNA(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, weight_upool=args.pweights)
 elif args.net == 'GFCNB':
-    model = GFCNB(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, pweights=args.pweights)
+    model = GFCNB(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, weight_upool=args.pweights)
 elif args.net == 'GFCNC':
-    model = GFCNC(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, pweights=args.pweights)
+    model = GFCNC(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, weight_upool=args.pweights)
 elif args.net == 'GFCND':
     model = GFCND(input_channels=NUM_INPUTS)
 elif args.net == 'PointNet':

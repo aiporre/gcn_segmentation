@@ -8,7 +8,7 @@ from torch_geometric.nn import graclus, max_pool, avg_pool, fps, radius, knn_int
 
 from torch_geometric.nn import SplineConv
 from lib.utils import print_debug
-from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN
+from torch.nn import Sequential as Seq, Linear as Lin, ReLU, BatchNorm1d as BN, Linear
 
 
 def normalized_cut_2d(edge_index, pos):
@@ -313,10 +313,10 @@ class GFCNA(torch.nn.Module):
 
 class GFCNC(torch.nn.Module):
     ''' model G-FCN 8s equivalent'''
-    def __init__(self, input_channels=1, postnorm_activation=True, pweights=False):
+    def __init__(self, input_channels=1, postnorm_activation=True, weight_upool=False):
         super(GFCNC, self).__init__()
         self.postnorm_activation = postnorm_activation
-        self.weight_upool = pweights
+        self.weight_upool = weight_upool
 
         self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
@@ -353,6 +353,11 @@ class GFCNC(torch.nn.Module):
         self.score_fr = SplineConv(256, 32, dim=2, kernel_size=1)
         self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
         self.score_pool3 = SplineConv(128, 32, dim=2, kernel_size=3)
+        if self.weight_upool:
+            self.score_w1 = Linear(input_channels, 32)
+            self.score_w2 = Linear(32, 32)
+            self.score_w3 = Linear(64, 32)
+            self.score_w4 = Linear(128, 32)
 
         self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
 
@@ -376,7 +381,7 @@ class GFCNC(torch.nn.Module):
         edge_index1 = data.edge_index
         batch1 = data.batch if hasattr(data,'batch') else None
         if self.weight_upool:
-            weights1 = pweights(x_pre, cluster1)
+            weights1 = self.score_w1(pweights(x_pre, cluster1))
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         # (V1.32)=>(V2.64)
@@ -395,7 +400,7 @@ class GFCNC(torch.nn.Module):
         batch2 = data.batch if hasattr(data,'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
         if self.weight_upool:
-            weights2 = pweights(x_pre, cluster2)
+            weights2 = self.score_w2(pweights(x_pre, cluster2))
         data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
         pool2 = data.clone()
 
@@ -416,7 +421,7 @@ class GFCNC(torch.nn.Module):
         batch3 = data.batch if hasattr(data,'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
         if self.weight_upool:
-            weights2 = pweights(x_pre, cluster3)
+            weights3 = self.score_w3(pweights(x_pre, cluster3))
         data = max_pool(cluster3, data, transform=T.Cartesian(cat=False))
         pool3 = data.clone()
 
@@ -437,7 +442,7 @@ class GFCNC(torch.nn.Module):
         batch4 = data.batch if hasattr(data, 'batch') else None
         # weights2, centroids2 = bweights(data, cluster2)
         if self.weight_upool:
-            weights4 = pweights(x_pre, cluster4)
+            weights4 = self.score_w4(pweights(x_pre, cluster4))
         data = max_pool(cluster4, data, transform=T.Cartesian(cat=False))
 
         # LAYERS:
