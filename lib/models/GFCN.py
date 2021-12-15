@@ -612,6 +612,57 @@ class GFCND(torch.nn.Module):
         # return F.sigmoid(x)
         return data
 
+class GFCNG(torch.nn.Module):
+    ''' GFCN equivalent to the FCN8s with topk'''
+    def __init__(self, input_channels=1):
+        super(GFCNG, self).__init__()
+        self.down1 = Downsampling(k_range=32, ratio=0.5, in_channels=input_channels, out_channels=32, dim=2, kernel_size=5,batch_norm=True)
+        self.down2 = Downsampling(k_range=64, ratio=0.5, in_channels=32, out_channels=64, dim=2, kernel_size=3)
+        self.down3 = Downsampling(k_range=128, ratio=0.5, in_channels=64, out_channels=128, dim=2, kernel_size=3)
+        self.down4 = Downsampling(k_range=256, ratio=0.5, in_channels=128, out_channels=128, dim=2, kernel_size=1)
+        self.up1 = Upsampling(k=3, in_channels=128, out_channels=64, dim=2, kernel_size=3)
+        self.score_fs = SplineConv(256, 32, dim=2, kernel_size=3)
+
+        self.up2 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=5,conv_layer=False)
+        self.up3 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=5,conv_layer=False)
+
+        self.score_pool3 = SplineConv(128, 32, dim=2, kernel_size=3)
+        self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
+        self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
+
+    def forward(self, data):
+        # V0,1 -> V1,32
+        data, backsampling_1 = self.down1(data)
+        # V1,32 -> V2,64
+        data, backsampling_2 = self.down2(data)
+        pool2 = data.clone()
+        # V2,64 -> V3,128
+        data, backsampling_3 = self.down3(data)
+        pool3 = data.clone()
+        # V3,128-> V4,256
+        data, backsampling_4 = self.down4(data)
+        # V4,256-> V3,32 // score FR
+        data = self.up1(data, backsampling_4)
+        data.x = F.elu(self.score_fs(data.x, data.edge_index, data.edge_attr))
+        # V3.128 -> V3.32 // score_pool3
+        pool3.x = F.elu(self.score_pool3(pool3.x, pool3.edge_index, pool3.edge_attr))
+        # addition
+        data.x = data.x + pool3.x
+
+        # V2.64-> V2,32 //score pool2
+        pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
+        # addition
+        data.x = data.x+pool2.x
+        # V1,128 -> V0,32
+        data = self.up2(data, backsampling_2)
+        data = self.up3(data, backsampling_1)
+        # convout
+        # V0,32 -> V0,1
+        data.x = self.convout(data.x, data.edge_index, data.edge_attr)
+
+        return data
+
+
 class GFCN(torch.nn.Module):
     ''' GFCN16s with barycentric upsampling'''
     def __init__(self, input_channels=1):
@@ -786,7 +837,7 @@ class GFCNE(torch.nn.Module):
         cluster1 = graclus(data.edge_index, weight, data.x.size(0))
         weights1 = pweights(x_pre, cluster1)
         # pooling
-        data = avg_pool(cluster1, data, transform=T.Cartesian(cat=False))
+        data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
 
         # (32/64,V_1/V_2)
         # pre-pool2
@@ -809,7 +860,7 @@ class GFCNE(torch.nn.Module):
         cluster2 = graclus(data.edge_index, weight, data.x.size(0))
         weights2 = pweights(x_pre, cluster2)
         # pooling
-        data = avg_pool(cluster2, data, transform=T.Cartesian(cat=False))
+        data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
         pool2 = data.clone()
 
         # 64/128,V_2/V_3
@@ -833,7 +884,7 @@ class GFCNE(torch.nn.Module):
         cluster3 = graclus(data.edge_index, weight, data.x.size(0))
         weights3 = pweights(x_pre, cluster3)
         # pooling
-        data = avg_pool(cluster3, data, transform=T.Cartesian(cat=False))
+        data = max_pool(cluster3, data, transform=T.Cartesian(cat=False))
         pool3 = data.clone()
 
         # (V3.128)=>(V4.256)
