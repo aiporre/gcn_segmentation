@@ -805,9 +805,9 @@ class GFCNE(torch.nn.Module):
             self.bn4_1 = torch.nn.BatchNorm1d(256)
             self.bn4_2 = torch.nn.BatchNorm1d(256)
 
-        self.score_fr = SplineConv(256, 32, dim=2, kernel_size=1)
-        self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
-        self.score_pool3 = SplineConv(128, 32, dim=2, kernel_size=3)
+        self.score_fr = SplineConv(256, 128, dim=2, kernel_size=1)
+        self.score_pool2 = SplineConv(64, 64, dim=2, kernel_size=3)
+        self.score_pool3 = SplineConv(128, 128, dim=2, kernel_size=3)
 
         # scores_wX
         self.score_w3 = SplineConv(128, 64, dim=2, kernel_size=1)
@@ -922,7 +922,7 @@ class GFCNE(torch.nn.Module):
         pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
         data.x = data.x+pool2.x
 
-        # upsample (V2.64)=>(V1.32)=>(V0.4)
+        # upsample (V2.64)=>(V1.32)=>(V0.N)
         data.x = F.elu(self.score_w2(data.x, data.edge_index, data.edge_attr))
         data = recover_grid_barycentric(data, weights=weights2, pos=pos2, edge_index=edge_index2, cluster=cluster2,
                                         batch=batch2, transform=T.Cartesian(cat=False))
