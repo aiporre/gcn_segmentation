@@ -487,7 +487,7 @@ class GFCNC(torch.nn.Module):
 #### MODEL
 class down(torch.nn.Module):
     def __init__(self, ratio, r, in_channels, out_channels, dim, kernel_size):
-        super(Downsampling, self).__init__()
+        super(down, self).__init__()
         self.ratio = ratio
         self.r = r
         self.conv = SplineConv(in_channels, out_channels, dim=dim, kernel_size=kernel_size)
@@ -790,7 +790,7 @@ class GFCNE(torch.nn.Module):
             self.bn2_2 = torch.nn.BatchNorm1d(64)
 
         self.conv3a = SplineConv(64, 128, dim=2, kernel_size=3)
-        self.conv3b = SplineConv(128, 128, dim=2, kernel_size=1)
+        self.conv3b = SplineConv(128, 128, dim=2, kernel_size=3)
         if postnorm_activation:
             self.bn3= torch.nn.BatchNorm1d(128)
         else:
@@ -930,5 +930,119 @@ class GFCNE(torch.nn.Module):
         data = recover_grid_barycentric(data, weights=weights1, pos=pos1, edge_index=edge_index1, cluster=cluster1,
                                         batch=batch1, transform=T.Cartesian(cat=False))
 
+        data.x = self.convout(data.x, data.edge_index, data.edge_attr)
+        return data
+
+class GFCNF(torch.nn.Module):
+    """ model G-FCN 8s no pooling or unpooling """
+    def __init__(self, input_channels=1, postnorm_activation=True):
+        super(GFCNF, self).__init__()
+        self.postnorm_activation = postnorm_activation
+
+        self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
+        self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
+        if postnorm_activation:
+            self.bn1 = torch.nn.BatchNorm1d(32)
+        else:
+            self.bn1_1 = torch.nn.BatchNorm1d(32)
+            self.bn1_2 = torch.nn.BatchNorm1d(32)
+
+        self.conv2a = SplineConv(32, 64, dim=2, kernel_size=3)
+        self.conv2b = SplineConv(64, 64, dim=2, kernel_size=3)
+        if postnorm_activation:
+            self.bn2= torch.nn.BatchNorm1d(64)
+        else:
+            self.bn2_1 = torch.nn.BatchNorm1d(64)
+            self.bn2_2 = torch.nn.BatchNorm1d(64)
+
+        self.conv3a = SplineConv(64, 128, dim=2, kernel_size=3)
+        self.conv3b = SplineConv(128, 128, dim=2, kernel_size=1)
+        if postnorm_activation:
+            self.bn3= torch.nn.BatchNorm1d(128)
+        else:
+            self.bn3_1 = torch.nn.BatchNorm1d(128)
+            self.bn3_2 = torch.nn.BatchNorm1d(128)
+
+        self.conv4a = SplineConv(128, 256, dim=2, kernel_size=1)
+        self.conv4b = SplineConv(256, 256, dim=2, kernel_size=1)
+        if postnorm_activation:
+            self.bn4= torch.nn.BatchNorm1d(256)
+        else:
+            self.bn4_1 = torch.nn.BatchNorm1d(256)
+            self.bn4_2 = torch.nn.BatchNorm1d(256)
+
+        self.score_fr = SplineConv(256, 32, dim=2, kernel_size=1)
+        self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
+        self.score_pool3 = SplineConv(128, 32, dim=2, kernel_size=3)
+
+        # scores_wX
+        self.score_w3 = SplineConv(32, 32, dim=2, kernel_size=1)
+        self.score_w2 = SplineConv(32, 32, dim=2, kernel_size=1)
+        self.score_w1 = SplineConv(32, 32, dim=2, kernel_size=1)
+
+        self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
+
+
+    def forward(self, data):
+        # (V0.N)=>(V0.32)
+        # convolution
+        if self.postnorm_activation:
+            data.x = F.elu(self.conv1a(data.x, data.edge_index, data.edge_attr))
+            data.x = F.elu(self.conv1b(data.x, data.edge_index, data.edge_attr))
+            data.x = self.bn1(data.x)
+        else:
+            data.x = F.elu(self.bn1_1(self.conv1a(data.x, data.edge_index, data.edge_attr)))
+            data.x = F.elu(self.bn1_2(self.conv1b(data.x, data.edge_index, data.edge_attr)))
+
+        # (V0.32)=>(V0.64)
+        # convolution
+        if self.postnorm_activation:
+            data.x = F.elu(self.conv2a(data.x, data.edge_index, data.edge_attr))
+            data.x = F.elu(self.conv2b(data.x, data.edge_index, data.edge_attr))
+            data.x = self.bn2(data.x)
+        else:
+            data.x = F.elu(self.bn2_1(self.conv2a(data.x, data.edge_index, data.edge_attr)))
+            data.x = F.elu(self.bn2_2(self.conv2b(data.x, data.edge_index, data.edge_attr)))
+        pool2 = data.clone()
+
+        # (V0.64)=>(V0.128)
+        if self.postnorm_activation:
+            data.x = F.elu(self.conv3a(data.x, data.edge_index, data.edge_attr))
+            data.x = F.elu(self.conv3b(data.x, data.edge_index, data.edge_attr))
+            data.x = self.bn3(data.x)
+        else:
+            data.x = F.elu(self.bn3_1(self.conv3a(data.x, data.edge_index, data.edge_attr)))
+            data.x = F.elu(self.bn3_2(self.conv3b(data.x, data.edge_index, data.edge_attr)))
+        pool3 = data.clone()
+
+        # (V0.128)=>(V0.256)
+        if self.postnorm_activation:
+            data.x = F.elu(self.conv4a(data.x, data.edge_index, data.edge_attr))
+            data.x = F.elu(self.conv4b(data.x, data.edge_index, data.edge_attr))
+            data.x = self.bn4(data.x)
+        else:
+            data.x = F.elu(self.bn4_1(self.conv4a(data.x, data.edge_index, data.edge_attr)))
+            data.x = F.elu(self.bn4_2(self.conv4b(data.x, data.edge_index, data.edge_attr)))
+
+        # upsample
+        # compute score of late space (V0.256)=>(V0.32)
+        data.x = F.elu(self.score_fr(data.x, data.edge_index, data.edge_attr))
+
+        # compute score of pool3 (V0.128)=>(V0.32)
+        pool3.x = F.elu(self.score_pool3(pool3.x, pool3.edge_index, pool3.edge_attr))
+        data.x = data.x+pool3.x
+
+        # replaces upsample V3=>V2 with convolution V0.32=>(V0.32)
+        data.x = F.elu(self.score_w3(data.x, data.edge_index, data.edge_attr))
+
+        # compute score of pool2 (V0.64)=>(V0.32)
+        pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
+        data.x = data.x+pool2.x
+
+        # replaces upsamping with spline conv of v0.32, v0.32
+        data.x = F.elu(self.score_w2(data.x, data.edge_index, data.edge_attr))
+        data.x = F.elu(self.score_w1(data.x, data.edge_index, data.edge_attr))
+
+        # output convolution
         data.x = self.convout(data.x, data.edge_index, data.edge_attr)
         return data
