@@ -635,7 +635,7 @@ class GFCN(torch.nn.Module):
         self.score_fr3 = SplineConv(32, input_channels, dim=2, kernel_size=1)
         self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
 
-        self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
+        self.convout = SplineConv(input_channels, 1, dim=2, kernel_size=5)
 
     def forward(self, data):
         # (1/32,V_0/V_1)
