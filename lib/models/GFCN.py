@@ -619,7 +619,7 @@ class GFCNG(torch.nn.Module):
         self.down1 = Downsampling(k_range=32, ratio=0.5, in_channels=input_channels, out_channels=32, dim=2, kernel_size=5,batch_norm=True)
         self.down2 = Downsampling(k_range=64, ratio=0.5, in_channels=32, out_channels=64, dim=2, kernel_size=3)
         self.down3 = Downsampling(k_range=128, ratio=0.5, in_channels=64, out_channels=128, dim=2, kernel_size=3)
-        self.down4 = Downsampling(k_range=256, ratio=0.5, in_channels=128, out_channels=128, dim=2, kernel_size=1)
+        self.down4 = Downsampling(k_range=256, ratio=0.5, in_channels=128, out_channels=256, dim=2, kernel_size=1)
         self.up1 = Upsampling(k=3, in_channels=128, out_channels=64, dim=2, kernel_size=3)
         self.score_fs = SplineConv(256, 32, dim=2, kernel_size=3)
 
