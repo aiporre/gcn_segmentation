@@ -22,6 +22,9 @@ then
   echo "Running upool topk"
   tid="kPre4Ch$fold"
   python training.py -s GISLES2018 -n GFCND -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 -X True --mod TMAX CBF CBV MTT --postnorm False -D experiment4_upool >> "experiment4_upool/gfcnd_${tid}_eval.log"
+  echo "Running no unpool and pooling"
+  tid="nPre4Ch$fold"
+  python training.py -s GISLES2018 -n GFCNF -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6 -g 100 --mod TMAX CBF CBV MTT --postnorm False -D experiment4_upool >> "experiment4_upool/gfcnd_$tid.log"
 elif [[ $channels == "5ch" ]]
 then
   echo " Deleting files gendo_"
