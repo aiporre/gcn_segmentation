@@ -4,7 +4,7 @@ from scipy.ndimage import measurements
 from tifffile import tifffile
 
 from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape, get_modalities
-from lib.models.GFCN import pweights
+from lib.models.GFCN import pweights, GFCNE
 from lib.process.evaluation import MetricsLogs
 from lib.process.losses import estimatePositiveWeight, GeneralizedDiceLoss, FocalLoss, DiceLoss
 
@@ -198,6 +198,8 @@ elif args.net == 'GFCNC':
     model = GFCNC(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm, weight_upool=args.pweights)
 elif args.net == 'GFCND':
     model = GFCND(input_channels=NUM_INPUTS)
+elif args.net == 'GFCNE':
+    model = GFCNE(input_channels=NUM_INPUTS, postnorm_activation=args.postnorm)
 elif args.net == 'PointNet':
     model = PointNet()
 elif args.net == 'UNet':
