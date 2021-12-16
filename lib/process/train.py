@@ -125,7 +125,7 @@ class Trainer(object):
         self.optimizer = None
         self._epoch = 0
         self.opt_th = 0.5
-    
+
     def update_optimal_threshold(self, progress_bar=True):
         opt_ths = []
         L = self.dataset.num_batches
@@ -175,7 +175,6 @@ class Trainer(object):
 
         features = features.to(self.device)
         target = target.to(self.device)
-
         prediction = self.model(features)
 
         if isinstance(prediction, Data):
