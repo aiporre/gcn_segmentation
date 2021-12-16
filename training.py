@@ -95,7 +95,7 @@ def process_command_line():
     parser.add_argument("--useful", type=str2bool, default=False,
                         help="useful flag True activates filter, and only useful samples are collected in all datasets"
                              ". If False all samples are collected. Default is False")
-    parser.add_argument("--fold", type=int, default=1,
+    parser.add_argument("-f", "--fold", type=int, default=1,
                         help="Fold number that use test=23/train*=71=>train=65/val=6. "
                              "Number between 1 and 4. Defaults 1")
     parser.add_argument("--id", type=str, default='XYZ',
