@@ -620,11 +620,12 @@ class GFCNG(torch.nn.Module):
         self.down2 = Downsampling(k_range=64, ratio=0.5, in_channels=32, out_channels=64, dim=2, kernel_size=3)
         self.down3 = Downsampling(k_range=128, ratio=0.5, in_channels=64, out_channels=128, dim=2, kernel_size=3)
         self.down4 = Downsampling(k_range=256, ratio=0.5, in_channels=128, out_channels=256, dim=2, kernel_size=1)
-        self.up1 = Upsampling(k=3, in_channels=128, out_channels=64, dim=2, kernel_size=3)
         self.score_fs = SplineConv(256, 32, dim=2, kernel_size=3)
+        self.up1 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=3)
+        self.up2 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=3, conv_layer=False)
+        self.up3 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=3, conv_layer=False)
+        self.up4 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=3, conv_layer=False)
 
-        self.up2 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=5,conv_layer=False)
-        self.up3 = Upsampling(k=3, in_channels=32, out_channels=32, dim=2, kernel_size=5,conv_layer=False)
 
         self.score_pool3 = SplineConv(128, 32, dim=2, kernel_size=3)
         self.score_pool2 = SplineConv(64, 32, dim=2, kernel_size=3)
@@ -642,20 +643,22 @@ class GFCNG(torch.nn.Module):
         # V3,128-> V4,256
         data, backsampling_4 = self.down4(data)
         # V4,256-> V3,32 // score FR
-        data = self.up1(data, backsampling_4)
         data.x = F.elu(self.score_fs(data.x, data.edge_index, data.edge_attr))
+        data = self.up1(data, backsampling_4)
+
         # V3.128 -> V3.32 // score_pool3
         pool3.x = F.elu(self.score_pool3(pool3.x, pool3.edge_index, pool3.edge_attr))
         # addition
         data.x = data.x + pool3.x
-
+        # V3 => V2
+        data = self.up2(data, backsampling_3)
         # V2.64-> V2,32 //score pool2
         pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
         # addition
         data.x = data.x+pool2.x
         # V1,128 -> V0,32
         data = self.up2(data, backsampling_2)
-        data = self.up3(data, backsampling_1)
+        data = self.up1(data, backsampling_1)
         # convout
         # V0,32 -> V0,1
         data.x = self.convout(data.x, data.edge_index, data.edge_attr)
