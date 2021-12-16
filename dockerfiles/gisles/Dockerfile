@@ -1,4 +1,5 @@
-FROM gfcn:v1
+FROM pytorch/pytorch:1.4-cuda10.1-cudnn7-devel
+
 ARG CODE_DIR="gfcn"
 
 ARG batch="4"
