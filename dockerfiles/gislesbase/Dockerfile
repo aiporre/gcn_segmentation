@@ -52,5 +52,4 @@ WORKDIR /workspace/gfcn
 
 ENTRYPOINT []
 #CMD ["/workspace/gfcn/depth_training.sh 4ch 1"]
-CMD ["python training.py -n GFCN -s GMNIST -c BCElogistic"]
- 
+CMD ["python", "training.py", "-n", "GFCN", "-c", "BCElogistic"]
