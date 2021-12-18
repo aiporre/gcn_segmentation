@@ -1,5 +1,5 @@
 FROM pytorch/pytorch:1.4-cuda10.1-cudnn7-devel
-ARG CODE_DIR="../../gfcn/"
+ARG CODE_DIR="gfcn/"
 
 # Changes thes sher to bash 
 RUN chsh -s /bin/bash
@@ -52,4 +52,4 @@ WORKDIR /workspace/gfcn
 
 ENTRYPOINT []
 #CMD ["/workspace/gfcn/depth_training.sh 4ch 1"]
-CMD ["python", "training.py", "-n", "GFCN", "-c", "BCElogistic"]
+CMD ["python", "training.py", "-n", "GFCN", "-c", "BCElogistic", "-s", "GMNIST"]
