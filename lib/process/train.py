@@ -302,6 +302,7 @@ class Trainer(object):
             measurements = np.load(os.path.join(root, measurements_file[0]), allow_pickle=True)
             measurements = measurements.item()  # convert to dictionary
             eval_logging.reset_measurements(measurements)
+            eval_logging.best_metric = best_metric
 
     def save_checkpoint(self, training_path: TrainingDir, lr, e, EPOCHS,  eval_logging, upload=False):
         check_point = {'lr': lr, 'e': e, 'E': EPOCHS, 'best_metric': eval_logging.best_metric,
