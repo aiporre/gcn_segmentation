@@ -44,7 +44,7 @@ def isles2018_reshape(x, channels=None, channel=None):
     # channels are deduced from N // nn if input is None
     N_channels = N // nn if channels is None else channels
     if N_channels == 1:
-        isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'], 1)
+        isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'])
     else:
         isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'], N_channels)
     x = np.reshape(x, isles_shape)
