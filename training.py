@@ -350,28 +350,51 @@ def eval(progress_bar=False, modalities=None):
     evaluator_test.opt_th = trainer.update_optimal_threshold(progress_bar=progress_bar)
     print('plotting one prediction')
     # Making the case if args.overlay_plot == True
-    fig_overlay_image = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=True,
-                                         reshape_transform=reshape_transform, modalities=modalities)
-    overlay_vol, case_id = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=True,
-                                                  reshape_transform=reshape_transform, modalities=modalities)
-    z, y, x = overlay_vol.shape[0], overlay_vol.shape[1], overlay_vol.shape[2]
-    overlay_vol.tofile(os.path.join(TRAINING_DIR.fig_dir,
-                               '{}_vol_{}_{}x{}x{}.raw'.format(TRAINING_DIR.prefix, case_id, x, y, z)))
-    savefigs(fig_name='{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir, fig=fig_overlay_image)
+    def plot_sample_vols(_sample_to_plot):
+        # Ploting over lay volume
+        overlay_vol, case_id = evaluator_test.plot_volumen(model=model, index=_sample_to_plot, overlap=True,
+                                                           reshape_transform=reshape_transform, modalities=modalities)
+        z, y, x = overlay_vol.shape[0], overlay_vol.shape[1], overlay_vol.shape[2]
+        overlay_vol.tofile(os.path.join(TRAINING_DIR.fig_dir,
+                                        '{}_vol_{}_{}x{}x{}.raw'.format(TRAINING_DIR.prefix, case_id, x, y, z)))
+        # Plotting multi-channel volume.
+        # Making the case with overlay_plot = False
+        multichannel_vol, case_id = evaluator_test.plot_volumen(model=model, index=_sample_to_plot, overlap=False,
+                                                                reshape_transform=reshape_transform,
+                                                                modalities=modalities)
+        z, y, x, c = multichannel_vol.shape[0], multichannel_vol.shape[1], multichannel_vol.shape[2], \
+                     multichannel_vol.shape[3]
+        multichannel_vol = multichannel_vol.transpose(0, 3, 1, 2)
+        tiff_filename = '{}_vol_{}_{}x{}x{}x{}.tiff'.format(TRAINING_DIR.prefix, case_id, x, y, z, c)
+        tifffile.imwrite(os.path.join(TRAINING_DIR.fig_dir, tiff_filename),
+                         multichannel_vol, imagej=True, metadata={'axes': 'ZCYX'})
 
-    # Making the case with overlay_plot = False
-    fig_four_plots = evaluator_test.plot_prediction(model=model, N=args.sample_to_plot, overlap=False,
-                                         reshape_transform=reshape_transform, modalities=modalities)
-    multichannel_vol, case_id = evaluator_test.plot_volumen(model=model, index=args.sample_to_plot, overlap=False,
-                                                  reshape_transform=reshape_transform, modalities=modalities)
-    z, y, x, c = multichannel_vol.shape[0], multichannel_vol.shape[1], multichannel_vol.shape[2], multichannel_vol.shape[3]
-    multichannel_vol = multichannel_vol.transpose(0, 3, 1, 2)
-    tiff_filename = '{}_vol_{}_{}x{}x{}x{}.tiff'.format(TRAINING_DIR.prefix, case_id, x, y, z, c)
-    tifffile.imwrite(os.path.join(TRAINING_DIR.fig_dir, tiff_filename),
-                     multichannel_vol, imagej=True, metadata={'axes': 'ZCYX'})
-    savefigs(fig_name='{}_{}_performance'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir,
-             fig=fig_four_plots)
+    def plot_sample_figs(_sample_to_plot, case_id=None):
+        fig_overlay_image, case_id = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=True,
+                                             reshape_transform=reshape_transform, modalities=modalities, get_case=True,
+                                             case_id=case_id)
+        savefigs(fig_name='{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir, fig=fig_overlay_image)
 
+        fig_four_plots, case_id = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=False,
+                                             reshape_transform=reshape_transform, modalities=modalities, get_case=True,
+                                             case_id=case_id)
+        savefigs(fig_name='{}_{}_performance'.format(TRAINING_DIR.prefix, case_id), fig_dir=TRAINING_DIR.fig_dir,
+                 fig=fig_four_plots)
+
+    if args.sample_to_plot > 0:
+        plot_sample_figs(None, case_id=args.sample_to_plot)
+        plot_sample_vols(args.sample_to_plot)
+    else:
+        total_test_samples = len(evaluator_test.dataset)
+        print('plotting 2D all testing samples (', total_test_samples, ') ...')
+        for n in range(total_test_samples):
+            plot_sample_figs(n)
+        print('plotting 3D all testing samples (', total_test_samples, ') ...')
+        total_vol_samples = len(evaluator_test.dataset.get_all_cases_id())
+        for c in range(total_vol_samples):
+            plot_sample_vols(c)
+
+        print('Done plotting')
     # plt.show()
     print('calculating stats...')
     metric_logs = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)

@@ -121,7 +121,6 @@ class MetricsLogs(object):
 
 class Evaluator(object):
     def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False,  eval=False, criterion=None):
-
         if eval:
             self.dataset = dataset.val
         else:
@@ -134,6 +133,9 @@ class Evaluator(object):
         # used for getting the validation/test loss
         self.criterion = criterion
         self.opt_th = 0.5
+
+    def __len__(self):
+        return len(self.dataset.get_all_cases_id())
 
     def DCM(self, model, progress_bar=True):
         DCM_accum = []
@@ -409,7 +411,17 @@ class Evaluator(object):
         print("metric avgs")
         return metric_avgs
 
-    def plot_prediction(self,model, index=0, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None, modalities=None):
+    def plot_prediction(self, model, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None,
+                        modalities=None, get_case=False, case_id=None):
+        if case_id is not None:
+            print('Warning: case id is given, then \'N\'', N, ' is ignored.')
+            indices_by_case_id = self.dataset.get_indices_by_case_id(case_id, useful=False)
+            # gets the central sample
+            assert len(indices_by_case_id) > 0, 'Something went wrong, indices by case is empty'
+            N = indices_by_case_id[(len(indices_by_case_id)-1) // 2]
+            print('new N=', N)
+        else:
+            case_id = self.dataset.get_case_id(N)
 
         # loading the image: it can be a numpy.ndarray or a Data/Batch object
         # image, mask = self.dataset.next_batch(1, shuffle=False) # selects an aleatory value from the dataset
@@ -501,7 +513,7 @@ class Evaluator(object):
             # plot prediction
             ax4.imshow(pred_mask.squeeze(),cmap='gray')
             ax4.set_title('predicted mask >0.5 prob')
-        return fig
+        return fig, case_id
 
     def plot_volumen(self,model, index=0, overlap=True, reshape_transform=None, modalities=None):
         # index was the offset of the processed_files list to concatenate into a volume,

@@ -1,4 +1,5 @@
 import csv
+import re
 
 import numpy as np
 from scipy import ndimage
@@ -269,6 +270,36 @@ class _GISLES2018(Dataset):
             self.useful = self_useful
             yield data
 
+    def get_indices_by_case_id(self, case_id, useful=None, relative_dataset=False):
+        if useful is None:
+            # override with the one of the dataset
+            useful = self.useful
+        if not relative_dataset:
+            # returns indices for a given case id absolute, as specified in the file processed_file.txt
+            return self.indices.get_by_case_id(case_id, useful=useful)
+        else:
+            indices_absolute = self.indices.get_by_case_id(case_id, useful=useful)
+            processed_file_names = ['gendo_{:04}.pt'.format(case_id_index) for case_id_index in indices_absolute]
+            indices_relative_to_dataset = []
+            self_useful = self.useful
+            self.useful = useful
+            for pf in processed_file_names:
+                indices_relative_to_dataset.append(self.processed_file_names.index(pf))
+            self.useful = self_useful
+            return indices_relative_to_dataset
+
+    def get_case_id(self, index):
+        # turn off flag to access all indices
+        self_useful = self.useful
+        self.useful = False
+        # Index correspond to the relative to the dataset.
+        # For example, index 0 is the index absolute 1280 in the test dataset
+        index_absolute = int(re.search(r'\d+', self.processed_file_names[index]).group())
+        case_id = self.indices.get_case_id(index_absolute)
+        # turn on it back
+        self.useful = self_useful
+        return case_id
+
     def get(self, idx):
         # compute offset
         data = torch.load(os.path.join(self.processed_dir, self.processed_file_names[idx]))
@@ -331,15 +362,19 @@ class _ISLESFoldIndices:
         Load the fold indices if the cache exists
         '''
         index_case_dict = csv_to_dict(self.cache_file, ',', key_col=1, item_col=0)
+        index_sample_dict = csv_to_dict(self.cache_file, ',', key_col=0, item_col=1)
         index_useful_dict = csv_to_dict(self.cache_file, ',', key_col=1, item_col=2)
         self.indices = {}
         self.useful_indices = {}
+        self.indices_backward = {}
         for case_id in self.get_cases():
             indices_case_id = [int(i) for i, c in index_case_dict.items() if c == case_id]
             useful_case_id = [index_useful_dict[str(i)] == 'True' for i in indices_case_id]
+            sample_case_id = { i: c for i, c in index_sample_dict.items() if c == case_id}
             if indices_case_id:
                 self.indices[case_id] = indices_case_id
                 self.useful_indices[case_id] = useful_case_id
+                self.indices_backward = dict(self.indices_backward, **sample_case_id)
 
     def get_by_case_id(self, case_id, useful=False):
         '''
@@ -351,6 +386,11 @@ class _ISLESFoldIndices:
             indices = self.indices[case_id]
             useful_indices = self.useful_indices[case_id]
             return [idx for idx, useful in zip(indices, useful_indices) if useful]
+
+    def get_case_id(self, index):
+        # get case id from index. eg. 10 ==> case_id = 1
+        # only indices in the type of dataset are keys in this dictionary
+        return self.indices_backward[index]
 
     def __len__(self):
         length = 0
