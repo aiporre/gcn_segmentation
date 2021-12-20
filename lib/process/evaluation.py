@@ -415,7 +415,7 @@ class Evaluator(object):
                         modalities=None, get_case=False, case_id=None):
         if case_id is not None:
             print('Warning: case id is given, then \'N\'', N, ' is ignored.')
-            indices_by_case_id = self.dataset.get_indices_by_case_id(case_id, useful=False)
+            indices_by_case_id = self.dataset.get_indices_by_case_id(case_id, useful=False, relative_dataset=True )
             # gets the central sample
             assert len(indices_by_case_id) > 0, 'Something went wrong, indices by case is empty'
             N = indices_by_case_id[(len(indices_by_case_id)-1) // 2]
@@ -474,7 +474,7 @@ class Evaluator(object):
             TP = pred_mask*mask
             FP = 1*((pred_mask-mask) > 0)
             FN = 1*((mask-pred_mask) > 0)
-            N = prediction.size
+            NN = prediction.size
 
             alpha = 0.5
             fig = plt.figure(figsize=(10, 10))
@@ -491,12 +491,12 @@ class Evaluator(object):
             A = TP.sum()
             B = FP.sum()
             C = FN.sum()
-            C = N-A-B-C
-            a = (A+C)/N
+            C = NN-A-B-C
+            a = (A+C)/NN
             p = (A + epsilon)/(A+B+epsilon)
             r = (A+epsilon)/(A+C+epsilon)
             dcm = 2*(p*r+epsilon)/(p+r+epsilon)
-            print('OVERLAY IMAGE STATS ==> Accuracy: ', a ,' Precision: ', p, ', Recall: ', r, 'Dice: ', dcm)
+            print('OVERLAY IMAGE STATS N=', N , 'case=', case_id, ' ==> Accuracy: ', a ,' Precision: ', p, ', Recall: ', r, 'Dice: ', dcm)
         else:
             ax1 = fig.add_subplot(2, 2, 1)
             ax2 = fig.add_subplot(2, 2, 2)
@@ -513,7 +513,7 @@ class Evaluator(object):
             # plot prediction
             ax4.imshow(pred_mask.squeeze(),cmap='gray')
             ax4.set_title('predicted mask >0.5 prob')
-        return fig, case_id
+        return fig, case_id, N
 
     def plot_volumen(self,model, index=0, overlap=True, reshape_transform=None, modalities=None):
         # index was the offset of the processed_files list to concatenate into a volume,
@@ -599,7 +599,7 @@ class Evaluator(object):
             precision = (num_tp) / (num_tp + num_fp)
             recall = (num_tp) / (num_tp + num_fn)
             accuracy = (num_tp + num_tn) / (num_tp + num_tn + num_fp + num_fn)
-            print('OVERLAY VOLUME STATS ==> Accuracy: ',  accuracy,
+            print('OVERLAY VOLUME STATS (case = ',case_id,' )==> Accuracy: ',  accuracy,
                   ' Precision: ', precision, ', Recall: ', recall, 'Dice: ', dice)
         return result, case_id
 

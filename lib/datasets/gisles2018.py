@@ -362,7 +362,6 @@ class _ISLESFoldIndices:
         Load the fold indices if the cache exists
         '''
         index_case_dict = csv_to_dict(self.cache_file, ',', key_col=1, item_col=0)
-        index_sample_dict = csv_to_dict(self.cache_file, ',', key_col=0, item_col=1)
         index_useful_dict = csv_to_dict(self.cache_file, ',', key_col=1, item_col=2)
         self.indices = {}
         self.useful_indices = {}
@@ -370,7 +369,7 @@ class _ISLESFoldIndices:
         for case_id in self.get_cases():
             indices_case_id = [int(i) for i, c in index_case_dict.items() if c == case_id]
             useful_case_id = [index_useful_dict[str(i)] == 'True' for i in indices_case_id]
-            sample_case_id = { i: c for i, c in index_sample_dict.items() if c == case_id}
+            sample_case_id = { i: c for i, c in index_case_dict.items() if c == case_id}
             if indices_case_id:
                 self.indices[case_id] = indices_case_id
                 self.useful_indices[case_id] = useful_case_id
@@ -390,6 +389,8 @@ class _ISLESFoldIndices:
     def get_case_id(self, index):
         # get case id from index. eg. 10 ==> case_id = 1
         # only indices in the type of dataset are keys in this dictionary
+        if isinstance(index, int):
+            index = str(index)
         return self.indices_backward[index]
 
     def __len__(self):

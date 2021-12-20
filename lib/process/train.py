@@ -216,6 +216,7 @@ class Trainer(object):
         self.model = model
         if os.path.exists(path):
             self.model.load_state_dict(torch.load(path))
+            print('Loaded model: ', path)
         else:
             print('Warning: there is no file :', path)
 
