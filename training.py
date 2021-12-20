@@ -380,10 +380,11 @@ def eval(progress_bar=False, modalities=None):
                                              case_id=_case_id)
         savefigs(fig_name='{}_{}_{}_performance'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
                  fig=fig_four_plots)
-        fig_four_plot.close()
+        fig_four_plots.close()
 
     if args.sample_to_plot > 0:
-        plot_sample_figs(None, _case_id=args.sample_to_plot)
+        case_id_num = args.sample_to_plot
+        plot_sample_figs(None, _case_id= evaluator_test.dataset.get_all_cases_id()[case_id_num])
         plot_sample_vols(args.sample_to_plot)
     else:
         total_test_samples = len(evaluator_test.dataset)
