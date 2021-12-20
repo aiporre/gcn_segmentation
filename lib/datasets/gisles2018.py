@@ -207,7 +207,7 @@ class _GISLES2018(Dataset):
             if "CTN" in self.modalities:
                 brain_mask = 1
                 for m in ["CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT"]:
-                    brain_mask *= (load_nifti(patient_files[m][0], neurological_convension=True) != 0).astype(np.float)
+                    brain_mask += (norm(load_nifti(patient_files[m][0], neurological_convension=True)) > 0).astype(np.float)
                 skull_strippen = lambda x: x * brain_mask
             if len(self.modalities) > 1:
                 ct_scan = []
