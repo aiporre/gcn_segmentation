@@ -24,7 +24,8 @@ then
   rm data/gisles2018/processed/TRAINING/gendo_*.pt
   tid="Pre5Ch$fold"
   echo "GFCNC with soft Dice loss"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold --postnorm False -D experiment5_cmp >> "experiment5_cmp/gfcnc_$tid.log"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid --useful True -t True -N 10 --id $tid -lr 1E-6  -g 200 -f $tfold --postnorm False -D experiment5_cmp >> "experiment5_cmp/gfcnc_$tid.log"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c FLsigmoid --useful True -t True -N 10 --id $tid -lr 1E-7  -g 300 -f $tfold --postnorm False -D experiment5_cmp >> "experiment5_cmp/gfcnc_$tid.log"
 elif [[ $channels == "1chCBV" ]]
 then
   echo " Deleting files gendo_"
@@ -32,7 +33,7 @@ then
   rm data/gisles2018/processed/TRAINING/gendo_*.pt
   tid="Pre1ChCBV$fold"
   echo "GFCNC with soft Dice loss"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c BCElogistic -t True -N 10 --id $tid -lr 1E-5  -g 100 -f $tfold --mod CBV --postnorm False -D experiment5_cmp >> "experiment5_cmp/gfcnc_$tid.log"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DLsigmoid -t True -N 10 --id $tid -lr 1E-5  -g 100 -f $tfold --mod CBV --postnorm False -D experiment5_cmp >> "experiment5_cmp/gfcnc_$tid.log"
 elif [[ $channels == "1chCBF" ]]
 then
   echo " Deleting files gendo_"
