@@ -7,11 +7,9 @@ from scipy import ndimage
 # CONSTANT WHERE TO FIND THE DATA
 from config import ISLES2018_DIR
 import os
-from .dataset import Datasets, Dataset
+from .dataset import Datasets, Dataset, EuclideanDataset
 import torch
-import torch_geometric.transforms as T
 import numpy as np
-from lib.graph import grid_tensor
 from lib.process.progress_bar import printProgressBar
 from lib.utils.csv import csv_to_dict
 import nibabel as nib
@@ -90,16 +88,16 @@ class ISLES2018(Datasets):
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.test_rate = test_rate
-        train_images = _ISLES2018(self.data_dir, dataset_type='train', transform=T.Cartesian(),
+        train_images = _ISLES2018(self.data_dir, dataset_type='train', transform=None,
                                     pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
-        val_images = _ISLES2018(self.data_dir, dataset_type='val', transform=T.Cartesian(),
+        val_images = _ISLES2018(self.data_dir, dataset_type='val', transform=None,
                                   pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
-        test_images = _ISLES2018(self.data_dir, dataset_type='test', transform=T.Cartesian(),
+        test_images = _ISLES2018(self.data_dir, dataset_type='test', transform=None,
                                    pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
 
-        train = Dataset(images=train_images, labels=train_images.make_labels())
-        val = Dataset(images=val_images, labels=val_images.make_labels())
-        test = Dataset(images=test_images, labels=test_images.make_labels())
+        train = EuclideanDataset(dataset=train_images)
+        val = EuclideanDataset(dataset=val_images)
+        test = EuclideanDataset(dataset=test_images)
         super(ISLES2018, self).__init__(train=train, test=test, val=val)
 
     @property
