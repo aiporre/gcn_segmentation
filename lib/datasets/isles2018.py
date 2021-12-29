@@ -137,6 +137,7 @@ class _ISLES2018(object):
                  modalities=("CTN", "CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT"),
                  useful=False):
         self.labels = True
+        self.transform = transform
         self.root = root
         self.test_rate = 1
         self.fold = fold
@@ -155,6 +156,19 @@ class _ISLES2018(object):
         # with masks bigger that 1000 pixels which is equivalent to nearby 1%
         self.raw_dir = raw_dir
         self.processed_dir = processed_dir
+
+    def _process(self):
+        if not all([os.path.exists(f) for f in self.processed_paths]):
+            print('processing files')
+            self.process()
+            print('Done!')
+        else:
+            print('File already exist!')
+
+    def __getitem__(self, idx):
+        data = self.get(idx)
+        data = data if self.transform else self.transform(data)
+        return data
 
     @property
     def raw_file_names(self):
@@ -182,7 +196,6 @@ class _ISLES2018(object):
         folder in order to skip the processing."""
         files = self.processed_file_names
         return [os.path.join(self.processed_dir, f) for f in files]
-
 
     def __len__(self):
         return len(self.processed_file_names)
@@ -294,24 +307,6 @@ class _ISLES2018(object):
 
     def _get_proc_file(self, processed_index):
         return 'endo_{:04d}.pt'.format(processed_index)
-
-    def make_labels(self):
-        # TODO: I dont know if I should make this an instance of the class lib.dataset.Dataset so it get the correct
-        # TODO: this requires to modified the parent class so it can be initializied without the list of files
-        # TODO: Make labels isnt the most appropriate method as it creates a new instace with the same object and changes behavrio, this is probably to complicated, the data is already there
-        # TODO: this calss will have probelms iwththe get get indices by case where the method get is by passed you returun x and not y, or viceversa.
-        self._dlabel_dataset = True
-        return self
-
-    def __getitem__(self, item):
-        data = self.get(item)
-        if self.labels:
-            return data[1]
-        else:
-            return data[0]
-
-
-
 
 
 class _ISLESFoldIndices:
