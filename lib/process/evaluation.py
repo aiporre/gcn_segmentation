@@ -12,6 +12,8 @@ import numpy as np
 
 from ..datasets.transforms import reshape_square
 from ..graph.batch import to_torch_batch
+from ..utils.csv import dict_to_csv
+
 
 class MetricsLogs(object):
     def __init__(self, measurements, monitor_metric="DCM"):
@@ -294,7 +296,7 @@ class Evaluator(object):
             if "precision" in metrics:
                 metric_values["precision"].append(torch.mean((TP)/(TP+FP+eps)).item())
             if "PPV" in metrics:
-                metric_values["PPV"].append(torch.mean((TP)/(N+eps)).item())
+                metric_values["PPV"].append(torch.mean((TP+FN)/(N+eps)).item())
             if progress_bar:
                 printProgressBar(i, L, prefix=prefix_text, suffix='Complete', length=50)
             else:
@@ -311,7 +313,7 @@ class Evaluator(object):
         metrics_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
         return metrics_avgs
 
-    def scores_volume(self, model, progress_bar=False, metrics=None, reshape_transform=None):
+    def scores_volume(self, model, progress_bar=False, metrics=None, reshape_transform=None, path_to_csv=None):
         if metrics is None:
             print("Nothing to do metrics is None")
             return
@@ -327,7 +329,7 @@ class Evaluator(object):
         sample = self.dataset[0]
         is_graph_tensor = isinstance(sample, (Data, Batch))
 
-        for case_id  in self.dataset.get_all_cases_id():
+        for case_id in self.dataset.get_all_cases_id():
             # collecting predictions for case_id
             preds = []
             preds_prob = []
@@ -398,7 +400,7 @@ class Evaluator(object):
                     precision = TP / (TP + FP)
                     metric_values["precision"].append(precision.item())
                 if "PPV" in metrics:
-                    metric_values["PPV"].append((TP/N).item())
+                    metric_values["PPV"].append(((TP+FN)/N).item())
             # printing progress bar
             if progress_bar:
                 printProgressBar(i, L, prefix=prefix, suffix='Complete', length=50)
@@ -406,7 +408,8 @@ class Evaluator(object):
                 if i % int(L/10) == 0 or i == 0:
                     print(prefix, ': in case ', i+1, ' out of ', L, '(percentage {}%)'.format(100.0*(i+1)/L))
             i += 1
-
+        if path_to_csv is not None:
+            dict_to_csv(path_to_csv, metric_values, index=self.dataset.get_all_cases_id())
         metric_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
         print("metric avgs")
         return metric_avgs
