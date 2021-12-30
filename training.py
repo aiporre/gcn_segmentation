@@ -2,8 +2,6 @@ import argparse
 import os.path
 from tifffile import tifffile
 
-from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape, get_modalities
-from lib.models.GFCN import GFCNE, GFCNG, GFCNF
 from lib.process.evaluation import MetricsLogs
 from lib.process.losses import estimatePositiveWeight, GeneralizedDiceLoss, FocalLoss, DiceLoss
 
@@ -28,7 +26,14 @@ except Exception as e:
     print('Warning: No module torch geometric. Failed to import GVESSEL12, Exception: ', str(e))
 
 try:
-    from lib.models import GFCN, GFCNA, GFCNC, GFCNB, PointNet, GFCND
+    from lib.datasets import GISLES2018
+    from lib.datasets.gisles2018 import isles2018_reshape
+    from lib.datasets.gisles2018 import get_modalities as gisles_get_modalities
+except Exception as e:
+    print('Warning: No module torch geometric. Failed to import GISLES2018, Exception: ', str(e))
+
+try:
+    from lib.models import GFCN, GFCNA, GFCNC, GFCNB, PointNet, GFCND, GFCNE, GFCNG, GFCNF
 except Exception as e:
     print('Warning: No module torch geometric. Failed to import models, Exception: ', str(e))
 
@@ -38,7 +43,8 @@ except Exception as e:
     print('Warning: No module dvn. Failed to import deep vessel models, Exception: ', str(e))
 
 from lib.models import UNet, FCN
-from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop, CropVessel12
+from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop, CropVessel12, ISLES2018
+from lib.datasets.isles2018 import get_modalities as isles_get_modalities
 
 from lib.process import Trainer, Evaluator, DCS, KEvaluator, KTrainer, TrainingDir
 import matplotlib.pyplot as plt
@@ -148,7 +154,12 @@ EPOCHS = args.epochs
 BATCH = args.batch
 DEEPVESSEL = False
 MEASUREMENTS = ["train_loss", "val_loss", "DCM", 'accuracy', 'precision', 'recall', "HD", "COD", "PPV"]
-MODALITIES = get_modalities(args.mod) if args.dataset == 'GISLES2018' else None
+if args.dataset == "GISLES2018":
+    MODALITIES = gisles_get_modalities(args.mod)
+elif args.dataset == 'ISLES2018':
+    MODALITIES = isles_get_modalities(args.mod)
+else:
+    MODALITIES = None
 NUM_INPUTS = 1 if MODALITIES is None else len(MODALITIES)
 
 if args.pre_transform:
@@ -183,6 +194,9 @@ elif args.dataset == 'GENDOSTROKE':
 elif args.dataset == 'GISLES2018':
     dataset = GISLES2018(data_dir=args.islesdir, modalities=MODALITIES, useful=args.useful, fold=args.fold)
     reshape_transform = isles2018_reshape
+elif args.dataset == 'ISLES2018':
+    dataset = ISLES2018(data_dir=args.islesdir, modalities=MODALITIES, useful=args.useful, fold=args.fold)
+    reshape_transform = None
 else:
     dataset = MNIST()
     reshape_transform = None
