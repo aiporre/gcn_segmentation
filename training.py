@@ -413,7 +413,8 @@ def eval(progress_bar=False, modalities=None):
     print('Calculated metrics testing set: \n', ''.join([f"{m} = {v}, " for m, v in metrics.items()]))
 
     metrics_vol = evaluator_test.scores_volume(model, progress_bar=progress_bar, metrics=MEASUREMENTS,
-                                               reshape_transform=reshape_transform)
+                                               reshape_transform=reshape_transform,
+                                               path_to_csv=TRAINING_DIR.metrics_csv_path)
 
     print('Calculated metrics testing set per case: \n', ''.join([f"{m} = {v}, " for m, v in metrics_vol.items()]))
 

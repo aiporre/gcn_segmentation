@@ -89,6 +89,10 @@ class TrainingDir(object):
         return os.path.join(self.root, "{}_measurements.npy".format(self.prefix))
 
     @property
+    def metrics_csv_path(self):
+        return os.path.join(self.root, "{}_metrics.csv".format(self.prefix))
+
+    @property
     def prefix_model(self):
         return "{}-ds{}-id{}".format(self.net_name, self.dataset_name, self.id)
 

@@ -3,6 +3,7 @@ try:
     from torch_geometric.data import DataLoader
 except ImportError:
     print('Warning: Error while trying to import torch_geometric.data.Dataloader')
+from torch.utils.data import DataLoader as EuclideanDataLoader
 
 class Datasets(object):
     def __init__(self, train, val, test):
@@ -75,7 +76,7 @@ class GraphDataset(object):
         i = 0
         while i < self.__len__():
             yield self._dataset[i]
-            i +=1
+            i += 1
 
     def batches(self):
         for _ in range(self.num_batches):
@@ -115,7 +116,88 @@ class GraphDataset(object):
     def get_indices_by_case_id(self, case_id, *args, **kwargs):
         return self._dataset.get_indices_by_case_id(case_id, *args, **kwargs)
 
+
+class EuclideanDataset(object):
+    def __init__(self, dataset, batch_size=1, shuffle=False):
+        self.shuffle = shuffle
+        self._dataset = dataset
+        self._batch_size = batch_size
+        self._dataloader = EuclideanDataLoader(dataset, batch_size=self._batch_size, shuffle=self.shuffle)
+        self._dataloader_iter = self._dataloader.__iter__()
+        self._index_in_epoch = 0
+
+    def enforce_batch(self, batch_size):
+        self._batch_size = batch_size
+        self._dataloader = DataLoader(self._dataset, batch_size=self._batch_size, shuffle=self.shuffle)
+        self._dataloader_iter = self._dataloader.__iter__()
+
+    @property
+    def num_batches(self):
+        return int(len(self._dataset) / self._batch_size)
+
+    @property
+    def num_examples(self):
+        return len(self._dataset)
+
+    def __len__(self):
+        return self.num_examples
+
+    def __getitem__(self, idx):
+        if not isinstance(idx, int):
+            raise TypeError('dataset indices must be integers, not '+ str(type(idx)))
+        if idx > self.__len__() or idx < -self.__len__():
+            raise IndexError('dataset index out of range')
+        if idx < 0:
+            idx = self.__len__()+idx
+        return self._dataset[idx]
+
+    def __iter__(self):
+        i = 0
+        while i < self.__len__():
+            yield self._dataset[i]
+            i += 1
+
+    def batches(self):
+        for _ in range(self.num_batches):
+            yield self.next_batch(self._batch_size, shuffle=self.shuffle)
+
+    def next_batch(self, batch_size, shuffle=True):
+        if not batch_size == self._batch_size:
+            self.shuffle =shuffle
+            self.enforce_batch(batch_size)
+            self._index_in_epoch = 0
+
+        # restarting dataloader iterable when
+        start = self._index_in_epoch
+        if start + self._batch_size > self.num_examples:
+            self._dataloader_iter = self._dataloader.__iter__()
+            self._index_in_epoch = 0
+        # new sample
+        try:
+            data = self._dataloader_iter.__next__()
+        except StopIteration:
+            self._dataloader_iter = self._dataloader.__iter__()
+            data = self._dataloader_iter.__next__()
+        images, labels = data, data.y
+        self._index_in_epoch += self._batch_size
+
+        return images, labels
+
+    def get_all_cases_id(self):
+        return self._dataset.get_all_cases_id()
+
+    def get_by_case_id(self, case_id, *args, **kwargs):
+        return self._dataset.get_by_case_id(case_id, *args, **kwargs)
+
+    def get_case_id(self, index, *args, **kwargs):
+        return self._dataset.get_case_id(index, *args, **kwargs)
+
+    def get_indices_by_case_id(self, case_id, *args, **kwargs):
+        return self._dataset.get_indices_by_case_id(case_id, *args, **kwargs)
+
+
 class Dataset(object):
+    # simple dataset on memory
     def __init__(self, images, labels, batch_size=1, shuffle=True):
         self.epochs_completed=0
         self._images = images
@@ -150,7 +232,6 @@ class Dataset(object):
         self._images = self._images[perm]
         self._labels = self._labels[perm]
 
-
     def __len__(self):
         return self.num_examples
 
@@ -168,6 +249,7 @@ class Dataset(object):
         while i< self.__len__():
             yield self._images[i], self._labels[i]
             i += 1
+
     def batches(self):
         for _ in range(self.num_batches):
             yield self.next_batch(batch_size=self._batch_size,shuffle=self._shuffle)
