@@ -361,8 +361,9 @@ def eval(progress_bar=False, modalities=None):
     model.eval() if not DEEPVESSEL else None
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     trainer.load_checkpoint(root=TRAINING_DIR.root, prefix=TRAINING_DIR.prefix, eval_logging=eval_metric_logging)
-    evaluator_test.opt_th = 0.5 # :trainer.update_optimal_threshold(progress_bar=progress_bar)
+    evaluator_test.opt_th = 0.5  # :trainer.update_optimal_threshold(progress_bar=progress_bar)
     print('plotting one prediction')
+
     # Making the case if args.overlay_plot == True
     def plot_sample_vols(_sample_to_plot):
         # Ploting over lay volume
@@ -385,20 +386,23 @@ def eval(progress_bar=False, modalities=None):
 
     def plot_sample_figs(_sample_to_plot, _case_id=None):
         fig_overlay_image, case_id, N = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=True,
-                                             reshape_transform=reshape_transform, modalities=modalities, get_case=True,
-                                             case_id=_case_id)
-        savefigs(fig_name='{}_{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir, fig=fig_overlay_image)
+                                                                       reshape_transform=reshape_transform,
+                                                                       modalities=modalities, get_case=True,
+                                                                       case_id=_case_id)
+        savefigs(fig_name='{}_{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
+                 fig=fig_overlay_image)
         plt.close()
         fig_four_plots, case_id, N = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=False,
-                                             reshape_transform=reshape_transform, modalities=modalities, get_case=True,
-                                             case_id=_case_id)
+                                                                    reshape_transform=reshape_transform,
+                                                                    modalities=modalities, get_case=True,
+                                                                    case_id=_case_id)
         savefigs(fig_name='{}_{}_{}_performance'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
                  fig=fig_four_plots)
         plt.close()
 
     if args.sample_to_plot > 0:
         case_id_num = args.sample_to_plot
-        plot_sample_figs(None, _case_id= evaluator_test.dataset.get_all_cases_id()[case_id_num])
+        plot_sample_figs(None, _case_id=evaluator_test.dataset.get_all_cases_id()[case_id_num])
         plot_sample_vols(args.sample_to_plot)
     else:
         total_test_samples = len(evaluator_test.dataset)
@@ -431,6 +435,7 @@ def eval(progress_bar=False, modalities=None):
                                                path_to_csv=TRAINING_DIR.metrics_csv_path)
 
     print('Calculated metrics testing set per case: \n', ''.join([f"{m} = {v}, " for m, v in metrics_vol.items()]))
+
 
 if not args.skip_training:
     train(lr=args.lr, progress_bar=args.progressbar)
