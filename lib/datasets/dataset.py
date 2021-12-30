@@ -128,7 +128,7 @@ class EuclideanDataset(object):
 
     def enforce_batch(self, batch_size):
         self._batch_size = batch_size
-        self._dataloader = DataLoader(self._dataset, batch_size=self._batch_size, shuffle=self.shuffle)
+        self._dataloader = EuclideanDataLoader(self._dataset, batch_size=self._batch_size, shuffle=self.shuffle)
         self._dataloader_iter = self._dataloader.__iter__()
 
     @property

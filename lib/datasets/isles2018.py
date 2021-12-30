@@ -119,7 +119,7 @@ class ISLES2018(Datasets):
 def makedirs(path):
     try:
         import os
-        os.makedirs(os.path.expanduser(os.path.normpath(path)))
+        os.makedirs(os.path.expanduser(os.path.normpath(path)), exist_ok=True)
     except OSError as e:
         print("Could not create directory %s: %s" % (path, e))
         raise e
@@ -157,6 +157,7 @@ class _ISLES2018(object):
         # with masks bigger that 1000 pixels which is equivalent to nearby 1%
         self.raw_dir = raw_dir
         self.processed_dir = processed_dir
+        self._process()
 
     def _process(self):
         if not all([os.path.exists(f) for f in self.processed_paths]):
@@ -168,8 +169,8 @@ class _ISLES2018(object):
 
     def __getitem__(self, idx):
         data = self.get(idx)
-        data = data if self.transform else self.transform(data)
-        return data
+        data = data if self.transform is None else self.transform(data)
+        return data 
 
     @property
     def raw_file_names(self):
@@ -253,7 +254,7 @@ class _ISLES2018(object):
                 x = torch.tensor(image).float()  # image is C,H,W or C,Y,X if the C exists, otherwise is set to 1
                 y = torch.tensor(mask).float()
                 # generates a tuple tensor containting first the images (n-channels) and seconds element is the mask
-                data = torch.stack([x, y], dim=0)
+                data = (x, y)
                 torch.save(data, os.path.join(self.processed_dir, self._get_proc_file(processed_index)))
             # update counter
             cnt_slices += processed_num
