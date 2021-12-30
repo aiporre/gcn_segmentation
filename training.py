@@ -287,6 +287,13 @@ elif args.net == 'DeepVessel':
     evaluator_test = KEvaluator(dataset, criterion=criterion)
     trainer.load_model(model, TRAINING_DIR.model_path)
     model = trainer.model
+elif args.dataset == 'ISLES2018':
+    trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, criterion=criterion,
+                      sigmoid=sigmoid)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, eval=True,
+                              criterion=criterion)
+    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, criterion=criterion)
+    trainer.load_model(model, TRAINING_DIR.model_path)
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion,
                       sigmoid=sigmoid)

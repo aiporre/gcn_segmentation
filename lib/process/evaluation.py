@@ -342,7 +342,8 @@ class Evaluator(object):
                     image['batch'] = torch.zeros(sample.x.shape[0]).long()
                 else:
                     image, mask = sample[0], sample[1]
-                    image = image.reshape([1] + list(image.shape))
+                    if len(image.shape) <= 2:
+                        image = image.reshape([1] + list(image.shape))
                 features = torch.tensor(image).float() if self.to_tensor else image
                 mask = torch.tensor(mask).float() if self.to_tensor else mask
 
@@ -437,7 +438,8 @@ class Evaluator(object):
             image['batch']=torch.zeros(sample.x.shape[0]).long()
         else:
             image, mask = sample[0], sample[1]
-            image = image.reshape([1]+list(image.shape))
+            if len(image.shape) <= 2:
+                image = image.reshape([1]+list(image.shape))
 
         input = torch.tensor(image).float() if self.to_tensor else image.clone()
         input = input.to(self.device)
@@ -464,6 +466,8 @@ class Evaluator(object):
                 image = reshape_transform(image.x, channels=channels, channel=0)
                 prediction = reshape_transform(prediction)
                 pred_mask = reshape_transform(pred_mask)
+        else:
+            image = image[...,0]
 
         # plot input image
         if not fig:
@@ -541,7 +545,8 @@ class Evaluator(object):
                 image['batch'] = torch.zeros(sample.x.shape[0]).long()
             else:
                 image, mask = sample[0], sample[1]
-                image = image.reshape([1]+list(image.shape))
+                if len(image.shape) <= 2:
+                    image = image.reshape([1]+list(image.shape))
 
             # makes a prediction for the image and generate the prediciont mask with boundary 0.5
             input = torch.tensor(image).float() if self.to_tensor else image.clone()
@@ -583,6 +588,12 @@ class Evaluator(object):
                         image = reshape_transform(image.x, channels=channels)
                         prediction = reshape_transform(prediction)
                         pred_mask = reshape_transform(pred_mask)
+                else:
+                    # in the eucliead case we swap C,Y,X or C,H,W to Y,X,C or H,W,C
+                    if isinstance(image, torch.Tensor):
+                        image = image.cpu().detach().numpy()
+                    if len(image.shape) > 2:
+                        image = image.transpose(2, 0, 1)
                 # concatenate the modality channels and prediction results
                 if len(image.shape) == 2:
                     image = np.stack([image, mask, prediction, pred_mask], axis=-1)
