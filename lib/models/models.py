@@ -60,7 +60,7 @@ class up(nn.Module):
         if bilinear:
             self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         else:
-            self.up = nn.ConvTranspose2d(in_ch//2, in_ch//2, 2, stride=2)
+            self.up = nn.ConvTranspose2d(in_ch // 2, in_ch // 2, 2, stride=2)
 
         self.conv = double_conv(in_ch, out_ch)
 
@@ -68,11 +68,11 @@ class up(nn.Module):
         x1 = self.up(x1)
 
         # input is CHW
-        diffY = x2.size()[2]-x1.size()[2]
-        diffX = x2.size()[3]-x1.size()[3]
+        diffY = x2.size()[2] - x1.size()[2]
+        diffX = x2.size()[3] - x1.size()[3]
 
-        x1 = F.pad(x1, (diffX//2, diffX-diffX//2,
-                        diffY//2, diffY-diffY//2))
+        x1 = F.pad(x1, (diffX // 2, diffX - diffX // 2,
+                        diffY // 2, diffY - diffY // 2))
 
         # for padding issues, see
         # https://github.com/HaiyongJiang/U-Net-Pytorch-Unstructured-Buggy/commit/0e854509c2cea854e247a9c615f175f76fbb2e3a
@@ -91,6 +91,7 @@ class outconv(nn.Module):
     def forward(self, x):
         x = self.conv(x)
         return x
+
 
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes):
@@ -119,6 +120,7 @@ class UNet(nn.Module):
         x = self.outc(x)
         return torch.sigmoid(x)
 
+
 class FCN(nn.Module):
     def __init__(self, n_channels, n_classes=1):
         super(FCN, self).__init__()
@@ -129,12 +131,11 @@ class FCN(nn.Module):
         return self.fcn(x)
 
 
-
 if __name__ == "__main__":
     # A full forward pass
     im = torch.randn(1, 1, 64, 84)
     # model = UnetSim()
-    model = UNet(n_channels=1,n_classes=2)
+    model = UNet(n_channels=1, n_classes=2)
     x = model(im)
     print(x.shape)
     del model
