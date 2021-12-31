@@ -2,8 +2,6 @@ import argparse
 import os.path
 from tifffile import tifffile
 
-from lib.datasets.gisles2018 import GISLES2018, isles2018_reshape, get_modalities
-from lib.models.GFCN import GFCNE, GFCNG, GFCNF
 from lib.process.evaluation import MetricsLogs
 from lib.process.losses import estimatePositiveWeight, GeneralizedDiceLoss, FocalLoss, DiceLoss
 
@@ -28,7 +26,14 @@ except Exception as e:
     print('Warning: No module torch geometric. Failed to import GVESSEL12, Exception: ', str(e))
 
 try:
-    from lib.models import GFCN, GFCNA, GFCNC, GFCNB, PointNet, GFCND
+    from lib.datasets import GISLES2018
+    from lib.datasets.gisles2018 import isles2018_reshape as gisles2018_reshape
+    from lib.datasets.gisles2018 import get_modalities as gisles_get_modalities
+except Exception as e:
+    print('Warning: No module torch geometric. Failed to import GISLES2018, Exception: ', str(e))
+
+try:
+    from lib.models import GFCN, GFCNA, GFCNC, GFCNB, PointNet, GFCND, GFCNE, GFCNG, GFCNF
 except Exception as e:
     print('Warning: No module torch geometric. Failed to import models, Exception: ', str(e))
 
@@ -38,7 +43,9 @@ except Exception as e:
     print('Warning: No module dvn. Failed to import deep vessel models, Exception: ', str(e))
 
 from lib.models import UNet, FCN
-from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop, CropVessel12
+from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop, CropVessel12, ISLES2018
+from lib.datasets.isles2018 import get_modalities as isles_get_modalities
+from lib.datasets.isles2018 import isles2018_reshape
 
 from lib.process import Trainer, Evaluator, DCS, KEvaluator, KTrainer, TrainingDir
 import matplotlib.pyplot as plt
@@ -148,7 +155,12 @@ EPOCHS = args.epochs
 BATCH = args.batch
 DEEPVESSEL = False
 MEASUREMENTS = ["train_loss", "val_loss", "DCM", 'accuracy', 'precision', 'recall', "HD", "COD", "PPV"]
-MODALITIES = get_modalities(args.mod) if args.dataset == 'GISLES2018' else None
+if args.dataset == "GISLES2018":
+    MODALITIES = gisles_get_modalities(args.mod)
+elif args.dataset == 'ISLES2018':
+    MODALITIES = isles_get_modalities(args.mod)
+else:
+    MODALITIES = None
 NUM_INPUTS = 1 if MODALITIES is None else len(MODALITIES)
 
 if args.pre_transform:
@@ -182,6 +194,9 @@ elif args.dataset == 'GENDOSTROKE':
     reshape_transform = endostroke_reshape
 elif args.dataset == 'GISLES2018':
     dataset = GISLES2018(data_dir=args.islesdir, modalities=MODALITIES, useful=args.useful, fold=args.fold)
+    reshape_transform = gisles2018_reshape
+elif args.dataset == 'ISLES2018':
+    dataset = ISLES2018(data_dir=args.islesdir, modalities=MODALITIES, useful=args.useful, fold=args.fold)
     reshape_transform = isles2018_reshape
 else:
     dataset = MNIST()
@@ -273,6 +288,13 @@ elif args.net == 'DeepVessel':
     evaluator_test = KEvaluator(dataset, criterion=criterion)
     trainer.load_model(model, TRAINING_DIR.model_path)
     model = trainer.model
+elif args.dataset == 'ISLES2018':
+    trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, criterion=criterion,
+                      sigmoid=sigmoid)
+    evaluator_val = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, eval=True,
+                              criterion=criterion)
+    evaluator_test = Evaluator(dataset=dataset, batch_size=BATCH, to_tensor=False, device=device, sigmoid=sigmoid, criterion=criterion)
+    trainer.load_model(model, TRAINING_DIR.model_path)
 else:
     trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, device=device, criterion=criterion,
                       sigmoid=sigmoid)
@@ -347,8 +369,9 @@ def eval(progress_bar=False, modalities=None):
     model.eval() if not DEEPVESSEL else None
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     trainer.load_checkpoint(root=TRAINING_DIR.root, prefix=TRAINING_DIR.prefix, eval_logging=eval_metric_logging)
-    evaluator_test.opt_th = 0.5 # :trainer.update_optimal_threshold(progress_bar=progress_bar)
+    evaluator_test.opt_th = 0.5  # :trainer.update_optimal_threshold(progress_bar=progress_bar)
     print('plotting one prediction')
+
     # Making the case if args.overlay_plot == True
     def plot_sample_vols(_sample_to_plot):
         # Ploting over lay volume
@@ -371,20 +394,23 @@ def eval(progress_bar=False, modalities=None):
 
     def plot_sample_figs(_sample_to_plot, _case_id=None):
         fig_overlay_image, case_id, N = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=True,
-                                             reshape_transform=reshape_transform, modalities=modalities, get_case=True,
-                                             case_id=_case_id)
-        savefigs(fig_name='{}_{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir, fig=fig_overlay_image)
+                                                                       reshape_transform=reshape_transform,
+                                                                       modalities=modalities, get_case=True,
+                                                                       case_id=_case_id)
+        savefigs(fig_name='{}_{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
+                 fig=fig_overlay_image)
         plt.close()
         fig_four_plots, case_id, N = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=False,
-                                             reshape_transform=reshape_transform, modalities=modalities, get_case=True,
-                                             case_id=_case_id)
+                                                                    reshape_transform=reshape_transform,
+                                                                    modalities=modalities, get_case=True,
+                                                                    case_id=_case_id)
         savefigs(fig_name='{}_{}_{}_performance'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
                  fig=fig_four_plots)
         plt.close()
 
     if args.sample_to_plot > 0:
         case_id_num = args.sample_to_plot
-        plot_sample_figs(None, _case_id= evaluator_test.dataset.get_all_cases_id()[case_id_num])
+        plot_sample_figs(None, _case_id=evaluator_test.dataset.get_all_cases_id()[case_id_num])
         plot_sample_vols(args.sample_to_plot)
     else:
         total_test_samples = len(evaluator_test.dataset)
@@ -417,6 +443,7 @@ def eval(progress_bar=False, modalities=None):
                                                path_to_csv=TRAINING_DIR.metrics_csv_path)
 
     print('Calculated metrics testing set per case: \n', ''.join([f"{m} = {v}, " for m, v in metrics_vol.items()]))
+
 
 if not args.skip_training:
     train(lr=args.lr, progress_bar=args.progressbar)

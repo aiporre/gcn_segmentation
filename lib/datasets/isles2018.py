@@ -1,13 +1,12 @@
 import csv
 import re
 
-import numpy as np
 from scipy import ndimage
 
 # CONSTANT WHERE TO FIND THE DATA
 from config import ISLES2018_DIR
 import os
-from .dataset import Datasets, Dataset, EuclideanDataset
+from .dataset import Datasets, EuclideanDataset
 import torch
 import numpy as np
 from lib.process.progress_bar import printProgressBar
@@ -24,23 +23,18 @@ def get_modalities(arg_mod):
     return output_modalities
 
 
-def isles2018_reshape(x, channels=None, channel=None):
+def isles2018_reshape(x, channel=None):
     '''
     Transform used by plotting functions
     '''
     if isinstance(x, torch.Tensor):
         x = x.cpu().detach().numpy()
-    N = x.size
-    nn = NORMALIZED_SHAPE['Y'] * NORMALIZED_SHAPE['X']
-    # channels are deduced from N // nn if input is None
-    N_channels = N // nn if channels is None else channels
-    if N_channels == 1:
-        isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'])
-    else:
-        isles_shape = (NORMALIZED_SHAPE['Y'], NORMALIZED_SHAPE['X'], N_channels)
-    x = np.reshape(x, isles_shape)
+    x = x.squeeze()
+    n_channels = x.shape[0] if len(x.shape)> 2 else 1
+    if n_channels != 1:
+        x = x.transpose(1, 2, 0)
     # selects one channel in specificed by channel input
-    if N_channels > 1 and channel is not None:
+    if n_channels > 1 and channel is not None:
         x = x[..., channel]
     return x
 
@@ -89,11 +83,11 @@ class ISLES2018(Datasets):
         self.batch_size = batch_size
         self.test_rate = test_rate
         train_images = _ISLES2018(self.data_dir, dataset_type='train', transform=None,
-                                    pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
-        val_images = _ISLES2018(self.data_dir, dataset_type='val', transform=None,
                                   pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
+        val_images = _ISLES2018(self.data_dir, dataset_type='val', transform=None,
+                                pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
         test_images = _ISLES2018(self.data_dir, dataset_type='test', transform=None,
-                                   pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
+                                 pre_transform=pre_transform, fold=fold, modalities=modalities, useful=useful)
 
         train = EuclideanDataset(dataset=train_images)
         val = EuclideanDataset(dataset=val_images)
@@ -114,15 +108,17 @@ class ISLES2018(Datasets):
 
     @property
     def num_channels(self):
-        return self._num_classes
+        return len(self.classes)
+
 
 def makedirs(path):
     try:
         import os
-        os.makedirs(os.path.expanduser(os.path.normpath(path)))
+        os.makedirs(os.path.expanduser(os.path.normpath(path)), exist_ok=True)
     except OSError as e:
-        print("Could not create directory %s: %s" % (path,e))
+        print("Could not create directory %s: %s" % (path, e))
         raise e
+
 
 class _ISLES2018(object):
 
@@ -152,10 +148,11 @@ class _ISLES2018(object):
         # e.g. gilses_1000 --> case_10
         self.indices = _ISLESFoldIndices(cache_file=os.path.join(root, 'raw', self.split_dir, 'processed_mapping.txt'),
                                          fold=fold, dataset_type=dataset_type)
-        self.useful = useful # flag that activates getting only the relevant samples
+        self.useful = useful  # flag that activates getting only the relevant samples
         # with masks bigger that 1000 pixels which is equivalent to nearby 1%
         self.raw_dir = raw_dir
         self.processed_dir = processed_dir
+        self._process()
 
     def _process(self):
         if not all([os.path.exists(f) for f in self.processed_paths]):
@@ -167,8 +164,8 @@ class _ISLES2018(object):
 
     def __getitem__(self, idx):
         data = self.get(idx)
-        data = data if self.transform else self.transform(data)
-        return data
+        data = data if self.transform is None else self.transform(data)
+        return data 
 
     @property
     def raw_file_names(self):
@@ -188,7 +185,7 @@ class _ISLES2018(object):
     def raw_paths(self):
         r"""The filepaths to find in order to skip the download."""
         files = self.raw_file_names
-        return [os.path.join( self.raw_dir, f) for f in files]
+        return [os.path.join(self.raw_dir, f) for f in files]
 
     @property
     def processed_paths(self):
@@ -211,13 +208,15 @@ class _ISLES2018(object):
 
             def norm(x):
                 return (x - x.min()) / (x.max() - x.min())
+
             # default is the idem function
             skull_strippen = lambda x: x
             # if the CT native is selected then use stry based od the non-zero sum values of the CTP-parameters
             if "CTN" in self.modalities:
                 brain_mask = 1
                 for m in ["CTP-TMAX", "CTP-CBF", "CTP-CBV", "CTP-MTT"]:
-                    brain_mask += (norm(load_nifti(patient_files[m][0], neurological_convension=True)) > 0).astype(np.float)
+                    brain_mask += (norm(load_nifti(patient_files[m][0], neurological_convension=True)) > 0).astype(
+                        np.float)
                 skull_strippen = lambda x: x * brain_mask
             if len(self.modalities) > 1:
                 ct_scan = []
@@ -243,12 +242,14 @@ class _ISLES2018(object):
                 # Read data from `raw_path`.
                 image = ct_scan[i]
                 mask = lesion_mask[i]
-                num_elements = NORMALIZED_SHAPE['Y'] * NORMALIZED_SHAPE['X']
-                nodes_shape = num_elements if len(image.shape) <= 2 else (num_elements, -1)
-                x = torch.tensor(image).float()
+                if len(image.shape) > 2:
+                    image = image.transpose(2, 0, 1)
+                else:
+                    image = np.expand_dims(image, axis=0)
+                x = torch.tensor(image).float()  # image is C,H,W or C,Y,X if the C exists, otherwise is set to 1
                 y = torch.tensor(mask).float()
                 # generates a tuple tensor containting first the images (n-channels) and seconds element is the mask
-                data = torch.stack([x,y], dim=0)
+                data = (x, y)
                 torch.save(data, os.path.join(self.processed_dir, self._get_proc_file(processed_index)))
             # update counter
             cnt_slices += processed_num
@@ -303,7 +304,7 @@ class _ISLES2018(object):
     def get(self, idx):
         # compute offset
         data = torch.load(os.path.join(self.processed_dir, self.processed_file_names[idx]))
-        return data
+        return data[0], data[1]
 
     def _get_proc_file(self, processed_index):
         return 'endo_{:04d}.pt'.format(processed_index)
@@ -372,7 +373,7 @@ class _ISLESFoldIndices:
         for case_id in self.get_cases():
             indices_case_id = [int(i) for i, c in index_case_dict.items() if c == case_id]
             useful_case_id = [index_useful_dict[str(i)] == 'True' for i in indices_case_id]
-            sample_case_id = { i: c for i, c in index_case_dict.items() if c == case_id}
+            sample_case_id = {i: c for i, c in index_case_dict.items() if c == case_id}
             if indices_case_id:
                 self.indices[case_id] = indices_case_id
                 self.useful_indices[case_id] = useful_case_id

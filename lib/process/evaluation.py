@@ -161,6 +161,10 @@ class Evaluator(object):
             if not pred_mask.size(0) == label.size(0):
                 b = label.size(0)
                 pred_mask = pred_mask.view(b, -1)
+            if not isinstance(image, Data):
+                b = label.shape[0]
+                label = label.view(b, -1)
+                pred_mask = pred_mask.view(b, -1)
             DCM_accum.append(dice_coeff(pred_mask, label).item())
             N += label.numel()
             if progress_bar:
@@ -205,6 +209,27 @@ class Evaluator(object):
                 b = label.size(0)
                 pred_mask = pred_mask.view(b, -1)
                 pred_prob = pred_prob.view(b, -1)
+            # compute square versions of pred and label as np arrays to compute the HD distance
+            if is_graph_tensor:
+                if reshape_transform is None:
+                    label_square = reshape_square(label)
+                    pred_mask_square = reshape_square(pred_mask)
+                else:
+                    label_square = reshape_transform(label)
+                    pred_mask_square = reshape_transform(pred_mask)
+            elif reshape_transform is not None:
+                label_square = reshape_transform(label)
+                pred_mask_square = reshape_transform(pred_mask)
+            else:
+                label_square = label
+                pred_mask_square = pred_mask
+            # after computing the square np.arrays we flat the predictions to compute the other metrics
+            if not is_graph_tensor:
+                b = label.shape[0]
+                label = label.view(b, -1)
+                prediction = prediction.view(b, -1)
+                pred_mask = pred_mask.view(b, -1)
+                pred_prob = pred_prob.view(b, -1)
             for m in metrics:
                 if m == 'val_loss':
                     g = metrics_values['val_loss']
@@ -216,13 +241,6 @@ class Evaluator(object):
                     g.append(dcm)
                     metrics_values["DCM"] = g
                 elif m == "HD":
-                    if is_graph_tensor:
-                        if reshape_transform is None:
-                            label_square = reshape_square(label)
-                            pred_mask_square = reshape_square(pred_mask)
-                        else:
-                            label_square = reshape_transform(label)
-                            pred_mask_square = reshape_transform(pred_mask)
                     hd = calculate_hausdorff_distance(pred_mask_square, label_square)
                     metrics_values["HD"].append(hd)
                 elif m == "AUC":
@@ -303,13 +321,6 @@ class Evaluator(object):
                 if i % int(L/10) == 0 or i == 0:
                     print('Bin Scores: in batch ', i+1, ' out of ', L, '(Completed {}%)'.format(100.0*(i+1)/L))
             i += 1
-        # metric_values = {}
-        # if "accuracy" in metrics:
-        #     metric_values["accuracy"] = correct/N
-        # if "recall" in metrics:
-        #     metric_values["precision"] = (TP+eps)/(TP+FP+eps)
-        # if "precision" in metrics:
-        #     metric_values["precision"] = (TP+eps)/(TP+FN+eps)
         metrics_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
         return metrics_avgs
 
@@ -328,8 +339,11 @@ class Evaluator(object):
         # check if it is is_graph_tensor:
         sample = self.dataset[0]
         is_graph_tensor = isinstance(sample, (Data, Batch))
-
+        aux_cnt = 0
         for case_id in self.dataset.get_all_cases_id():
+            aux_cnt += 1
+            if aux_cnt > 10:
+                break
             # collecting predictions for case_id
             preds = []
             preds_prob = []
@@ -342,8 +356,12 @@ class Evaluator(object):
                     image['batch'] = torch.zeros(sample.x.shape[0]).long()
                 else:
                     image, mask = sample[0], sample[1]
-                    image = image.reshape([1] + list(image.shape))
-                features = torch.tensor(image).float() if self.to_tensor else image
+                    if isinstance(image, torch.Tensor):
+                        image = image.unsqueeze(0)
+                    else:
+                        image = np.expand_dims(image, axis=0)
+
+                features = torch.tensor(image).float() if self.to_tensor else image.clone()
                 mask = torch.tensor(mask).float() if self.to_tensor else mask
 
                 features = features.to(self.device)
@@ -364,6 +382,12 @@ class Evaluator(object):
                         mask = reshape_transform(mask.cpu().detach().numpy())
                         prediction = reshape_transform(prediction)
                         pred_prob = reshape_transform(pred_prob)
+                else:
+                    if reshape_transform is not None:
+                        mask = reshape_transform(mask)
+                        prediction = reshape_transform(prediction)
+                        pred_prob = reshape_transform(pred_prob)
+
                 preds.append(prediction)
                 preds_prob.append(pred_prob)
                 masks.append(mask)
@@ -378,7 +402,7 @@ class Evaluator(object):
             TN = N - TP - FP -FN
             for m in metrics:
                 if m == "DCM":
-                    dcm = (2 * TP) / (2 * TP + FP + FN)
+                    dcm = (2 * TP) / (2 * TP + FP + FN) if (2 * TP + FP + FN) != 0 else np.array(0)
                     metric_values["DCM"].append(dcm.item())
                 elif m == "HD":
                     hd = calculate_hausdorff_distance(pred_mask, mask)
@@ -390,16 +414,16 @@ class Evaluator(object):
                 elif m == "COD":
                     cod = calculate_cod(pred_prob.reshape(1,-1), mask.reshape(1, -1))
                     metric_values["COD"].append(cod.mean().item())
-                if "accuracy" in metrics:
+                elif m == "accuracy":
                     accuracy = (TP + TN) / N
                     metric_values["accuracy"].append(accuracy.item())
-                if "recall" in metrics:
-                    recall = TP / (TP + FN)
+                elif "recall" == m:
+                    recall = TP / (TP + FN) if (TP + FN) != 0 else np.array(0)
                     metric_values["recall"].append(recall.item())
-                if "precision" in metrics:
-                    precision = TP / (TP + FP)
+                elif "precision" == m:
+                    precision = TP / (TP + FP) if (TP + FP) != 0 else np.array(0)
                     metric_values["precision"].append(precision.item())
-                if "PPV" in metrics:
+                elif "PPV" == m:
                     metric_values["PPV"].append(((TP+FN)/N).item())
             # printing progress bar
             if progress_bar:
@@ -411,7 +435,6 @@ class Evaluator(object):
         if path_to_csv is not None:
             dict_to_csv(path_to_csv, metric_values, index=self.dataset.get_all_cases_id())
         metric_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
-        print("metric avgs")
         return metric_avgs
 
     def plot_prediction(self, model, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None,
@@ -437,7 +460,10 @@ class Evaluator(object):
             image['batch']=torch.zeros(sample.x.shape[0]).long()
         else:
             image, mask = sample[0], sample[1]
-            image = image.reshape([1]+list(image.shape))
+            if isinstance(image, torch.Tensor):
+                image = image.unsqueeze(0)
+            else:
+                image = np.expand_dims(image, axis=0)
 
         input = torch.tensor(image).float() if self.to_tensor else image.clone()
         input = input.to(self.device)
@@ -464,7 +490,12 @@ class Evaluator(object):
                 image = reshape_transform(image.x, channels=channels, channel=0)
                 prediction = reshape_transform(prediction)
                 pred_mask = reshape_transform(pred_mask)
-
+        else:
+            if reshape_transform is not None:
+                image = reshape_transform(image, channel=0)
+                mask = reshape_transform(mask)
+                prediction = reshape_transform(prediction)
+                pred_mask = reshape_transform(pred_mask)
         # plot input image
         if not fig:
             fig = plt.figure(figsize=figsize)
@@ -541,7 +572,10 @@ class Evaluator(object):
                 image['batch'] = torch.zeros(sample.x.shape[0]).long()
             else:
                 image, mask = sample[0], sample[1]
-                image = image.reshape([1]+list(image.shape))
+                if isinstance(image, torch.Tensor):
+                    image = image.unsqueeze(0)
+                else:
+                    image = np.expand_dims(image, axis=0)
 
             # makes a prediction for the image and generate the prediciont mask with boundary 0.5
             input = torch.tensor(image).float() if self.to_tensor else image.clone()
@@ -562,6 +596,10 @@ class Evaluator(object):
                     else:
                         mask = reshape_transform(mask.cpu().detach().numpy())
                         pred_mask = reshape_transform(pred_mask)
+                else:
+                    if reshape_transform is not None:
+                        mask = reshape_transform(mask)
+                        pred_mask = reshape_transform(pred_mask)
                 TP = pred_mask*mask
                 FP = 1*((pred_mask-mask) > 0)
                 FN = 1*((mask-pred_mask) > 0)
@@ -581,6 +619,13 @@ class Evaluator(object):
                         channels = None if modalities is None else len(modalities)
                         # takes the first channel if there is more than one modality
                         image = reshape_transform(image.x, channels=channels)
+                        prediction = reshape_transform(prediction)
+                        pred_mask = reshape_transform(pred_mask)
+                else:
+                    # in the euclidean case we swap C,Y,X or C,H,W to Y,X,C or H,W,C
+                    if reshape_transform is not None:
+                        image = reshape_transform(image)
+                        mask = reshape_transform(mask)
                         prediction = reshape_transform(prediction)
                         pred_mask = reshape_transform(pred_mask)
                 # concatenate the modality channels and prediction results

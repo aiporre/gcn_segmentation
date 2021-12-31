@@ -128,7 +128,7 @@ class EuclideanDataset(object):
 
     def enforce_batch(self, batch_size):
         self._batch_size = batch_size
-        self._dataloader = DataLoader(self._dataset, batch_size=self._batch_size, shuffle=self.shuffle)
+        self._dataloader = EuclideanDataLoader(self._dataset, batch_size=self._batch_size, shuffle=self.shuffle)
         self._dataloader_iter = self._dataloader.__iter__()
 
     @property
@@ -178,7 +178,7 @@ class EuclideanDataset(object):
         except StopIteration:
             self._dataloader_iter = self._dataloader.__iter__()
             data = self._dataloader_iter.__next__()
-        images, labels = data, data.y
+        images, labels = data[0], data[1]
         self._index_in_epoch += self._batch_size
 
         return images, labels
