@@ -223,6 +223,9 @@ class Evaluator(object):
                         else:
                             label_square = reshape_transform(label)
                             pred_mask_square = reshape_transform(pred_mask)
+                    else:
+                        label_square = reshape_square(label)
+                        pred_mask_square = reshape_square(pred_mask)
                     hd = calculate_hausdorff_distance(pred_mask_square, label_square)
                     metrics_values["HD"].append(hd)
                 elif m == "AUC":
@@ -438,8 +441,10 @@ class Evaluator(object):
             image['batch']=torch.zeros(sample.x.shape[0]).long()
         else:
             image, mask = sample[0], sample[1]
-            if len(image.shape) <= 2:
-                image = image.reshape([1]+list(image.shape))
+            if isinstance(image, torch.Tensor):
+                image = image.unsqueeze(0)
+            else:
+                image = np.expand_dims(image, axis=0)
 
         input = torch.tensor(image).float() if self.to_tensor else image.clone()
         input = input.to(self.device)
@@ -467,7 +472,12 @@ class Evaluator(object):
                 prediction = reshape_transform(prediction)
                 pred_mask = reshape_transform(pred_mask)
         else:
-            image = image[...,0]
+            image = image[0, 0, ...]
+            if isinstance(image, torch.Tensor):
+                image = image.cpu().detach().numpy()
+                mask = mask.cpu().detach().numpy()
+            pred_mask = pred_mask.cpu().detach().numpy().squeeze()
+            prediction = prediction.cpu().detach().numpy().squeeze()
 
         # plot input image
         if not fig:
@@ -545,8 +555,10 @@ class Evaluator(object):
                 image['batch'] = torch.zeros(sample.x.shape[0]).long()
             else:
                 image, mask = sample[0], sample[1]
-                if len(image.shape) <= 2:
-                    image = image.reshape([1]+list(image.shape))
+                if isinstance(image, torch.Tensor):
+                    image = image.unsqueeze(0)
+                else:
+                    image = np.expand_dims(image, axis=0)
 
             # makes a prediction for the image and generate the prediciont mask with boundary 0.5
             input = torch.tensor(image).float() if self.to_tensor else image.clone()
@@ -567,6 +579,11 @@ class Evaluator(object):
                     else:
                         mask = reshape_transform(mask.cpu().detach().numpy())
                         pred_mask = reshape_transform(pred_mask)
+                else:
+                    if isinstance(mask, torch.Tensor):
+                        mask = mask.cpu().detach().numpy()
+                    mask = mask.squeeze()
+                    pred_mask = pred_mask.cpu().detach().numpy().squeeze()
                 TP = pred_mask*mask
                 FP = 1*((pred_mask-mask) > 0)
                 FN = 1*((mask-pred_mask) > 0)
@@ -590,10 +607,18 @@ class Evaluator(object):
                         pred_mask = reshape_transform(pred_mask)
                 else:
                     # in the eucliead case we swap C,Y,X or C,H,W to Y,X,C or H,W,C
+                    image = image[0]
                     if isinstance(image, torch.Tensor):
-                        image = image.cpu().detach().numpy()
+                        image = image.cpu().detach().numpy() # dimensions are C,Y,X
+                        mask = mask.cpu().detach().numpy().squeeze() # dimesions are Y,X
+                    prediction = prediction.cpu().detach().numpy().squeeze()
+                    pred_mask = pred_mask.cpu().detach().numpy().squeeze()
+                    print('prediction.shape: ', prediction.shape)
+                    print('pred_mask.shape: ', pred_mask.shape)
+                    print('image.shape', image.shape)
                     if len(image.shape) > 2:
-                        image = image.transpose(2, 0, 1)
+                        image = image.transpose(1, 2, 0)
+                    print('image.shape', image.shape)
                 # concatenate the modality channels and prediction results
                 if len(image.shape) == 2:
                     image = np.stack([image, mask, prediction, pred_mask], axis=-1)
