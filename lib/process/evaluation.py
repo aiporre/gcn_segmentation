@@ -339,11 +339,7 @@ class Evaluator(object):
         # check if it is is_graph_tensor:
         sample = self.dataset[0]
         is_graph_tensor = isinstance(sample, (Data, Batch))
-        aux_cnt = 0
         for case_id in self.dataset.get_all_cases_id():
-            aux_cnt += 1
-            if aux_cnt > 10:
-                break
             # collecting predictions for case_id
             preds = []
             preds_prob = []
