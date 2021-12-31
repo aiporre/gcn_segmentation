@@ -125,7 +125,7 @@ class FCN(nn.Module):
     def __init__(self, n_channels, n_classes=1):
         super(FCN, self).__init__()
         self.fcn = FCN8s(n_class=n_classes)
-        super().conv1_1 = nn.Conv2d(n_channels, 64, 3, padding=100)
+        self.fcn.conv1_1 = nn.Conv2d(n_channels, 64, 3, padding=100)
 
     def forward(self, x):
         return self.fcn(x)
