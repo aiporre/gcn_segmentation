@@ -4,6 +4,7 @@ from tifffile import tifffile
 
 from lib.process.evaluation import MetricsLogs
 from lib.process.losses import estimatePositiveWeight, GeneralizedDiceLoss, FocalLoss, DiceLoss
+from lib.utils.timer import TimeTrack
 
 try:
     from lib.datasets.gendostroke import GENDOSTROKE, endostroke_reshape
@@ -310,12 +311,14 @@ def train(lr=0.001, progress_bar=False):
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     trainer.load_checkpoint(root=TRAINING_DIR.root, prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
     timer = Timer(args.checkpoint_timer)
+    time_track = TimeTrack(EPOCHS)
     for e in trainer.get_range(EPOCHS):
         trainer.model.train() if not DEEPVESSEL else None
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
+        time_track.lap()
         mean_loss = np.array(loss).mean()
         eval_metric_logging.update_loss_log(loss)
-        print('EPOCH ', e, 'loss epoch', mean_loss)
+        print('EPOCH ', e, 'loss epoch ', mean_loss, 'time: ', time_track)
         model = trainer.model
         if DEEPVESSEL:
             print('Evaluation Epoch {}/{}...'.format(e, EPOCHS))
