@@ -27,7 +27,7 @@ except Exception as e:
 
 try:
     from lib.datasets import GISLES2018
-    from lib.datasets.gisles2018 import isles2018_reshape
+    from lib.datasets.gisles2018 import isles2018_reshape as gisles2018_reshape
     from lib.datasets.gisles2018 import get_modalities as gisles_get_modalities
 except Exception as e:
     print('Warning: No module torch geometric. Failed to import GISLES2018, Exception: ', str(e))
@@ -45,6 +45,7 @@ except Exception as e:
 from lib.models import UNet, FCN
 from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop, CropVessel12, ISLES2018
 from lib.datasets.isles2018 import get_modalities as isles_get_modalities
+from lib.datasets.isles2018 import isles2018_reshape
 
 from lib.process import Trainer, Evaluator, DCS, KEvaluator, KTrainer, TrainingDir
 import matplotlib.pyplot as plt
@@ -193,10 +194,10 @@ elif args.dataset == 'GENDOSTROKE':
     reshape_transform = endostroke_reshape
 elif args.dataset == 'GISLES2018':
     dataset = GISLES2018(data_dir=args.islesdir, modalities=MODALITIES, useful=args.useful, fold=args.fold)
-    reshape_transform = isles2018_reshape
+    reshape_transform = gisles2018_reshape
 elif args.dataset == 'ISLES2018':
     dataset = ISLES2018(data_dir=args.islesdir, modalities=MODALITIES, useful=args.useful, fold=args.fold)
-    reshape_transform = None
+    reshape_transform = isles2018_reshape
 else:
     dataset = MNIST()
     reshape_transform = None
