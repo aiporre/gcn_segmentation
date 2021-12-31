@@ -63,16 +63,16 @@ class FPModule(torch.nn.Module):
 
 
 class PointNet(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, input_channels=1):
         super(PointNet, self).__init__()
 
-        self.sa1_module = SAModule(0.5, 0.2, MLP([3, 64, 64, 128]))
+        self.sa1_module = SAModule(0.5, 0.2, MLP([input_channels+2, 64, 64, 128]))
         self.sa2_module = SAModule(0.25, 0.4, MLP([128+2, 128, 128, 256]))
         self.sa3_module = GlobalSAModule(MLP([256+2, 256, 512, 1024]))
 
         self.fp3_module = FPModule(1, MLP([1024+256, 256, 256]))
         self.fp2_module = FPModule(3, MLP([256+128, 256, 128]))
-        self.fp1_module = FPModule(3, MLP([128+1, 128, 128, 128]))
+        self.fp1_module = FPModule(3, MLP([128+input_channels, 128, 128, 128]))
 
         self.lin1 = torch.nn.Linear(128, 128)
         self.lin2 = torch.nn.Linear(128, 128)
@@ -83,7 +83,6 @@ class PointNet(torch.nn.Module):
             data.x = data.x.unsqueeze(-1)
         sa0_out = (data.x, data.pos, data.batch)
         sa1_out = self.sa1_module(*sa0_out)
-        print('success first convolution!!: ', sa1_out)
         sa2_out = self.sa2_module(*sa1_out)
         sa3_out = self.sa3_module(*sa2_out)
 
@@ -96,4 +95,6 @@ class PointNet(torch.nn.Module):
         x = self.lin2(x)
         x = F.dropout(x, p=0.5, training=self.training)
         x = self.lin3(x)
-        return F.sigmoid(x)
+        data.x = x
+        return data
+
