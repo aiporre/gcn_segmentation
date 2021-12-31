@@ -220,7 +220,7 @@ elif args.net == 'GFCNF':
 elif args.net == 'GFCNG':
     model = GFCNG(input_channels=NUM_INPUTS)
 elif args.net == 'PointNet':
-    model = PointNet()
+    model = PointNet(input_channels=NUM_INPUTS)
 elif args.net == 'UNet':
     model = UNet(n_channels=NUM_INPUTS, n_classes=1)
 elif args.net == 'FCN':

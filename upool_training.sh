@@ -29,15 +29,15 @@ elif [[ $channels == "5ch" ]]
 then
   echo "Running 5 channels"
   echo " Deleting files gendo_"
-  rm data/gisles2018/processed/TRAINING/gendo_*.pt
+  # rm data/gisles2018/processed/TRAINING/gendo_*.pt
   echo "Training upool proportional vs topk"
   echo "Running upool proportional"
 
   tid="uPre5Ch$fold"
-  python training.py -s GISLES2018 -n GFCNE -b 4 -c DCSsigmoid -t True -N 10 --id $tid -lr 1E-7  -g 100 -f $tfold --postnorm False -D experiment4_upool -W True>> "experiment4_upool/gfcne_$tid.log"
+  python training.py -s GISLES2018 -n GFCNE -b 4 -c DCSsigmoid -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold --postnorm False -D experiment4_upool -W True>> "experiment4_upool/gfcne_$tid.log"
   echo "Running upool topk"
   tid="kPre5Ch$fold"
-  python training.py -s GISLES2018 -n GFCNG -b 8 -c DCSsigmoid -t True -N 10 --id $tid -lr 1E-4  -g 100 -f $tfold --postnorm False -D experiment4_upool >> "experiment4_upool/gfcng_$tid.log"
+  python training.py -s GISLES2018 -n GFCNG -b 8 -c DCSsigmoid -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold --postnorm False -D experiment4_upool >> "experiment4_upool/gfcng_$tid.log"
   echo "Running no unpool and pooling"
   tid="nPre5Ch$fold"
   python training.py -s GISLES2018 -n GFCNF -b 2 -c DCSsigmoid -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold --postnorm False -D experiment4_upool >> "experiment4_upool/gfcnf_$tid.log"

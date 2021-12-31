@@ -26,7 +26,7 @@ then
 elif [[ $channels == "5ch" ]]
 then
   echo " Deleting files gendo_"
-  rm data/gisles2018/processed/TRAINING/gendo_*.pt
+  # rm data/gisles2018/processed/TRAINING/gendo_*.pt
   tid="Pre5Ch$fold"
   echo "GFCNC with soft Dice loss"
   python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
