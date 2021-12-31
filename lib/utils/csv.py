@@ -17,9 +17,9 @@ def csv_to_dict(filename, delimeter, has_header=False, key_col=0, item_col=1):
     return values
 
 
-def dict_to_csv(filename, values, delimiter=',', index=None):
-    header = [""] + list(values.keys())
-    columns = list(values.values())
+def dict_to_csv(filename, dict_values, delimiter=',', index=None):
+    header = [""] + list(dict_values.keys())
+    columns = list(dict_values.values())
 
     def all_equal(vv):
         return all(x == vv[0] for x in vv)
@@ -30,12 +30,12 @@ def dict_to_csv(filename, values, delimiter=',', index=None):
 
     if index is None:
         index = list(range(length))
-    dict_values = [dict(zip(header, vv)) for vv in zip(index, *columns)]
+    dict_row_values = [dict(zip(header, vv)) for vv in zip(index, *columns)]
     try:
         with open(filename, 'w') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=header, delimiter=delimiter)
             writer.writeheader()
-            for data in dict_values:
-                writer.writerow(data)
+            for row_data in dict_row_values:
+                writer.writerow(row_data)
     except IOError:
         print("I/O error")
