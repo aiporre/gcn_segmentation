@@ -148,6 +148,11 @@ class Trainer(object):
             if isinstance(prediction, Data):
                 prediction = to_torch_batch(prediction)
             prediction = sigmoid(prediction) if self.sigmoid else prediction
+
+            if not isinstance(image, Data):
+                b = image.shape[0]
+                prediction = prediction.view(b, -1)
+                label = label.view(b, -1)
             if check_label_not_unique(label):
                 opt_ths.extend(calculate_optimal_threshold(prediction, label))
             if progress_bar:
