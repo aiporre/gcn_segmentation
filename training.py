@@ -311,7 +311,7 @@ def train(lr=0.001, progress_bar=False):
     eval_metric_logging = MetricsLogs(MEASUREMENTS, monitor_metric=args.monitor_metric)
     trainer.load_checkpoint(root=TRAINING_DIR.root, prefix=prefix_checkpoint, eval_logging=eval_metric_logging)
     timer = Timer(args.checkpoint_timer)
-    time_track = TimeTrack(EPOCHS)
+    time_track = TimeTrack(len(trainer.get_range()))
     for e in trainer.get_range(EPOCHS):
         trainer.model.train() if not DEEPVESSEL else None
         loss = trainer.train_epoch(lr=lr, progress_bar=progress_bar)
