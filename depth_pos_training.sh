@@ -29,7 +29,7 @@ then
   # rm data/gisles2018/processed/TRAINING/gendo_*.pt
   tid="Pos5Ch$fold"
   echo "GFCNC with soft Dice loss"
-  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
+  #python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
   echo "GFCNB with soft Dice loss"
   python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold -D experiment3_depth >> "experiment3_depth/gfcnb_$tid.log"
   echo "GFCNA with soft Dice loss"
