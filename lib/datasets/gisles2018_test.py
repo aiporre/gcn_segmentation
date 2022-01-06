@@ -14,11 +14,13 @@ class DatasetGILSES2018Test(TestCase):
             print('iterms: ', k)
 
     def test_load_nifti(self):
-        patient_path = os.path.join(ISLES2018_DIR, "raw", "TRAINING", "case_1")
-        patient_files = get_files_patient_path(patient_path)
-        print(patient_files)
-        ct_scan_path = patient_files['CTN'][0]
-        data = load_nifti(ct_scan_path, show_description=True, neurological_convension=True)
+        for c in range(1,94):
+            c_str = "case_" + str(c)
+            patient_path = os.path.join(ISLES2018_DIR, "raw", "TRAINING", c_str)
+            patient_files = get_files_patient_path(patient_path)
+            print(patient_files)
+            ct_scan_path = patient_files['CTN'][0]
+            data = load_nifti(ct_scan_path, show_description=True, neurological_convension=True)
 
 
 class Test_ISLESFoldIndices(TestCase):
