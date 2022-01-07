@@ -16,8 +16,8 @@ then
   echo "Deleting files gendo_"
 #  rm data/gisles/processed/TRAINING/gendo_*.pt
   tid="Pre4Ch$fold"
-  # echo "GFCNC with soft Dice loss"
-  # python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold --mod TMAX CBF CBV MTT --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
+  echo "GFCNC with soft Dice loss"
+  python training.py -s GISLES2018 -n GFCNC -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold --mod TMAX CBF CBV MTT --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnc_$tid.log"
   echo "GFCNB with soft Dice loss"
   python training.py -s GISLES2018 -n GFCNB -b 4 -c DCSsigmoid  -t True -N 10 --id $tid -lr 1E-6  -g 100 -f $tfold --mod TMAX CBF CBV MTT --postnorm False -D experiment3_depth >> "experiment3_depth/gfcnb_$tid.log"
   echo "GFCNA with soft Dice loss"
