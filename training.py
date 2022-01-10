@@ -365,7 +365,7 @@ def train(lr=0.001, progress_bar=False):
 
     # loss_all = np.array(loss_all)
     trainer.save_model(TRAINING_DIR.model_path)
-    trainer.save_checkpoint(TRAINING_DIR, lr, e, EPOCHS, eval_metric_logging, args.upload)
+    trainer.save_checkpoint(TRAINING_DIR, lr, EPOCHS, EPOCHS, eval_metric_logging, args.upload)
 
 
 def eval(progress_bar=False, modalities=None):
