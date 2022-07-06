@@ -224,7 +224,11 @@ class Trainer(object):
     def load_model(self, model, path):
         self.model = model
         if os.path.exists(path):
-            self.model.load_state_dict(torch.load(path))
+            if not torch.cuda.is_available():
+                self.model = torch.load(path, map_location=torch.device('cpu'))
+
+            else:
+                self.model.load_state_dict(torch.load(path))
             print('Loaded model: ', path)
         else:
             print('Warning: there is no file :', path)
