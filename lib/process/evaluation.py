@@ -1,6 +1,9 @@
 import torch
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from matplotlib.colors import ListedColormap
+from skimage import color, measure
+from skimage.exposure import exposure
 from torch_geometric.data import Data, Batch
 from hausdorff import hausdorff_distance
 
@@ -120,6 +123,60 @@ class MetricsLogs(object):
 
     def get_loss_per_iter(self):
         return self._loss_per_iter
+def plot_graph(g, image=None, ax=None, channel=0, mag=1.0, th=None, figsize=(70,70)):
+    """
+    Plots a graph in a matplotlib figure.
+    """
+    assert channel in range(g.num_node_features), "Channel must be in range [0, {}]".format(g.num_node_features)
+    assert mag > 0, "Magnification must be greater than 0"
+    assert figsize[0] > 0, "Figure width must be greater than 0"
+    assert figsize[1] > 0, "Figure height must be greater than 0"
+    # create figure
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.get_figure()
+    # create axes
+    ax = fig.add_subplot(111)
+    # gather graph data
+    pos_x, pos_y = np.zeros(g.num_nodes), np.zeros(g.num_nodes)
+    for k, g_pos in enumerate(g.pos):
+        pos_x[k], pos_y[k] = g_pos[0]*mag, g_pos[1]*mag
+    values = np.zeros(g.num_nodes)
+    for k, g_value in enumerate(g.x[:, channel]):
+        values[k] = g_value
+    coo_matrix = g.edge_index
+    # define image limits
+    if image is not None:
+        xmin, xmax, ymin, ymax = image.shape[0]-0.5, -0.5, image.shape[1]-0.5, -0.5
+    else:
+        xmin, xmax, ymin, ymax = -0.5, max(pos_x)+0.5, -0.5, max(pos_y)+0.5 
+    # plot image
+    if image is not None:
+        image = image.copy()/image.max()
+        image = color.gray2rgb(image)
+        ax.imshow(image[::-1,:], cmap='gray')
+    # plot graph
+    for i in range(g.num_edges):
+        ii, jj = int(coo_matrix[0, i]), int(coo_matrix[1, i])
+        # filter repeated edges
+        if ii == jj or ii > jj:
+            continue
+        if th is not None and (values[ii]<th or values[jj]<th):
+            continue
+        ax.plot([pos_x[coo_matrix[0, i]], pos_x[coo_matrix[1, i]]],
+                [pos_y[coo_matrix[0, i]], pos_y[coo_matrix[1, i]]],
+                c='lightgray', alpha=0.3)
+    colors = [cm.bwr(color) for color in values]
+    for xx, yy, cc, vv in zip(pos_x, pos_y, colors, values):
+        ax.plot(xx, yy, 'o', c=cc, markersize=vv)
+    ax.axis('scaled')
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    
+    # return figure
+    return fig
+
 
 class Evaluator(object):
     def __init__(self, dataset, batch_size=64, to_tensor=True, device=None, sigmoid=False,  eval=False, criterion=None):
@@ -433,13 +490,15 @@ class Evaluator(object):
         metric_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
         return metric_avgs
 
-    def plot_prediction(self, model, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None,
-                        modalities=None, get_case=False, case_id=None):
+    def plot_graph(self, model, figsize=(10,10), N=190, reshape_transform=None,
+                        modalities=None, case_id=None):
         if case_id is not None:
             print('Warning: case id is given, then \'N\'', N, ' is ignored.')
             indices_by_case_id = self.dataset.get_indices_by_case_id(case_id, useful=False, relative_dataset=True )
             # gets the central sample
             assert len(indices_by_case_id) > 0, 'Something went wrong, indices by case is empty'
+            # NOTE: The actual error is that the case_id is not the testing/validation dataset.
+            # NOTE: N is the index the dataset, which varies between folds, we get case id instead
             N = indices_by_case_id[(len(indices_by_case_id)-1) // 2]
             print('new N=', N)
         else:
@@ -448,6 +507,109 @@ class Evaluator(object):
         # loading the image: it can be a numpy.ndarray or a Data/Batch object
         # image, mask = self.dataset.next_batch(1, shuffle=False) # selects an aleatory value from the dataset
         sample = self.dataset[N]
+        is_graph_tensor = isinstance(sample, (Data, Batch))
+        if is_graph_tensor:
+            # this graph tensor
+            image = sample
+            mask = sample.y
+            image['batch'] = torch.zeros(sample.x.shape[0]).long()
+        else:
+            image, mask = sample[0], sample[1]
+            if isinstance(image, torch.Tensor):
+                image = image.unsqueeze(0)
+            else:
+                image = np.expand_dims(image, axis=0)
+
+        model_input = torch.tensor(image).float() if self.to_tensor else image.clone()
+        model_input = model_input.to(self.device)
+        print('prediction to activations in latent space...')
+        model.set_only_activation()
+        activations = model(model_input)
+        model.set_only_activation(False)
+        activations = activations.cpu().detach().numpy()
+        # computes mean of activations and keeps dimensions
+        if is_graph_tensor:
+            activations_mean = activations.clone()
+            activations_mean.x = torch.mean(activations.x, dim=1, keepdim=True)
+            activations_mean.x = (activations_mean.x - torch.min(activations_mean.x))\
+                                 / (torch.max(activations_mean.x) - torch.min(activations_mean.x))
+        else:
+            activations = activations.cpu().detach().numpy()
+            activations_mean = np.mean(activations, axis=1, keepdims=True)
+            activations_mean = (activations_mean - np.min(activations_mean))\
+                                 / (np.max(activations_mean) - np.min(activations_mean))
+        # transform the graph tensor or euclidean tensor to square images
+        if is_graph_tensor:
+            if reshape_transform is None:
+                mask = reshape_square(mask)
+                channels = None if modalities is None else len(modalities)
+                images = reshape_square(image.x, channels=channels)
+
+            else:
+                mask = reshape_transform(mask)
+                channels = None if modalities is None else len(modalities)
+                # takes the first channel if there is more than one modality
+                images = reshape_transform(image.x, channels=channels)
+        else:
+            if reshape_transform is not None:
+                # TODO: this might fail! if you try to run euclideans :(
+                images = reshape_transform(image)
+                mask = reshape_transform(mask)
+
+        # plotting the images next to the activations
+        height, width, _ = images.shape
+        fig_width = figsize[0]
+        fig_height = fig_width * (5*height) / (2*width)
+        fig, axs = plt.subplots(nrows=5, ncols=2, squeeze=True, gridspec_kw={'wspace': 0, 'hspace':0},
+                                figsize=(fig_width, fig_height))
+        for i in range(5):
+            for j in range(2):
+               axs[i, j].axis('off')
+        # find countours of the mask
+        contours = measure.find_contours(mask, 0.5)
+        # plot imagenes next to the activations
+        for i, modality in enumerate(modalities):
+            if modality == 'CBV':
+                image_cbv = exposure.adjust_gamma(images[:, :, 2], 0.5)
+                axs[i, 0].imshow(image_cbv, cmap='viridis')
+                plot_graph(activations_mean, image=image_cbv, ax=axs[i, 1], th=0.5)
+                axs[i, 1].plot(contours[0][:, 1], contours[0][:, 0], 'y', linewidth=0.1*fig_width)
+            elif modality == 'CBF':
+                image_cbf = exposure.adjust_gamma(images[:, :, 3], 0.5)
+                axs[i, 0].imshow(image_cbf, cmap='viridis')
+                plot_graph(activations_mean, image=image_cbf, ax=axs[i, 1], th=0.5)
+                axs[i, 1].plot(contours[0][:, 1], contours[0][:, 0], 'y', linewidth=0.1*fig_width)
+            elif modality == 'CTN':
+                axs[i, 0].imshow(images[:,:i], cmap='gray')
+                plot_graph(activations_mean, image=images[:,:,i], ax=axs[i, 1], th=0.5)
+                axs[i, 1].plot(contours[0][:, 1], contours[0][:, 0], 'y', linewidth=0.1*fig_width)
+            else:
+                axs[i, 0].imshow(images[:,:,i], cmap='viridis')
+                plot_graph(activations_mean, image=images[:,:,1], ax=axs[i, 1], th=0.5)
+                axs[i, 1].plot(contours[0][:, 1], contours[0][:, 0], 'y', linewidth=0.1*fig_width)
+        plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+        return fig, case_id, N
+
+    def plot_prediction(self, model, fig=None, figsize=(10,10), N=190, overlap=True, reshape_transform=None,
+                        modalities=None, get_case=False, case_id=None, activation_map=False):
+        if case_id is not None:
+            print('Warning: case id is given, then \'N\'', N, ' is ignored.')
+            indices_by_case_id = self.dataset.get_indices_by_case_id(case_id, useful=False, relative_dataset=True )
+            # gets the central sample
+            assert len(indices_by_case_id) > 0, 'Something went wrong, indices by case is empty'
+            # NOTE: The actual error is that the case_id is not the testing/validation dataset.
+            # NOTE: N is the index the dataset, which varies between folds, we get case id instead
+            N = indices_by_case_id[(len(indices_by_case_id)-1) // 2]
+            print('new N=', N)
+        else:
+            case_id = self.dataset.get_case_id(N)
+
+        # loading the image: it can be a numpy.ndarray or a Data/Batch object
+        # image, mask = self.dataset.next_batch(1, shuffle=False) # selects an aleatory value from the dataset
+        sample = self.dataset[N]
+        print('----- nasty saving object')
+        torch.save(sample, f'sample_case_id_{case_id}_N_{N}.pt')
+        raise Exception('stop here!')
         is_graph_tensor = isinstance(sample, (Data, Batch))
         if is_graph_tensor:
             # this graph tensor
@@ -463,12 +625,23 @@ class Evaluator(object):
 
         input = torch.tensor(image).float() if self.to_tensor else image.clone()
         input = input.to(self.device)
+        print(' prediction normal as prob...')
         prediction = model(input)
         if is_graph_tensor:
             prediction =  prediction.x
         pred_mask = (sigmoid(prediction) > self.opt_th).float() if self.sigmoid else (prediction > self.opt_th).float()
         # after using prediction for calculating the mask then the prediction is transformed to prob,
         prediction = sigmoid(prediction) if self.sigmoid else prediction
+        
+        if activation_map:
+            print('prediction to activations in latent space...')
+            model.set_only_activation()
+            input = torch.tensor(image).float() if self.to_tensor else image.clone()
+            activations = model(input)
+            if is_graph_tensor:
+                activations = activations.x
+            model.set_only_activation()
+            print('activations: ', activations.shape)
         # converts to an square if necessary
         if is_graph_tensor:
             if reshape_transform is None:
@@ -495,6 +668,7 @@ class Evaluator(object):
         # plot input image
         if not fig:
             fig = plt.figure(figsize=figsize)
+
         if overlap:
             mask = mask.squeeze()
             pred_mask = pred_mask.squeeze()

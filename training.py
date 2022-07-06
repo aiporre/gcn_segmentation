@@ -396,6 +396,15 @@ def eval(progress_bar=False, modalities=None):
                          multichannel_vol, imagej=True, metadata={'axes': 'ZCYX'})
 
     def plot_sample_figs(_sample_to_plot, _case_id=None):
+        fig_activation, case_id, N = evaluator_test.plot_graph(model=model, N=_sample_to_plot,
+                                                                   reshape_transform=reshape_transform,
+                                                                   modalities=modalities,
+                                                                   case_id=_case_id)
+
+        savefigs(fig_name='{}_{}_{}_activation'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
+                 fig=fig_activation)
+        plt.close()
+
         fig_overlay_image, case_id, N = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=True,
                                                                        reshape_transform=reshape_transform,
                                                                        modalities=modalities, get_case=True,
