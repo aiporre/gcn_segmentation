@@ -523,10 +523,9 @@ class Evaluator(object):
         model_input = torch.tensor(image).float() if self.to_tensor else image.clone()
         model_input = model_input.to(self.device)
         print('prediction to activations in latent space...')
-        model.set_only_activation()
+        model.set_only_activation(True)
         activations = model(model_input)
         model.set_only_activation(False)
-        activations = activations.cpu().detach().numpy()
         # computes mean of activations and keeps dimensions
         if is_graph_tensor:
             activations_mean = activations.clone()
@@ -580,12 +579,12 @@ class Evaluator(object):
                 plot_graph(activations_mean, image=image_cbf, ax=axs[i, 1], th=0.5)
                 axs[i, 1].plot(contours[0][:, 1], contours[0][:, 0], 'y', linewidth=0.1*fig_width)
             elif modality == 'CTN':
-                axs[i, 0].imshow(images[:,:i], cmap='gray')
-                plot_graph(activations_mean, image=images[:,:,i], ax=axs[i, 1], th=0.5)
+                axs[i, 0].imshow(images[:, :, i], cmap='gray')
+                plot_graph(activations_mean, image=images[:, :, i], ax=axs[i, 1], th=0.5)
                 axs[i, 1].plot(contours[0][:, 1], contours[0][:, 0], 'y', linewidth=0.1*fig_width)
             else:
-                axs[i, 0].imshow(images[:,:,i], cmap='viridis')
-                plot_graph(activations_mean, image=images[:,:,1], ax=axs[i, 1], th=0.5)
+                axs[i, 0].imshow(images[:, :, i], cmap='viridis')
+                plot_graph(activations_mean, image=images[:, :, i], ax=axs[i, 1], th=0.5)
                 axs[i, 1].plot(contours[0][:, 1], contours[0][:, 0], 'y', linewidth=0.1*fig_width)
         plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
         return fig, case_id, N
