@@ -317,6 +317,8 @@ class GFCNC(torch.nn.Module):
         super(GFCNC, self).__init__()
         self.postnorm_activation = postnorm_activation
         self.weight_upool = weight_upool
+        self.only_activation = False
+        self.layer_num = 4
 
         self.conv1a = SplineConv(input_channels, 32, dim=2, kernel_size=5)
         self.conv1b = SplineConv(32, 32, dim=2, kernel_size=5)
@@ -361,6 +363,10 @@ class GFCNC(torch.nn.Module):
 
         self.convout = SplineConv(32, 1, dim=2, kernel_size=5)
 
+    def set_only_activation(self, only_activation=True, layer_num=4):
+        assert 8 > layer_num > 0, 'Layer number must be between 1 and 7.'
+        self.only_activation = only_activation
+        self.layer_num = layer_num
 
     def forward(self, data):
         # define weights as None:
@@ -383,6 +389,8 @@ class GFCNC(torch.nn.Module):
         if self.weight_upool:
             weights1 = self.score_w1(pweights(x_pre, cluster1))
         data = max_pool(cluster1, data, transform=T.Cartesian(cat=False))
+        if self.only_activation and self.layer_num == 1:
+            return data
 
         # (V1.32)=>(V2.64)
         x_pre = data.x.clone().detach() if self.weight_upool else None
@@ -402,6 +410,8 @@ class GFCNC(torch.nn.Module):
         if self.weight_upool:
             weights2 = self.score_w2(pweights(x_pre, cluster2))
         data = max_pool(cluster2, data, transform=T.Cartesian(cat=False))
+        if self.only_activation and self.layer_num == 2:
+            return data
         pool2 = data.clone()
 
         # (V2.64)=>(V3.128)
@@ -413,7 +423,6 @@ class GFCNC(torch.nn.Module):
         else:
             data.x = F.elu(self.bn3_1(self.conv3a(data.x, data.edge_index, data.edge_attr)))
             data.x = F.elu(self.bn3_2(self.conv3b(data.x, data.edge_index, data.edge_attr)))
-
         weight = normalized_cut_2d(data.edge_index, data.pos)
         cluster3 = graclus(data.edge_index, weight, data.x.size(0))
         pos3 = data.pos
@@ -423,6 +432,8 @@ class GFCNC(torch.nn.Module):
         if self.weight_upool:
             weights3 = self.score_w3(pweights(x_pre, cluster3))
         data = max_pool(cluster3, data, transform=T.Cartesian(cat=False))
+        if self.only_activation and self.layer_num == 3:
+            return data
         pool3 = data.clone()
 
 
@@ -444,6 +455,8 @@ class GFCNC(torch.nn.Module):
         if self.weight_upool:
             weights4 = self.score_w4(pweights(x_pre, cluster4))
         data = max_pool(cluster4, data, transform=T.Cartesian(cat=False))
+        if self.only_activation and self.layer_num == 4:
+            return data
 
         # LAYERS:
         # Transform V4.256 to V0.1
@@ -458,6 +471,8 @@ class GFCNC(torch.nn.Module):
         # compute score of pool3  (V3.128)=>(V3,32)
         pool3.x = F.elu(self.score_pool3(pool3.x, pool3.edge_index, pool3.edge_attr))
         data.x = data.x+pool3.x
+        if self.only_activation and self.layer_num == 5:
+            return data
 
         # upsample V3=>V2
         if self.weight_upool:
@@ -468,6 +483,8 @@ class GFCNC(torch.nn.Module):
         # compute score of pool2 (V2.64)=>(V2.32)
         pool2.x = F.elu(self.score_pool2(pool2.x, pool2.edge_index, pool2.edge_attr))
         data.x = data.x+pool2.x
+        if self.only_activation and self.layer_num == 6:
+            return data
 
         # upsample (V2.32)=>(V1.32)=>(V0.32)
         if self.weight_upool:
@@ -692,6 +709,7 @@ class GFCN(torch.nn.Module):
     def forward(self, data):
         # (1/32,V_0/V_1)
         # pre-pool1
+        print("this is the data: " , data)
         pos1 = data.pos
         edge_index1 = data.edge_index
         x_pre = data.x.clone().detach()
