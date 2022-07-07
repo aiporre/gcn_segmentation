@@ -136,8 +136,6 @@ def plot_graph(g, image=None, ax=None, channel=0, mag=1.0, th=None, figsize=(70,
         fig, ax = plt.subplots(figsize=figsize)
     else:
         fig = ax.get_figure()
-    # create axes
-    ax = fig.add_subplot(111)
     # gather graph data
     pos_x, pos_y = np.zeros(g.num_nodes), np.zeros(g.num_nodes)
     for k, g_pos in enumerate(g.pos):
@@ -606,9 +604,9 @@ class Evaluator(object):
         # loading the image: it can be a numpy.ndarray or a Data/Batch object
         # image, mask = self.dataset.next_batch(1, shuffle=False) # selects an aleatory value from the dataset
         sample = self.dataset[N]
-        print('----- nasty saving object')
-        torch.save(sample, f'sample_case_id_{case_id}_N_{N}.pt')
-        raise Exception('stop here!')
+        # print('----- nasty saving object')
+        # jtorch.save(sample, f'sample_case_id_{case_id}_N_{N}.pt')
+        # // raise Exception('stop here!')
         is_graph_tensor = isinstance(sample, (Data, Batch))
         if is_graph_tensor:
             # this graph tensor
