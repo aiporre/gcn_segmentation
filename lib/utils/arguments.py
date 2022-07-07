@@ -78,4 +78,6 @@ def process_command_line():
                         help="sample to plot from the dataset")
     parser.add_argument("--mod", nargs="+", type=str, default=["CTN", "TMAX", "CBF", "CBV", "MTT"],
                         help=" Modalities for the ISLES2018 dataset. Defaults to [\"CTN\", \"TMAX\", \"CBF\", \"CBV\", \"MTT\"]")
+    parser.add_argument('--actions', '-A', nargs='+', type=str, default=['plot_samples', 'plot_vols', 'eval_samples', 'eval_vols'],
+                        help='actions to be performed. Options are plot_samples, plot_vols,  eval_samples, eval_vols')
     return parser.parse_args()
