@@ -2,11 +2,11 @@ import torch
 from matplotlib import pyplot as plt
 from torch import nn
 
+from lib.datasets.gendostroke import GENDOSTROKE
 from lib.models import GFCN, GFCNA, GFCNB, GFCNC, GFCND, GFCNE, GFCNF, GFCNG, PointNet, UNet, FCN
 from lib.process import Trainer, Evaluator, KTrainer, KEvaluator, DCS, TrainingDir
 from lib.process.losses import estimatePositiveWeight, GeneralizedDiceLoss, FocalLoss, DiceLoss
 from lib.utils import savefigs
-
 
 from lib.datasets import GMNIST, GSVESSEL, GVESSEL12, GISLES2018
 from lib.datasets.gisles2018 import isles2018_reshape as gisles2018_reshape
@@ -15,10 +15,12 @@ from lib.datasets.gisles2018 import get_modalities as gisles_get_modalities
 from lib.datasets import MNIST, VESSEL12, SVESSEL, Crop, CropVessel12, ISLES2018
 from lib.datasets.isles2018 import get_modalities as isles_get_modalities
 from lib.datasets.isles2018 import isles2018_reshape
+
 try:
     from dvn import FCN as DeepVessel
 except Exception as e:
     print('Warning: No module dvn. Failed to import deep vessel models, Exception: ', str(e))
+
 
 def get_pretransform(*args, **kwargs):
     pre_transform_name = kwargs['pre_transform']
@@ -32,11 +34,11 @@ def get_pretransform(*args, **kwargs):
         pre_transform = None
     return pre_transform
 
+
 def get_dataset(*args, **kwargs):
-    dataset_name = kwargs['dataset'],
-    pre_trasform_name = kwargs['pre_transform']
-    pre_transform = get_pretransform(pre_trasform=pre_trasform_name)
-    modalites = get_modalities(dataset_name=dataset_name, modalities=kwargs['modalities'])
+    dataset_name = kwargs['dataset']
+    pre_transform = get_pretransform(**kwargs)
+    modalites = get_modalities(dataset_name=dataset_name, modalities=kwargs['mod'])
     if dataset_name == 'MNIST':
         dataset = MNIST(background=kwargs['background'])
         reshape_transform = None
@@ -59,15 +61,19 @@ def get_dataset(*args, **kwargs):
         dataset = GENDOSTROKE(data_dir=kwargs['endodir'])
         reshape_transform = None  # TODO: this is missing endostroke_reshape
     elif dataset_name == 'GISLES2018':
-        dataset = GISLES2018(data_dir=kwargs['islesdir'], modalities=modalites, useful=kwargs['useful'], fold=kwargs['fold'])
+        dataset = GISLES2018(data_dir=kwargs['islesdir'], modalities=modalites, useful=kwargs['useful'],
+                             fold=kwargs['fold'])
         reshape_transform = gisles2018_reshape
     elif dataset_name == 'ISLES2018':
-        dataset = ISLES2018(data_dir=kwargs['islesdir'], modalities=modalites, useful=kwargs['useful'], fold=kwargs['fold'])
+        dataset = ISLES2018(data_dir=kwargs['islesdir'], modalities=modalites, useful=kwargs['useful'],
+                            fold=kwargs['fold'])
         reshape_transform = isles2018_reshape
     else:
-        dataset = MNIST()
-        reshape_transform = None
+        # dataset = MNIST()
+        # reshape_transform = None
+        raise Exception(f'Dataset {dataset_name} not implemented')
     return dataset, reshape_transform
+
 
 def get_modalities(dataset_name, modalities):
     if dataset_name == 'GISLES2018':
@@ -78,7 +84,7 @@ def get_modalities(dataset_name, modalities):
         return None
 
 
-def get_model(net, postnorm, pweights, mod, dataset):
+def get_model(net, postnorm, pweights, mod, dataset, **kwargs):
     _modalities = get_modalities(dataset_name=dataset, modalities=mod)
     NUM_INPUTS = 1 if _modalities is None else len(_modalities)
     if net == 'GFCN':
@@ -110,7 +116,8 @@ def get_model(net, postnorm, pweights, mod, dataset):
         raise ValueError('Unknown network')
     return model
 
-def get_criterion(criterion_name, progressbar, dataset=None, weight = None):
+
+def get_criterion(criterion_name, progressbar, dataset=None, weight=None):
     assert dataset is not None and weight is None, 'Dataset must be specified when weight is not given'
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if criterion_name == 'BCE':
@@ -158,16 +165,17 @@ def get_criterion(criterion_name, progressbar, dataset=None, weight = None):
     return criterion, sigmoid
 
 
-def get_evaluators(model, dataset, net, batch, **kwargs):
+def get_evaluators(model, dataset_obj, *args, **kwargs):
+    dataset = dataset_obj
     criterion, sigmoid = get_criterion(criterion_name=kwargs['criterion'],
                                        progressbar=kwargs['progressbar'],
-                                       dataset = dataset,
+                                       dataset=dataset,
                                        weight=kwargs['weight'])
-    dataset_name = kwargs['dataset']
-    net_name = kwargs['net']
     BATCH = kwargs['batch']
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    TRAINING_DIR = TrainingDir(kwargs['training_dir'], kwargs['net'], kwargs['dataset'], kwargs['id'], kwargs['epochs'], kwargs['load_model'])
+    TRAINING_DIR = TrainingDir(kwargs['training_dir'], kwargs['net'], kwargs['dataset'], kwargs['id'], kwargs['epochs'],
+                               kwargs['load_model'])
+    TRAINING_DIR.makedirs()
     if kwargs['dataset'][0] == 'G':
         trainer = Trainer(model=model, dataset=dataset, batch_size=BATCH, to_tensor=False, device=device,
                           criterion=criterion, sigmoid=sigmoid)
@@ -203,32 +211,45 @@ def get_evaluators(model, dataset, net, batch, **kwargs):
     return trainer, evaluator_val, evaluator_test, TRAINING_DIR
 
 
-def plot_sample_figs(_sample_to_plot, _case_id=None, *args, **kwargs):
-    net, postnorm, pweights, mod, dataset_name = kwargs['net'], kwargs['postnorm'], kwargs['pweights'], kwargs['mod'], kwargs['dataset']
+def plot_sample_figs(_sample_to_plot, *args, **kwargs):
+    net, postnorm, pweights, mod, dataset_name = kwargs['net'], kwargs['postnorm'], kwargs['pweights'], kwargs['mod'], \
+                                                 kwargs['dataset']
     model = get_model(**kwargs)
-    _, _, evaluator_test, TRAINING_DIR = get_evaluators(model=model, **kwargs)
-    dataset, reshape_transform = get_dataset(dataset=dataset_name, **kwargs)
     modalities = get_modalities(dataset_name=dataset_name, modalities=mod)
-    fig_activation, case_id, N = evaluator_test.plot_graph(model=model, N=_sample_to_plot,
-                                                           reshape_transform=reshape_transform,
-                                                           modalities=modalities,
-                                                           case_id=_case_id)
+    dataset, reshape_transform = get_dataset(**kwargs)
+    _, _, evaluator_test, TRAINING_DIR = get_evaluators(model=model, dataset_obj=dataset, **kwargs)
 
-    savefigs(fig_name='{}_{}_{}_activation'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
-             fig=fig_activation)
-    plt.close()
+    def _plot_sample_figs(_sample_to_plot, _case_id):
+        fig_activation, case_id, N = evaluator_test.plot_graph(model=model, N=_sample_to_plot,
+                                                               reshape_transform=reshape_transform,
+                                                               modalities=modalities,
+                                                               case_id=_case_id)
 
-    fig_overlay_image, case_id, N = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=True,
-                                                                   reshape_transform=reshape_transform,
-                                                                   modalities=modalities, get_case=True,
-                                                                   case_id=_case_id)
-    savefigs(fig_name='{}_{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
-             fig=fig_overlay_image)
-    plt.close()
-    fig_four_plots, case_id, N = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=False,
-                                                                reshape_transform=reshape_transform,
-                                                                modalities=modalities, get_case=True,
-                                                                case_id=_case_id)
-    savefigs(fig_name='{}_{}_{}_performance'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
-             fig=fig_four_plots)
-    plt.close()
+        savefigs(fig_name='{}_{}_{}_activation'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
+                 fig=fig_activation)
+        plt.close()
+
+        fig_overlay_image, case_id, N = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=True,
+                                                                       reshape_transform=reshape_transform,
+                                                                       modalities=modalities, get_case=True,
+                                                                       case_id=_case_id)
+        savefigs(fig_name='{}_{}_{}_overlap'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
+                 fig=fig_overlay_image)
+        plt.close()
+        fig_four_plots, case_id, N = evaluator_test.plot_prediction(model=model, N=_sample_to_plot, overlap=False,
+                                                                    reshape_transform=reshape_transform,
+                                                                    modalities=modalities, get_case=True,
+                                                                    case_id=_case_id)
+        savefigs(fig_name='{}_{}_{}_performance'.format(TRAINING_DIR.prefix, case_id, N), fig_dir=TRAINING_DIR.fig_dir,
+                 fig=fig_four_plots)
+        plt.close()
+
+    if _sample_to_plot > 0:
+        case_id_num = _sample_to_plot
+        _plot_sample_figs(None, _case_id=evaluator_test.dataset.get_all_cases_id()[case_id_num])
+    else:
+        total_test_samples = len(evaluator_test.dataset)
+        print('plotting 2D all testing samples (', total_test_samples, ') ...')
+        for n in range(total_test_samples):
+            _plot_sample_figs(n, None)
+        print('Done plotting')
