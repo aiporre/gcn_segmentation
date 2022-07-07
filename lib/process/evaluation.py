@@ -164,10 +164,11 @@ def plot_graph(g, image=None, ax=None, channel=0, mag=1.0, th=None, figsize=(70,
             continue
         ax.plot([pos_x[coo_matrix[0, i]], pos_x[coo_matrix[1, i]]],
                 [pos_y[coo_matrix[0, i]], pos_y[coo_matrix[1, i]]],
-                c='lightgray', alpha=0.3)
+                c='lightgray', alpha=0.3,
+                linewidth=0.1*figsize[1])
     colors = [cm.bwr(color) for color in values]
     for xx, yy, cc, vv in zip(pos_x, pos_y, colors, values):
-        ax.plot(xx, yy, 'o', c=cc, markersize=vv)
+        ax.plot(xx, yy, 'o', c=cc, markersize=0.2*figsize[1])
     ax.axis('scaled')
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
@@ -488,7 +489,7 @@ class Evaluator(object):
         metric_avgs = {m: np.array(g).mean() for m, g in metric_values.items()}
         return metric_avgs
 
-    def plot_graph(self, model, figsize=(10,10), N=190, reshape_transform=None,
+    def plot_graph(self, model, figsize=(70,70), N=190, reshape_transform=None,
                         modalities=None, case_id=None):
         if case_id is not None:
             print('Warning: case id is given, then \'N\'', N, ' is ignored.')
