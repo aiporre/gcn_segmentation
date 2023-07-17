@@ -7,14 +7,16 @@ For example, GFCN-dsGMINST.path.
 
 The dataset options are:
 
-|   | dataset   | contains                                                             |
-|---|-----------|----------------------------------------------------------------------|
-| 1 | GVESSEL12 | Vessel 12 dataset. CT Scans of 20 patients. Graph grid generated.    |
-| 2 | GMISNT    | Segmentation generated from the MNIST dataset. Graph grid generated. |
-| 3 | GSVESSEL  | Vaculature simulations based on the VascuSynth.Graph grid generated. |
-| 4 | VESSEL12  | Vessel 12 dataset. CT Scans of 20 patients                           |
-| 5 | MISNT     | Segmentation generated from the MNIST dataset                        |
-| 6 | SVESSEL   | Vaculature simulations based on the VascuSynth.                      |
+|   | dataset   | contains                                                                   |
+|---|-----------|----------------------------------------------------------------------------|
+| 1 | GVESSEL12 | Vessel 12 dataset. CT Scans of 20 patients. Graph grid generated.          |
+| 2 | GMISNT    | Segmentation generated from the MNIST dataset. Graph grid generated.       |
+| 3 | GSVESSEL  | Vaculature simulations based on the VascuSynth.Graph grid generated.       |
+| 4 | VESSEL12  | Vessel 12 dataset. CT Scans of 20 patients                                 |
+| 5 | MISNT     | Segmentation generated from the MNIST dataset                              |
+| 6 | SVESSEL   | Vaculature simulations based on the VascuSynth.                            |
+| 7 | ISLES2018 | ISLES challenge dataset. CTP maps and CT scans brain.                      |
+| 8 | GISLES2018| ISLES challenge dataset. CTP maps and CT scans brain. Graph grid generated |
 
 the available models are:
 
@@ -31,10 +33,7 @@ the available models are:
 | 9 | DeepVessel | DeepVesselNet from Tetteh et al. (2018)                                                                            |
 
 
-The available training looses are: BCE, 
-
-
-  
+The available training looses are: BCE, Focal Loss, Generalized Dice Loss. 
 
 # Evaluation and Training
 
@@ -60,7 +59,7 @@ The best option is to create a soft link inside the directory `data` in this rep
 ```bash
 ./
 ../
-vessel12@ -> /Volumes/sd16j005/Ariel/files_mdh
+vessel12@ -> /path/to/your/files_mdh
 ```
 And for the Geometrical you might want to add one more level so:
 
@@ -69,5 +68,5 @@ data
 |-gvessel12
   |-./
   |-../
-  |- raw@ -> /Volumes/sd16j005/Ariel/files_mdh
+  |- raw@ -> /path/to/your//files_mdh
 ```
