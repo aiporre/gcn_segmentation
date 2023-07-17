@@ -1,5 +1,8 @@
 # Graph-based Fully Convolutional Network (GFCN)
 
+![alt text](https://github.com/aiporre/gcn_segmentation/blob/main/images/banner.jpg?raw=true)
+
+
 ## Main script "training.py"
 
 Run from project directory 
