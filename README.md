@@ -1,7 +1,12 @@
 # Graph-based Fully Convolutional Network (GFCN)
 
-##Main script "training.py"
+## Main script "training.py"
 
+Run from project directory 
+```
+python traininig.py # runs default MNIST
+```
+## Datsets
 A model is generated in the path ./ with the name {network type}-ds{dataset type}.pth.
 For example, GFCN-dsGMINST.path.
 
